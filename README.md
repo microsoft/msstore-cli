@@ -1,14 +1,7 @@
-# Project
+# Microsoft Store Command Line Interface (CLI)
 
-> This repo has been populated by an initial template to help get you started. Please
-> make sure to update the content to build a great experience for community-building.
-
-As the maintainer of this project, please make a few updates:
-
-- Improving this README.MD file to provide a great experience
-- Updating SUPPORT.MD with content about this project's support experience
-- Understanding the security reporting process in SECURITY.MD
-- Remove this section from the README
+## About
+The Microsoft Store Command Line Interface is a cross-platform (Windows, MacOS, Linux) CLI that helps developers access the APIs Microsoft Store APIs, for both managed (MSIX), as well as un-managed (MSI/EXE) applications. It helps developers by creating required online resources (credentials), as well as later setting up their application projects (UWPs, Win32s, Flutter, PWAs, as well as many other types of Windows application) to be ready to ship to the Microsoft Store, going from the initial steps of configuring the application's manifest, as well as the actual publishing of an MSIX or MSI/EXE.
 
 ## Contributing
 
