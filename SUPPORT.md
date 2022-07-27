@@ -1,25 +1,18 @@
-# TODO: The maintainer of this repo has not yet edited this file
-
-**REPO OWNER**: Do you want Customer Service & Support (CSS) support for this product/project?
-
-- **No CSS support:** Fill out this template with information about how to file issues and get help.
-- **Yes CSS support:** Fill out an intake form at [aka.ms/onboardsupport](https://aka.ms/onboardsupport). CSS will work with/help you to determine next steps.
-- **Not sure?** Fill out an intake as though the answer were "Yes". CSS will help you decide.
-
-*Then remove this first heading from this SUPPORT.MD file before publishing your repo.*
-
 # Support
 
-## How to file issues and get help  
+## How to file issues and get help
 
-This project uses GitHub Issues to track bugs and feature requests. Please search the existing 
-issues before filing new issues to avoid duplicates.  For new issues, file your bug or 
+This project uses [GitHub Issues][gh-issue] to [track bugs][gh-bug] and [feature requests][gh-feature]. Please search the existing issues before filing new issues to avoid duplicates.  For new issues, file your bug or 
 feature request as a new Issue.
 
-For help and questions about using this project, please **REPO MAINTAINER: INSERT INSTRUCTIONS HERE 
-FOR HOW TO ENGAGE REPO OWNERS OR COMMUNITY FOR HELP. COULD BE A STACK OVERFLOW TAG OR OTHER
-CHANNEL. WHERE WILL YOU HELP PEOPLE?**.
+For help and questions about using this project, please look at our [Wiki][wiki] for using the Microsoft Store CLI and our [Contributor's Guide][contributor] if you want to work on MSStoreCLI.
 
-## Microsoft Support Policy  
+## Microsoft Support Policy
 
-Support for this **PROJECT or PRODUCT** is limited to the resources listed above.
+Support for the Microsoft Store CLI is limited to the resources listed above.
+
+[gh-issue]: https://github.com/microsoft/msstore-cli/issues/new/choose
+[gh-bug]: https://github.com/microsoft/msstore-cli/issues/new?assignees=&labels=Issue-Bug&template=bug_report.md&title=
+[gh-feature]: https://github.com/microsoft/msstore-cli/issues/new?assignees=&labels=&template=feature_request.md&title=
+[wiki]: https://github.com/microsoft/msstore-cli/wiki
+[contributor]: https://github.com/microsoft/msstore-cli/blob/main/CONTRIBUTING.md
