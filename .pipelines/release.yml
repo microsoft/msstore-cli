@@ -18,7 +18,7 @@ parameters:
       - arm64
 
 jobs:
-- job: build-nuget-and-tests
+- job: Build_Nuget_And_Tests
   displayName: Build Nuget and Run Tests
   strategy:
     matrix:
@@ -54,7 +54,7 @@ jobs:
   #     name: NuGet
   #     path: MSStore.API/bin/Release/*.nupkg
   
-- job: build-cli
+- job: Build_CLI
   strategy:
     matrix:
       ${{ each dotnet_config in parameters.dotnet_configurations }}:
