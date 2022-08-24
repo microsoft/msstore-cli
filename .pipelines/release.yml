@@ -19,7 +19,7 @@ jobs:
   #- name: Setup .NET
   #   uses: actions/setup-dotnet@v2
   #   with:
-  #     dotnet-version: 6.0.x
+  #     dotnet_version: 6.0.x
   # - name: Install and Configure Keyring
   #   if: $( os == 'ubuntu-latest' )
   #   run: |
@@ -45,7 +45,7 @@ jobs:
   
 - job: build-cli
   parameters:
-  - name: dotnet-configurations
+  - name: dotnet_configurations
     type: object
     default:
       - Release
@@ -56,46 +56,46 @@ jobs:
       - arm64
   strategy:
     matrix:
-      ${{ each dotnet-config in parameters.dotnet-configurations }}:
+      ${{ each dotnet_config in parameters.dotnet_configurations }}:
         ${{ each platform in parameters.buildPlatforms }}:
-          ${{ dotnet-config }}_windows_${{ platform }}:
+          ${{ dotnet_config }}_windows_${{ platform }}:
             os: windows-latest
-            dotnet-os: win
-            dotnet-framework: net6.0-windows10.0.17763.0
-            dotnet-arch: ${{ platform }}
-            dotnet-configuration: ${{ dotnet-config }}
-          ${{ dotnet-config }}linux_${{ platform }}:
+            dotnet_os: win
+            dotnet_framework: net6.0-windows10.0.17763.0
+            dotnet_arch: ${{ platform }}
+            dotnet_configuration: ${{ dotnet_config }}
+          ${{ dotnet_config }}linux_${{ platform }}:
             os: ubuntu-latest
-            dotnet-os: linux
-            dotnet-framework: net6.0
-            dotnet-arch: ${{ platform }}
-            dotnet-configuration: ${{ dotnet-config }}
-          ${{ dotnet-config }}macos_${{ platform }}:
+            dotnet_os: linux
+            dotnet_framework: net6.0
+            dotnet_arch: ${{ platform }}
+            dotnet_configuration: ${{ dotnet_config }}
+          ${{ dotnet_config }}macos_${{ platform }}:
             os: macos-latest
-            dotnet-os: osx.12
-            dotnet-framework: net6.0
-            dotnet-arch: ${{ platform }}
-            dotnet-configuration: ${{ dotnet-config }}
+            dotnet_os: osx.12
+            dotnet_framework: net6.0
+            dotnet_arch: ${{ platform }}
+            dotnet_configuration: ${{ dotnet_config }}
   pool:
     vmImage: $( os )
 
-  displayName: Build CLI - $( dotnet-os )-$( dotnet-arch )
+  displayName: Build CLI - $( dotnet_os )-$( dotnet_arch )
 
   steps:
   - checkout: 
   # - name: Setup .NET
   #   uses: actions/setup-dotnet@v2
   #   with:
-  #     dotnet-version: 6.0.x
+  #     dotnet_version: 6.0.x
   # - name: Restore CLI
-  #   run: dotnet restore MSStore.CLI -r $( dotnet-os )-$( dotnet-arch ) /p:Configuration=Release
+  #   run: dotnet restore MSStore.CLI -r $( dotnet_os )-$( dotnet_arch ) /p:Configuration=Release
   # - name: Build CLI
-  #   run: dotnet build MSStore.CLI --no-restore --no-self-contained -r $( dotnet-os )-$( dotnet-arch ) -f $( dotnet-framework ) /p:Configuration=Release
+  #   run: dotnet build MSStore.CLI --no-restore --no-self-contained -r $( dotnet_os )-$( dotnet_arch ) -f $( dotnet_framework ) /p:Configuration=Release
   # - name: Publish SelfContained CLI
-  #   run: dotnet publish MSStore.CLI --no-build --no-self-contained -r $( dotnet-os )-$( dotnet-arch ) -f $( dotnet-framework ) /p:Configuration=Release
+  #   run: dotnet publish MSStore.CLI --no-build --no-self-contained -r $( dotnet_os )-$( dotnet_arch ) -f $( dotnet_framework ) /p:Configuration=Release
   # - name: Upload Artifact - CLI
   #   if: $( !env.ACT )
   #   uses: actions/upload-artifact@v3
   #   with:
-  #     name: CLI-$( dotnet-os )-$( dotnet-arch )
-  #     path: $( github.workspace )/MSStore.CLI/bin/Release/$( dotnet-framework )/$( dotnet-os )-$( dotnet-arch )/publish/**/*
+  #     name: CLI-$( dotnet_os )-$( dotnet_arch )
+  #     path: $( github.workspace )/MSStore.CLI/bin/Release/$( dotnet_framework )/$( dotnet_os )-$( dotnet_arch )/publish/**/*
