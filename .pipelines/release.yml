@@ -6,6 +6,17 @@
 trigger: none
 pr: none
 
+parameters:
+  - name: dotnet_configurations
+    type: object
+    default:
+      - Release
+  - name: buildPlatforms
+    type: object
+    default:
+      - x64
+      - arm64
+
 jobs:
 - job: build-nuget-and-tests
   displayName: Build Nuget and Run Tests
@@ -44,16 +55,6 @@ jobs:
   #     path: MSStore.API/bin/Release/*.nupkg
   
 - job: build-cli
-  parameters:
-  - name: dotnet_configurations
-    type: object
-    default:
-      - Release
-  - name: buildPlatforms
-    type: object
-    default:
-      - x64
-      - arm64
   strategy:
     matrix:
       ${{ each dotnet_config in parameters.dotnet_configurations }}:
