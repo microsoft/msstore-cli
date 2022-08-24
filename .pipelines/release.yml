@@ -13,7 +13,7 @@ jobs:
     matrix:
       os: { windows-latest, ubuntu-latest, macos-latest}
   pool:
-    vmImage: ${{ matrix.os }}
+    vmImage: $( os )
   steps:
   - checkout: 
   #- name: Setup .NET
@@ -21,7 +21,7 @@ jobs:
   #   with:
   #     dotnet-version: 6.0.x
   # - name: Install and Configure Keyring
-  #   if: ${{ matrix.os == 'ubuntu-latest' }}
+  #   if: $( os == 'ubuntu-latest' )
   #   run: |
   #     sudo apt-get install -y gnome-keyring
   #     export $(dbus-launch --sh-syntax)
@@ -34,54 +34,52 @@ jobs:
   # - name: Test
   #   run: dotnet test MSStore.CLI.sln --no-restore /p:Configuration=Release /p:CollectCoverage=true --logger "console;verbosity=detailed"
   # - name: Pack NuGet
-  #   if: ${{ matrix.os == 'ubuntu-latest' }}
+  #   if: $( os == 'ubuntu-latest' )
   #   run: dotnet pack MSStore.API --no-build -c Release
   # - name: Upload Artifact - NuGet
-  #   if: ${{ matrix.os == 'ubuntu-latest' && !env.ACT }}
+  #   if: $( os == 'ubuntu-latest' && !env.ACT )
   #   uses: actions/upload-artifact@v3
   #   with:
   #     name: NuGet
   #     path: MSStore.API/bin/Release/*.nupkg
   
 - job: build-cli
-  variables:
-    dotnet-configuration: Release
+  parameters:
+  - name: dotnet-configurations
+    type: object
+    default:
+      - Release
+  - name: buildPlatforms
+    type: object
+    default:
+      - x64
+      - arm64
   strategy:
     matrix:
-      windows_x64:
-        os: windows-latest
-        dotnet-os: win
-        dotnet-framework: net6.0-windows10.0.17763.0
-        dotnet-arch: x64
-      windows_arm64:
-        os: windows-latest
-        dotnet-os: win
-        dotnet-framework: net6.0-windows10.0.17763.0
-        dotnet-arch: arm64
-      linux_x64:
-        os: ubuntu-latest
-        dotnet-os: linux
-        dotnet-framework: net6.0
-        dotnet-arch: x64
-      linux_arm64:
-        os: ubuntu-latest
-        dotnet-os: linux
-        dotnet-framework: net6.0
-        dotnet-arch: arm64
-      macos_x64:
-        os: macos-latest
-        dotnet-os: osx.12
-        dotnet-framework: net6.0
-        dotnet-arch: x64
-      macos_arm64:
-        os: macos-latest
-        dotnet-os: osx.12
-        dotnet-framework: net6.0
-        dotnet-arch: arm64
+      ${{ each dotnet-config in parameters.dotnet-configurations }}:
+        ${{ each platform in parameters.buildPlatforms }}:
+          ${{ dotnet-config }}_windows_${{ platform }}:
+            os: windows-latest
+            dotnet-os: win
+            dotnet-framework: net6.0-windows10.0.17763.0
+            dotnet-arch: ${{ platform }}
+            dotnet-configuration: ${{ dotnet-config }}
+          ${{ dotnet-config }}linux_${{ platform }}:
+            os: ubuntu-latest
+            dotnet-os: linux
+            dotnet-framework: net6.0
+            dotnet-arch: ${{ platform }}
+            dotnet-configuration: ${{ dotnet-config }}
+          ${{ dotnet-config }}macos_${{ platform }}:
+            os: macos-latest
+            dotnet-os: osx.12
+            dotnet-framework: net6.0
+            dotnet-arch: ${{ platform }}
+            dotnet-configuration: ${{ dotnet-config }}
   pool:
-    vmImage: ${{ matrix.os }}
+    vmImage: $( os )
 
-  displayName: Build CLI - ${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }}
+  displayName: Build CLI - $( dotnet-os )-$( dotnet-arch )
 
   steps:
   - checkout: 
@@ -90,14 +88,14 @@ jobs:
   #   with:
   #     dotnet-version: 6.0.x
   # - name: Restore CLI
-  #   run: dotnet restore MSStore.CLI -r ${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }} /p:Configuration=Release
+  #   run: dotnet restore MSStore.CLI -r $( dotnet-os )-$( dotnet-arch ) /p:Configuration=Release
   # - name: Build CLI
-  #   run: dotnet build MSStore.CLI --no-restore --no-self-contained -r ${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }} -f ${{ matrix.dotnet-framework }} /p:Configuration=Release
+  #   run: dotnet build MSStore.CLI --no-restore --no-self-contained -r $( dotnet-os )-$( dotnet-arch ) -f $( dotnet-framework ) /p:Configuration=Release
   # - name: Publish SelfContained CLI
-  #   run: dotnet publish MSStore.CLI --no-build --no-self-contained -r ${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }} -f ${{ matrix.dotnet-framework }} /p:Configuration=Release
+  #   run: dotnet publish MSStore.CLI --no-build --no-self-contained -r $( dotnet-os )-$( dotnet-arch ) -f $( dotnet-framework ) /p:Configuration=Release
   # - name: Upload Artifact - CLI
-  #   if: ${{ !env.ACT }}
+  #   if: $( !env.ACT )
   #   uses: actions/upload-artifact@v3
   #   with:
-  #     name: CLI-${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }}
-  #     path: ${{ github.workspace }}/MSStore.CLI/bin/Release/${{ matrix.dotnet-framework }}/${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }}/publish/**/*
+  #     name: CLI-$( dotnet-os )-$( dotnet-arch )
+  #     path: $( github.workspace )/MSStore.CLI/bin/Release/$( dotnet-framework )/$( dotnet-os )-$( dotnet-arch )/publish/**/*
