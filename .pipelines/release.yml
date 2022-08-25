@@ -1,8 +1,3 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
-
 trigger: none
 pr: none
 
@@ -22,42 +17,49 @@ jobs:
   displayName: Build Nuget and Run Tests
   strategy:
     matrix:
-      Windows:
-        os: windows-latest
-      Linux:
-        os: ubuntu-latest
-      Mac:
-        os: macos-latest
+      ${{ each dotnet_config in parameters.dotnet_configurations }}:
+        Windows_${{ dotnet_config }}:
+          os: windows-latest
+          dotnet_configuration: ${{ dotnet_config }}
+        Linux_${{ dotnet_config }}:
+          os: ubuntu-latest
+          dotnet_configuration: ${{ dotnet_config }}
+        Mac_${{ dotnet_config }}:
+          os: macos-latest
+          dotnet_configuration: ${{ dotnet_config }}
   pool:
     vmImage: $(os)
   steps:
   - checkout: self
-  #- name: Setup .NET
-  #   uses: actions/setup-dotnet@v2
-  #   with:
-  #     dotnet_version: 6.0.x
-  # - name: Install and Configure Keyring
-  #   if: $(os == 'ubuntu-latest')
-  #   run: |
-  #     sudo apt-get install -y gnome-keyring
-  #     export $(dbus-launch --sh-syntax)
-  #     export $(echo 'anypass_just_to_unlock' | gnome-keyring-daemon --unlock)
-  #     export $(echo 'anypass_just_to_unlock' | gnome-keyring-daemon --start --components=gpg,pkcs11,secrets,ssh)
-  # - name: Restore dependencies
-  #   run: dotnet restore MSStore.CLI.sln /p:Configuration=Release
-  # - name: Build
-  #   run: dotnet build MSStore.CLI.sln --no-restore /p:Configuration=Release
-  # - name: Test
-  #   run: dotnet test MSStore.CLI.sln --no-restore /p:Configuration=Release /p:CollectCoverage=true --logger "console;verbosity=detailed"
-  # - name: Pack NuGet
-  #   if: $(os == 'ubuntu-latest')
-  #   run: dotnet pack MSStore.API --no-build -c Release
-  # - name: Upload Artifact - NuGet
-  #   if: $(os == 'ubuntu-latest' && !env.ACT)
-  #   uses: actions/upload-artifact@v3
-  #   with:
-  #     name: NuGet
-  #     path: MSStore.API/bin/Release/*.nupkg
+  - task: Setup .NET
+    inputs:
+      version: 6.0.x
+  - script: |
+      sudo apt-get install -y gnome-keyring
+      export $(dbus-launch --sh-syntax)
+      export $(echo 'anypass_just_to_unlock' | gnome-keyring-daemon --unlock)
+      export $(echo 'anypass_just_to_unlock' | gnome-keyring-daemon --start --components=gpg,pkcs11,secrets,ssh)
+    condition: and(succeeded(), eq('$(os)', 'ubuntu-latest'))
+    displayName: Install and Configure Keyring
+  - script: dotnet restore MSStore.CLI.sln /p:Configuration=$(dotnet_configuration)
+    displayName: Restore dependencies
+  - script: dotnet build MSStore.CLI.sln --no-restore /p:Configuration=$(dotnet_configuration)
+    displayName: Build
+  - script: dotnet test MSStore.CLI.sln --no-restore /p:Configuration=$(dotnet_configuration) /p:CollectCoverage=true --logger "console;verbosity=detailed"
+    displayName: Test
+  - script: dotnet pack MSStore.API --no-build -c $(dotnet_configuration)
+    condition: and(succeeded(), eq('$(os)', 'ubuntu-latest'))
+    displayName: Pack NuGet
+  - task: CopyFiles@2
+    displayName: 'Copy Artifacts'
+    inputs:
+      contents: '$(System.DefaultWorkingDirectory)/MSStore.API/bin/$(dotnet_configuration)/*.nupkg'
+      flattenFolders: true
+      targetFolder: '$(Build.ArtifactStagingDirectory)'
+  - publish: '$(Build.ArtifactStagingDirectory)'
+    condition: and(succeeded(), eq('$(os)', 'ubuntu-latest'))
+    displayName: Upload Artifact - NuGet
+    artifact: NuGet
   
 - job: Build_CLI
   strategy:
@@ -89,19 +91,20 @@ jobs:
 
   steps:
   - checkout: self
-  # - name: Setup .NET
-  #   uses: actions/setup-dotnet@v2
-  #   with:
-  #     dotnet_version: 6.0.x
-  # - name: Restore CLI
-  #   run: dotnet restore MSStore.CLI -r $(dotnet_os)-$(dotnet_arch) /p:Configuration=Release
-  # - name: Build CLI
-  #   run: dotnet build MSStore.CLI --no-restore --no-self-contained -r $(dotnet_os)-$(dotnet_arch) -f $(dotnet_framework) /p:Configuration=Release
-  # - name: Publish SelfContained CLI
-  #   run: dotnet publish MSStore.CLI --no-build --no-self-contained -r $(dotnet_os)-$(dotnet_arch) -f $(dotnet_framework) /p:Configuration=Release
-  # - name: Upload Artifact - CLI
-  #   if: $(!env.ACT)
-  #   uses: actions/upload-artifact@v3
-  #   with:
-  #     name: CLI-$(dotnet_os)-$(dotnet_arch)
-  #     path: $(github.workspace)/MSStore.CLI/bin/Release/$(dotnet_framework)/$(dotnet_os)-$(dotnet_arch)/publish/**/*
+  - task: Setup .NET
+    inputs:
+      version: 6.0.x
+  - script: dotnet restore MSStore.CLI -r $(dotnet_os)-$(dotnet_arch) /p:Configuration=$(dotnet_configuration)
+    displayName: Restore CLI
+  - script: dotnet build MSStore.CLI --no-restore --no-self-contained -r $(dotnet_os)-$(dotnet_arch) -f $(dotnet_framework) /p:Configuration=$(dotnet_configuration)
+    displayName: Build CLI
+  - script: dotnet publish MSStore.CLI --no-build --no-self-contained -r $(dotnet_os)-$(dotnet_arch) -f $(dotnet_framework) /p:Configuration=$(dotnet_configuration)
+    displayName: Publish SelfContained CLI
+  - task: CopyFiles@2
+    displayName: 'Copy Artifacts'
+    inputs:
+      contents: '$(System.DefaultWorkingDirectory)/MSStore.CLI/bin/$(dotnet_configuration)/$(dotnet_framework)/$(dotnet_os)-$(dotnet_arch)/publish/**/*'
+      targetFolder: '$(Build.ArtifactStagingDirectory)'
+  - publish: '$(Build.ArtifactStagingDirectory)'
+    displayName: Upload Artifact - CLI
+    artifact: CLI-$(dotnet_os)-$(dotnet_arch)
