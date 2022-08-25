@@ -22,7 +22,12 @@ jobs:
   displayName: Build Nuget and Run Tests
   strategy:
     matrix:
-      os: { windows-latest, ubuntu-latest, macos-latest}
+      windows:
+        os: windows-latest
+      linux:
+        os: ubuntu-latest
+      mac:
+        os: macos-latest
   pool:
     vmImage: $(os)
   steps:
