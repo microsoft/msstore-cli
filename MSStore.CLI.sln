@@ -1,0 +1,56 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.2.32602.215
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MSStore.CLI", "MSStore.CLI\MSStore.CLI.csproj", "{50F972C3-11FB-4B14-9FB0-234B2F12043A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{0966C65A-4C8E-4F31-A368-67DB61112508}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+		.runsettings = .runsettings
+		.github\workflows\build.yml = .github\workflows\build.yml
+		Directory.Build.props = Directory.Build.props
+		Directory.Build.targets = Directory.Build.targets
+	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MSStore.API", "MSStore.API\MSStore.API.csproj", "{BBE70B19-B6C5-4B43-AC18-3A5FCBC70C97}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MSStore.CLI.UnitTests", "MSStore.CLI.UnitTests\MSStore.CLI.UnitTests.csproj", "{8BD7850B-EB12-476D-8A3B-8D5DCE34DF78}"
+EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "MSStore.CLI.Setup", "MSStore.CLI.Setup\MSStore.CLI.Setup.vdproj", "{6741136F-6EFF-4156-8468-57AE63929F84}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MSStore.CLI.Setup.CustomActions", "MSStore.CLI.Setup.CustomActions\MSStore.CLI.Setup.CustomActions.csproj", "{816725FB-BF61-4882-A08D-F4A29BCF8D1C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{50F972C3-11FB-4B14-9FB0-234B2F12043A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{50F972C3-11FB-4B14-9FB0-234B2F12043A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{50F972C3-11FB-4B14-9FB0-234B2F12043A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{50F972C3-11FB-4B14-9FB0-234B2F12043A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BBE70B19-B6C5-4B43-AC18-3A5FCBC70C97}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BBE70B19-B6C5-4B43-AC18-3A5FCBC70C97}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BBE70B19-B6C5-4B43-AC18-3A5FCBC70C97}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BBE70B19-B6C5-4B43-AC18-3A5FCBC70C97}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8BD7850B-EB12-476D-8A3B-8D5DCE34DF78}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8BD7850B-EB12-476D-8A3B-8D5DCE34DF78}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8BD7850B-EB12-476D-8A3B-8D5DCE34DF78}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8BD7850B-EB12-476D-8A3B-8D5DCE34DF78}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6741136F-6EFF-4156-8468-57AE63929F84}.Debug|Any CPU.ActiveCfg = Debug
+		{6741136F-6EFF-4156-8468-57AE63929F84}.Release|Any CPU.ActiveCfg = Release
+		{816725FB-BF61-4882-A08D-F4A29BCF8D1C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{816725FB-BF61-4882-A08D-F4A29BCF8D1C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{816725FB-BF61-4882-A08D-F4A29BCF8D1C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{816725FB-BF61-4882-A08D-F4A29BCF8D1C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {230E09E0-A2F7-4BF2-B54D-2314923AD0EC}
+	EndGlobalSection
+EndGlobal

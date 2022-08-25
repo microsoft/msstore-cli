@@ -1,0 +1,83 @@
+name: CI/CD
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-nuget-and-tests:
+    name: Build Nuget and Run Tests
+    strategy:
+      matrix:
+        os: [ windows-latest, ubuntu-latest, macos-latest ]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v2
+      with:
+        dotnet-version: 6.0.x
+    - name: Install and Configure Keyring
+      if: ${{ matrix.os == 'ubuntu-latest' }}
+      run: |
+        sudo apt-get install -y gnome-keyring
+        export $(dbus-launch --sh-syntax)
+        export $(echo 'anypass_just_to_unlock' | gnome-keyring-daemon --unlock)
+        export $(echo 'anypass_just_to_unlock' | gnome-keyring-daemon --start --components=gpg,pkcs11,secrets,ssh)
+    - name: Restore dependencies
+      run: dotnet restore MSStore.CLI.sln /p:Configuration=Release
+    - name: Build
+      run: dotnet build MSStore.CLI.sln --no-restore /p:Configuration=Release
+    - name: Test
+      run: dotnet test MSStore.CLI.sln --no-restore /p:Configuration=Release /p:CollectCoverage=true --logger "console;verbosity=detailed"
+    - name: Pack NuGet
+      if: ${{ matrix.os == 'ubuntu-latest' }}
+      run: dotnet pack MSStore.API --no-build -c Release
+    - name: Upload Artifact - NuGet
+      if: ${{ matrix.os == 'ubuntu-latest' && !env.ACT }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: NuGet
+        path: MSStore.API/bin/Release/*.nupkg
+  
+  build-cli:
+    strategy:
+      matrix:
+        os: [ windows-latest, ubuntu-latest, macos-latest ]
+        dotnet-configuration: [ 'Release' ]
+        dotnet-arch: ['x64', 'arm64' ]
+        include:
+          - os: windows-latest
+            dotnet-os: win
+            dotnet-framework: net6.0-windows10.0.17763.0
+          - os: ubuntu-latest
+            dotnet-os: linux
+            dotnet-framework: net6.0
+          - os: macos-latest
+            dotnet-os: osx.12
+            dotnet-framework: net6.0
+    runs-on: ${{ matrix.os }}
+
+    name: Build CLI - ${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }}
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v2
+      with:
+        dotnet-version: 6.0.x
+    - name: Restore CLI
+      run: dotnet restore MSStore.CLI -r ${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }} /p:Configuration=Release
+    - name: Build CLI
+      run: dotnet build MSStore.CLI --no-restore --no-self-contained -r ${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }} -f ${{ matrix.dotnet-framework }} /p:Configuration=Release
+    - name: Publish SelfContained CLI
+      run: dotnet publish MSStore.CLI --no-build --no-self-contained -r ${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }} -f ${{ matrix.dotnet-framework }} /p:Configuration=Release
+    - name: Upload Artifact - CLI
+      if: ${{ !env.ACT }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: CLI-${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }}
+        path: ${{ github.workspace }}/MSStore.CLI/bin/Release/${{ matrix.dotnet-framework }}/${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }}/publish/**/*

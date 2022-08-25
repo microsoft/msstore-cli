@@ -1,5 +1,13 @@
-trigger: none
-pr: none
+trigger:
+  batch: true
+  branches:
+    include:
+      - main
+
+pr:
+  branches:
+    include:
+      - main
 
 parameters:
   - name: dotnet_configurations
@@ -12,8 +20,12 @@ parameters:
       - x64
       - arm64
 
+#     0.0.yyMM.dd##
+#     0.0.1904.0900
+name: 0.0.$(Date:yyMM).$(Date:dd)$(Rev:rr)
+
 jobs:
-- job: Build_Nuget_And_Tests
+- job: BuildNuGet
   displayName: Build Nuget and Run Tests
   strategy:
     matrix:
@@ -35,17 +47,15 @@ jobs:
     displayName: Setup .NET
     inputs:
       version: 6.0.x
-  - script: dotnet nuget add source https://pkgs.dev.azure.com/microsoft/Pax/_packaging/MSStore.CLI_PublicPackages/nuget/v3/index.json --name MSStore.CLI_PublicPackages
-    displayName: Add package source
-  - task: NuGetAuthenticate@0
   - script: dotnet restore MSStore.CLI.sln /p:Configuration=$(dotnet_configuration)
     displayName: Restore dependencies
-  - template: ./templates/build-nuget.yaml
+  - template: ../templates/build-nuget.yaml
     parameters:
       dotnet_configuration: $(dotnet_configuration)
       AgentOS: $(Agent.OS)
-  
-- job: Build_CLI
+
+- job: BuildCLI
+  displayName: Build CLI
   strategy:
     matrix:
       ${{ each dotnet_config in parameters.dotnet_configurations }}:
@@ -70,21 +80,15 @@ jobs:
             dotnet_configuration: ${{ dotnet_config }}
   pool:
     vmImage: $(os)
-
-  displayName: Build CLI
-
   steps:
   - checkout: self
   - task: UseDotNet@2
     displayName: Setup .NET
     inputs:
       version: 6.0.x
-  - script: dotnet nuget add source https://pkgs.dev.azure.com/microsoft/Pax/_packaging/MSStore.CLI_PublicPackages/nuget/v3/index.json --name MSStore.CLI_PublicPackages
-    displayName: Add package source
-  - task: NuGetAuthenticate@0
   - script: dotnet restore MSStore.CLI -r $(dotnet_runtime)-$(dotnet_arch) /p:Configuration=$(dotnet_configuration)
     displayName: Restore CLI
-  - template: ./templates/build-cli.yaml
+  - template: ../templates/build-cli.yaml
     parameters:
       dotnet_runtime: $(dotnet_runtime)
       dotnet_framework: $(dotnet_framework)

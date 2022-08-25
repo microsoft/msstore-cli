@@ -1,0 +1,6 @@
+<RunSettings>
+  <MSTest>
+    <MaxCpuCount>1</MaxCpuCount>
+    <DeploymentEnabled>False</DeploymentEnabled>
+  </MSTest>
+</RunSettings>

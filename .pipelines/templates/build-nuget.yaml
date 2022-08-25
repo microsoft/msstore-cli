@@ -1,0 +1,42 @@
+parameters:
+  - name: dotnet_configuration
+    type: object
+    default:
+      - Release
+  - name: AgentOS
+    type: string
+    default: ''
+
+steps:
+- script: echo "##vso[task.setvariable variable=AgentOS]${{ parameters.AgentOS }}"
+- script: |
+    sudo apt-get install -y gnome-keyring
+    export $(dbus-launch --sh-syntax)
+    export $(echo 'anypass_just_to_unlock' | gnome-keyring-daemon --unlock)
+    export $(echo 'anypass_just_to_unlock' | gnome-keyring-daemon --start --components=gpg,pkcs11,secrets,ssh)
+  condition: eq(variables.AgentOS, 'Linux')
+  displayName: Install and Configure Keyring
+- script: dotnet build MSStore.CLI.sln --no-restore /p:Configuration=${{ parameters.dotnet_configuration }}
+  displayName: Build
+- script: dotnet test MSStore.CLI.sln --no-restore /p:Configuration=${{ parameters.dotnet_configuration }} /p:CollectCoverage=true --logger "console;verbosity=detailed"
+  displayName: Test
+- script: dotnet pack MSStore.API --no-build -c ${{ parameters.dotnet_configuration }}
+  displayName: Pack NuGet
+- task: CopyFiles@2
+  displayName: 'Copy Artifacts'
+  condition: eq(variables.AgentOS, 'Linux')
+  inputs:
+    contents: '$(System.DefaultWorkingDirectory)/MSStore.API/bin/${{ parameters.dotnet_configuration }}/*.nupkg'
+    flattenFolders: true
+    targetFolder: '$(Build.ArtifactStagingDirectory)'
+- task: PublishPipelineArtifact@1
+  displayName: Upload Artifact - NuGet
+  condition: eq(variables.AgentOS, 'Linux')
+  inputs:
+    path: '$(Build.ArtifactStagingDirectory)'
+    artifactName: NuGet
+- task: ms.vss-governance-buildtask.governance-build-task-component-detection.ComponentGovernanceComponentDetection@0
+  displayName: 'Component Detection'
+  condition: and(succeededOrFailed(), not(eq(variables['Build.Reason'], 'PullRequest')))
+  inputs:
+    ignoreDirectories: 'MSStore.CLI.UnitTests'

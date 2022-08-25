@@ -348,3 +348,7 @@ MigrationBackup/
 
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
+
+/MSStore.CLI/Properties/launchSettings.json
+/MSStore.CLI.UnitTests/coverage.json
+/testEnvironments.json

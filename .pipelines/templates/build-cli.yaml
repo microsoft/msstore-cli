@@ -1,0 +1,24 @@
+parameters:
+  dotnet_runtime: ''
+  dotnet_framework: ''
+  dotnet_arch: ''
+
+steps:
+- script: dotnet build MSStore.CLI --no-restore --no-self-contained -r ${{ parameters.dotnet_runtime }}-${{ parameters.dotnet_arch }} -f ${{ parameters.dotnet_framework }} /p:Configuration=${{ parameters.dotnet_configuration }}
+  displayName: Build CLI
+- script: dotnet publish MSStore.CLI --no-build --no-self-contained -r ${{ parameters.dotnet_runtime }}-${{ parameters.dotnet_arch }} -f ${{ parameters.dotnet_framework }} /p:Configuration=${{ parameters.dotnet_configuration }}
+  displayName: Publish SelfContained CLI
+- task: CopyFiles@2
+  displayName: 'Copy Artifacts'
+  inputs:
+    contents: '$(System.DefaultWorkingDirectory)/MSStore.CLI/bin/${{ parameters.dotnet_configuration }}/${{ parameters.dotnet_framework }}/${{ parameters.dotnet_runtime }}-${{ parameters.dotnet_arch }}/publish/**/*'
+    targetFolder: '$(Build.ArtifactStagingDirectory)'
+- publish: '$(Build.ArtifactStagingDirectory)'
+  displayName: Upload Artifact - CLI
+  artifact: CLI-${{ parameters.dotnet_runtime }}-${{ parameters.dotnet_arch }}
+
+- task: ms.vss-governance-buildtask.governance-build-task-component-detection.ComponentGovernanceComponentDetection@0
+  displayName: 'Component Detection'
+  condition: and(succeededOrFailed(), not(eq(variables['Build.Reason'], 'PullRequest')))
+  inputs:
+    ignoreDirectories: 'MSStore.CLI.UnitTests'
