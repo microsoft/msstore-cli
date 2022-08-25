@@ -22,16 +22,16 @@ jobs:
   displayName: Build Nuget and Run Tests
   strategy:
     matrix:
-      windows:
+      Windows:
         os: windows-latest
-      linux:
+      Linux:
         os: ubuntu-latest
-      mac:
+      Mac:
         os: macos-latest
   pool:
     vmImage: $(os)
   steps:
-  - checkout: 
+  - checkout: self
   #- name: Setup .NET
   #   uses: actions/setup-dotnet@v2
   #   with:
@@ -70,13 +70,13 @@ jobs:
             dotnet_framework: net6.0-windows10.0.17763.0
             dotnet_arch: ${{ platform }}
             dotnet_configuration: ${{ dotnet_config }}
-          ${{ dotnet_config }}linux_${{ platform }}:
+          ${{ dotnet_config }}_linux_${{ platform }}:
             os: ubuntu-latest
             dotnet_os: linux
             dotnet_framework: net6.0
             dotnet_arch: ${{ platform }}
             dotnet_configuration: ${{ dotnet_config }}
-          ${{ dotnet_config }}macos_${{ platform }}:
+          ${{ dotnet_config }}_macos_${{ platform }}:
             os: macos-latest
             dotnet_os: osx.12
             dotnet_framework: net6.0
@@ -85,10 +85,10 @@ jobs:
   pool:
     vmImage: $(os)
 
-  displayName: Build CLI - $(dotnet_os)-$(dotnet_arch)
+  displayName: Build CLI
 
   steps:
-  - checkout: 
+  - checkout: self
   # - name: Setup .NET
   #   uses: actions/setup-dotnet@v2
   #   with:
