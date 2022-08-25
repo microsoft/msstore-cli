@@ -31,7 +31,8 @@ jobs:
     vmImage: $(os)
   steps:
   - checkout: self
-  - task: Setup .NET
+  - task: UseDotNet@2
+    displayName: Setup .NET
     inputs:
       version: 6.0.x
   - script: |
@@ -91,7 +92,8 @@ jobs:
 
   steps:
   - checkout: self
-  - task: Setup .NET
+  - task: UseDotNet@2
+    displayName: Setup .NET
     inputs:
       version: 6.0.x
   - script: dotnet restore MSStore.CLI -r $(dotnet_os)-$(dotnet_arch) /p:Configuration=$(dotnet_configuration)
