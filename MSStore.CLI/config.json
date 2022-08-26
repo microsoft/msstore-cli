@@ -1,0 +1,3 @@
+{
+  "AIConnectionString": "#{AI_CONNECTION_STRING}#"
+}

@@ -1,0 +1,67 @@
+parameters:
+  - name: dotnet_configuration
+    type: object
+    default:
+      - Release
+  - name: AgentOS
+    type: string
+    default: ''
+  - name: DoEsrp
+    type: boolean
+    default: false
+
+steps:
+- script: dotnet pack MSStore.API --no-build -c ${{ parameters.dotnet_configuration }}
+  displayName: Pack NuGet
+- ${{ if eq(parameters['DoEsrp'], 'true') }}:
+  - task: EsrpCodeSigning@2
+    displayName: Code Sign ESRP - Nuget
+    condition: startsWith(variables.AgentOS, 'Linux')
+    inputs:
+      ConnectedServiceName: 'MSStoreCLI - ESRP Code Signing'
+      FolderPath: '$(System.DefaultWorkingDirectory)/MSStore.API/bin/${{ parameters.dotnet_configuration }}'
+      Pattern: '*.nupkg'
+      signConfigType: inlineSignParams
+      inlineOperation: |
+       [ 
+           {
+               "KeyCode": "CP-401405",
+               "OperationCode": "NuGetSign",
+               "Parameters": { },
+               "ToolName": "sign",
+               "ToolVersion": "1.0"
+           },
+           {
+               "KeyCode": "CP-401405",
+               "OperationCode": "NuGetVerify",
+               "Parameters": { },
+               "ToolName": "sign",
+               "ToolVersion": "1.0"
+           }
+       ]
+- task: CopyFiles@2
+  displayName: 'Copy Artifacts - NuGet'
+  condition: startsWith(variables.AgentOS, 'Linux')
+  inputs:
+    contents: '$(System.DefaultWorkingDirectory)/MSStore.API/bin/${{ parameters.dotnet_configuration }}/*.nupkg'
+    flattenFolders: true
+    targetFolder: '$(Build.ArtifactStagingDirectory)/NuGet'
+- task: CopyFiles@2
+  displayName: 'Copy Artifacts - NuGet DLLs'
+  condition: startsWith(variables.AgentOS, 'Linux')
+  inputs:
+    contents: '$(System.DefaultWorkingDirectory)/MSStore.API/bin/${{ parameters.dotnet_configuration }}/net7.0/*'
+    flattenFolders: true
+    targetFolder: '$(Build.ArtifactStagingDirectory)/NuGetDLLs'
+- task: PublishPipelineArtifact@1
+  displayName: Upload Artifact - NuGet
+  condition: startsWith(variables.AgentOS, 'Linux')
+  inputs:
+    path: '$(Build.ArtifactStagingDirectory)/NuGet'
+    artifactName: NuGet
+- task: PublishPipelineArtifact@1
+  displayName: Upload Artifact - NuGet DLLs
+  condition: startsWith(variables.AgentOS, 'Linux')
+  inputs:
+    path: '$(Build.ArtifactStagingDirectory)/NuGetDLLs'
+    artifactName: NuGetDLLs

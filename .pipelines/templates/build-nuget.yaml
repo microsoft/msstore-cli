@@ -1,0 +1,105 @@
+parameters:
+  - name: dotnet_configuration
+    type: object
+    default:
+      - Release
+  - name: AgentOS
+    type: string
+    default: ''
+  - name: DoEsrp
+    type: boolean
+    default: false
+
+steps:
+- script: |
+    echo "##vso[task.setvariable variable=AgentOS;]${{ parameters.AgentOS }}"
+- script: |
+    sudo apt-get install -y gnome-keyring
+    export $(dbus-launch --sh-syntax)
+    export $(echo 'anypass_just_to_unlock' | gnome-keyring-daemon --unlock)
+    export $(echo 'anypass_just_to_unlock' | gnome-keyring-daemon --start --components=gpg,pkcs11,secrets,ssh)
+  condition: startsWith(variables.AgentOS, 'Linux')
+  displayName: Install and Configure Keyring
+- task: DotNetCoreCLI@2
+  inputs:
+    command: custom
+    custom: tool
+    arguments: install --tool-path . nbgv
+  displayName: Install NBGV tool
+- script: ./nbgv cloud
+  condition: startsWith(variables.AgentOS, 'Darwin')
+  displayName: Set Version MacOS
+- script: nbgv cloud
+  condition: not(startsWith(variables.AgentOS, 'Darwin'))
+  displayName: Set Version
+- script: dotnet build MSStore.CLI.sln --no-restore /p:Configuration=${{ parameters.dotnet_configuration }}
+  displayName: Build
+- task: DotNetCoreCLI@2
+  displayName: 'Tests'
+  env:
+    CollectCoverage: true
+    CoverletOutputFormat: cobertura
+  inputs:
+    command: 'test'
+    projects: '**/*[Tt]est*/*.csproj'
+    publishTestResults: true
+    arguments: '--configuration ${{ parameters.dotnet_configuration }}'
+- task: DotNetCoreCLI@2
+  displayName: 'Install ReportGenerator'
+  inputs:
+    command: custom
+    custom: tool
+    arguments: 'install --global dotnet-reportgenerator-globaltool --version 5.1.10'
+- script: reportgenerator "-reports:$(Build.SourcesDirectory)/**/*coverage.*.cobertura.xml" "-targetdir:$(Build.SourcesDirectory)/report" "-reporttypes:Cobertura" "-filefilters:-*GenerationContext*.g.cs"
+  displayName: Merge code coverage files
+- task: PublishCodeCoverageResults@1
+  displayName: 'Publish code coverage results'
+  inputs:
+    codeCoverageTool: 'Cobertura'
+    summaryFileLocation: '$(Build.SourcesDirectory)/report/Cobertura.xml'
+- ${{ if eq(parameters['DoEsrp'], 'true') }}:
+  - task: EsrpCodeSigning@2
+    displayName: Code Sign ESRP - API DLL
+    condition: startsWith(variables.AgentOS, 'Linux')
+    inputs:
+      ConnectedServiceName: 'MSStoreCLI - ESRP Code Signing'
+      FolderPath: '$(System.DefaultWorkingDirectory)/MSStore.API/bin/${{ parameters.dotnet_configuration }}/net7.0'
+      Pattern: 'MSStore.API.dll'
+      signConfigType: inlineSignParams
+      inlineOperation: |
+       [ 
+           {
+               "KeyCode": "CP-233863-SN",
+               "OperationCode": "StrongNameSign",
+               "Parameters": { },
+               "ToolName": "sign",
+               "ToolVersion": "1.0"
+           },
+           {
+               "KeyCode": "CP-233863-SN",
+               "OperationCode": "StrongNameVerify",
+               "Parameters": { },
+               "ToolName": "sign",
+               "ToolVersion": "1.0"
+           },
+           {
+               "KeyCode": "CP-230012",
+               "OperationCode": "SigntoolSign",
+               "Parameters": {
+                   "OpusName": "Microsoft Store CLI",
+                   "OpusInfo": "https://github.com/Microsoft/msstore-cli",
+                   "FileDigest": "/fd \"SHA256\"",
+                   "PageHash": "/PH",
+                   "TimeStamp": "/tr \"http://rfc3161.gtm.corp.microsoft.com/TSS/HttpTspServer\" /td sha256"
+               },
+               "ToolName": "sign",
+               "ToolVersion": "1.0"
+            },
+            {
+               "KeyCode": "CP-230012",
+               "OperationCode": "SigntoolVerify",
+               "Parameters": {},
+               "ToolName": "sign",
+               "ToolVersion": "1.0"
+            }
+       ]

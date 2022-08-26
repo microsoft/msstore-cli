@@ -1,0 +1,250 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
+
+using System.Runtime.CompilerServices;
+using MSStore.API.Packaged.Models;
+using MSStore.CLI.Services.PWABuilder;
+
+namespace MSStore.CLI.UnitTests
+{
+    [TestClass]
+    public class ProjectConfiguratorTests : BaseCommandLineTest
+    {
+        [TestInitialize]
+        public void Init()
+        {
+            FakeLogin();
+            AddDefaultFakeAccount();
+            AddFakeApps();
+        }
+
+        private static string CopyFilesRecursively(string sourcePath, [CallerMemberName] string caller = null!)
+        {
+            sourcePath = Path.Combine("TestData", sourcePath);
+
+            var targetPath = Path.Combine(caller, sourcePath);
+
+            Directory.CreateDirectory(targetPath);
+
+            foreach (string dirPath in Directory.GetDirectories(sourcePath, "*", SearchOption.AllDirectories))
+            {
+                Directory.CreateDirectory(dirPath.Replace(sourcePath, targetPath));
+            }
+
+            foreach (string newPath in Directory.GetFiles(sourcePath, "*.*", SearchOption.AllDirectories))
+            {
+                File.Copy(newPath, newPath.Replace(sourcePath, targetPath), true);
+            }
+
+            return targetPath;
+        }
+
+        [TestMethod]
+        public async Task ProjectConfiguratorParsesFlutterProject()
+        {
+            var path = CopyFilesRecursively("FlutterProject");
+
+            ExternalCommandExecutor
+                .Setup(x => x.RunAsync(It.Is<string>(s => s == "flutter pub add --dev msix --dry-run"), It.Is<string>(s => s == new DirectoryInfo(path).FullName), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Services.ExternalCommandExecutionResult
+                {
+                    ExitCode = 0,
+                    StdOut = "No dependencies would change",
+                    StdErr = string.Empty
+                });
+
+            var result = await ParseAndInvokeAsync(
+                new string[]
+                {
+                    "init",
+                    path,
+                    "--verbose"
+                });
+
+            result = result.Replace(Environment.NewLine, string.Empty);
+
+            ExternalCommandExecutor.VerifyAll();
+
+            result.Should().Contain("This seems to be a Flutter project.");
+            result.Should().Contain("is now configured to build to the Microsoft Store!");
+
+            var pubspecYamlFileContents = await File.ReadAllTextAsync(Path.Combine(path, "pubspec.yaml"));
+
+            pubspecYamlFileContents.Should().Contain("msix");
+        }
+
+        [TestMethod]
+        public async Task ProjectConfiguratorParsesAlreadyConfiguredFlutterProject()
+        {
+            var path = CopyFilesRecursively("FlutterProject");
+
+            ExternalCommandExecutor
+                .Setup(x => x.RunAsync(It.Is<string>(s => s == "flutter pub add --dev msix --dry-run"), It.Is<string>(s => s == new DirectoryInfo(path).FullName), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Services.ExternalCommandExecutionResult
+                {
+                    ExitCode = 0,
+                    StdOut = "Would change XX dependencies.",
+                    StdErr = string.Empty
+                });
+
+            ExternalCommandExecutor
+                .Setup(x => x.RunAsync(It.Is<string>(s => s == "flutter pub add --dev msix"), It.Is<string>(s => s == new DirectoryInfo(path).FullName), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Services.ExternalCommandExecutionResult
+                {
+                    ExitCode = 0,
+                    StdOut = string.Empty,
+                    StdErr = string.Empty
+                });
+
+            var result = await ParseAndInvokeAsync(
+                new string[]
+                {
+                    "init",
+                    path,
+                    "--verbose"
+                });
+
+            result = result.Replace(Environment.NewLine, string.Empty);
+
+            ExternalCommandExecutor.VerifyAll();
+
+            result.Should().Contain("This seems to be a Flutter project.");
+            result.Should().Contain("is now configured to build to the Microsoft Store!");
+
+            var pubspecYamlFileContents = await File.ReadAllTextAsync(Path.Combine(path, "pubspec.yaml"));
+
+            pubspecYamlFileContents.Should().Contain("msix");
+        }
+
+        [TestMethod]
+        public async Task ProjectConfiguratorParsesUWPProject()
+        {
+            var path = CopyFilesRecursively("UWPProject");
+
+            var result = await ParseAndInvokeAsync(
+                new string[]
+                {
+                    "init",
+                    path,
+                    "--verbose"
+                });
+
+            result = result.Replace(Environment.NewLine, string.Empty);
+
+            result.Should().Contain("This seems to be a UWP project.");
+
+            var appxManifestFileContents = await File.ReadAllTextAsync(Path.Combine(path, "Package.appxmanifest"));
+
+            appxManifestFileContents.Should().Contain("Fake App");
+        }
+
+        private void SetupSuccessfullPWA()
+        {
+            FakeConsole
+                .SetupSequence(x => x.RequestStringAsync(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync("1")
+                .ReturnsAsync("en-US");
+
+            PWABuilderClient
+                .Setup(x => x.GenerateZipAsync(It.IsAny<GenerateZipRequest>(), It.IsAny<IProgress<double>>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((GenerateZipRequest generateZipRequest, IProgress<double> progress, CancellationToken ct) =>
+                {
+                    progress.Report(0);
+
+                    var rootDir = Path.Combine(Path.GetTempPath(), "MSStore", "PWAZips");
+
+                    Directory.CreateDirectory(rootDir);
+
+                    var filePath = Path.Combine(rootDir, Path.ChangeExtension(Path.GetRandomFileName(), "zip"));
+
+                    progress.Report(100);
+
+                    return filePath;
+                });
+            PWABuilderClient
+                .Setup(x => x.FetchWebManifestAsync(It.IsAny<Uri>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new WebManifestFetchResponse
+                {
+                    Content = new WebManifestFetchContent
+                    {
+                        Json = new WebManifestJson
+                        {
+                            Description = "Test description",
+                            Screenshots = new List<ScreenShot>
+                            {
+                                new ScreenShot
+                                {
+                                    Src = "https://www.microsoft.com/image1.png"
+                                }
+                            },
+                            Icons = new List<Icon>
+                            {
+                                new Icon
+                                {
+                                    Src = "https://www.microsoft.com/image2.png",
+                                    Sizes = "512x512"
+                                },
+                                new Icon
+                                {
+                                    Src = "https://www.microsoft.com/image3.png",
+                                    Sizes = "6x5"
+                                }
+                            }
+                        }
+                    },
+                });
+
+            AddDefaultFakeSubmission();
+            InitDefaultSubmissionStatusResponseQueue();
+
+            FakeStorePackagedAPI
+                .Setup(x => x.CommitSubmissionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new DevCenterCommitResponse
+                {
+                    Status = "CommitStarted",
+                });
+        }
+
+        [TestMethod]
+        public async Task ProjectConfiguratorParserPWA()
+        {
+            SetupSuccessfullPWA();
+
+            var result = await ParseAndInvokeAsync(
+                new string[]
+                {
+                    "init",
+                    "https://microsoft.com",
+                    "--verbose"
+                });
+
+            TokenManager
+                .Verify(x => x.SelectAccountAsync(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Once);
+
+            result.Should().Contain("You've provided a URL, so we'll use PWABuilder.com to setup your PWA and upload");
+            result.Should().Contain("Submission commit success!");
+        }
+
+        [TestMethod]
+        public async Task ProjectConfiguratorParserPWAShouldNotCallPartnerCenterAPIIfPublisherNameIsProvided()
+        {
+            SetupSuccessfullPWA();
+
+            var result = await ParseAndInvokeAsync(
+                new string[]
+                {
+                    "init",
+                    "https://microsoft.com",
+                    "--publisherDisplayName",
+                    "FAKE_PUBLISHER_DISPLAY_NAME",
+                    "--verbose"
+                });
+
+            TokenManager
+                .Verify(x => x.SelectAccountAsync(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
+
+            result.Should().Contain("You've provided a URL, so we'll use PWABuilder.com to setup your PWA and upload");
+            result.Should().Contain("Submission commit success!");
+        }
+    }
+}

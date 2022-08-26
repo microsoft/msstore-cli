@@ -1,0 +1,19 @@
+schedules:
+- cron: "0 0 1 * *"
+  displayName: Monthly check
+  branches:
+    include:
+    - main
+
+pr: none
+
+jobs:
+- job: CodeInspector
+  displayName: Code Inspector
+  pool:
+    vmImage: windows-latest
+  steps:
+  - checkout: self
+  - task: CodeInspector@2
+    inputs:
+      ProductId: $(STPID)

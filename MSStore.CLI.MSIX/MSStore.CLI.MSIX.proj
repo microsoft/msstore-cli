@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+    <ItemGroup>
+        <MakeMsixInputAssets Include="$(MSBuildThisFileDirectory)Assets\*" />
+        <MakeMsixInputs Include="$(MSBuildThisFileDirectory)obj\$(Platform)\appxmanifest.xml" />
+        <MakeMsixInputs Include="$(PublishFolderPath)\**\*" />
+    </ItemGroup>
+
+    <PropertyGroup>
+        <MakeMsixOutputFilename Condition="'$(MakeMsixOutputFilename)' == ''">MSStore.CLI.MSIX_LOCAL_$(Platform).msix</MakeMsixOutputFilename>
+        <OutDir Condition="'$(OutDir)' == ''">$(MSBuildThisFileDirectory)AppPackages\$(Platform)\</OutDir>
+    </PropertyGroup>
+
+    <Target Name="MakeMSIX"
+      Inputs="@(MakeMsixInputs);@(MakeMsixInputAssets)"
+      Outputs="$(OutDir)$(MakeMsixOutputFilename)">
+
+        <PropertyGroup>
+            <_MakeMsix_WorkDir>$(OutDir)msix</_MakeMsix_WorkDir>
+            <_MakeMsix_OutDir>$(OutDir)</_MakeMsix_OutDir>
+            <_MakeMsix_OutFilename>$(_MakeMsix_OutDir)$(MakeMsixOutputFilename)</_MakeMsix_OutFilename>
+            <MakeMsixOutputFilename>$(_MakeMsix_OutFilename)</MakeMsixOutputFilename>
+            <_MakeMsix_Directory>C:\Program Files (x86)\Windows Kits\10\App Certification Kit\</_MakeMsix_Directory>
+            <_MakeMsix_Executable>makeappx.exe</_MakeMsix_Executable>
+            <_MakeMsix_Path Condition="'$(_MakeMsix_Path)' == ''">$(_MakeMsix_Directory)$(_MakeMsix_Executable)</_MakeMsix_Path>
+            <_MakeMsix_Parameters>/o /h SHA256</_MakeMsix_Parameters>
+            <_MakeMsixCommand>&quot;$(_MakeMsix_Path)&quot; pack $(_MakeMsix_Parameters) /d $(_MakeMsix_WorkDir) /p $(_MakeMsix_OutFilename)</_MakeMsixCommand>
+        </PropertyGroup>
+        <RemoveDir Directories="$(_MakeMsix_WorkDir)" Condition="Exists('$(_MakeMsix_WorkDir)')" />
+        <Delete Files="$(OutDir)$(MakeMsixOutputFilename)"/>
+        <MakeDir Directories="$(_MakeMsix_WorkDir)" Condition="!Exists('$(_MakeMsix_WorkDir)')" />
+        <Message Text="MakeMSIX: Copy @(MakeMsixInputs) to $(_MakeMsix_WorkDir)" Importance="normal" />
+        <Copy SourceFiles="@(MakeMsixInputs)" DestinationFolder="$(_MakeMsix_WorkDir)" SkipUnchangedFiles="true" />
+        <Message Text="MakeMSIX: Copy @(MakeMsixInputAssets) to $(_MakeMsix_WorkDir)\Assets" Importance="normal" Condition="'@(MakeMsixInputAssets)' != ''"/>
+        <MakeDir Directories="$(_MakeMsix_WorkDir)\Assets" Condition="'@(MakeMsixInputAssets)' != '' and !Exists('$(_MakeMsix_WorkDir)\Assets')" />
+        <Copy SourceFiles="@(MakeMsixInputAssets)" DestinationFolder="$(_MakeMsix_WorkDir)\Assets" SkipUnchangedFiles="true" Condition="'@(MakeMsixInputAssets)' != ''"/>
+
+        <Message Text="MakeMSIX: Command: $(_MakeMsixCommand)" Importance="normal" />
+        <Exec Command="$(_MakeMsixCommand)" />
+    </Target>
+
+</Project>

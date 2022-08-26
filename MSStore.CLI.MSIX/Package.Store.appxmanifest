@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
+  xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
+  xmlns:uap8="http://schemas.microsoft.com/appx/manifest/uap/windows10/8"
+  IgnorableNamespaces="uap rescap desktop uap3 uap8">
+
+    <Identity
+      Name="Microsoft.MicrosoftStoreCLI"
+      Publisher="CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US"
+      Version="0.1.0.0" />
+
+    <Properties>
+        <DisplayName>Microsoft Store CLI</DisplayName>
+        <PublisherDisplayName>Microsoft Corporation</PublisherDisplayName>
+        <Logo>Assets\StoreLogo.png</Logo>
+    </Properties>
+
+    <Dependencies>
+        <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.19033.0" />
+    </Dependencies>
+
+    <Resources>
+        <Resource Language="EN-US"/>
+    </Resources>
+
+    <Applications>
+        <Application Id="MSStoreCLI"
+          Executable="MSStore.exe"
+          EntryPoint="Windows.FullTrustApplication">
+            <uap:VisualElements
+              DisplayName="MSStore.CLI"
+              Description="MSStore.CLI"
+              BackgroundColor="transparent"
+              Square150x150Logo="Assets\Square150x150Logo.png"
+              Square44x44Logo="Assets\Square44x44Logo.png"
+              AppListEntry="none"/>
+            <Extensions>
+                <uap3:Extension
+                    Category="windows.appExecutionAlias">
+                    <uap3:AppExecutionAlias>
+                        <desktop:ExecutionAlias Alias="MSStore.exe" />
+                    </uap3:AppExecutionAlias>
+                </uap3:Extension>
+            </Extensions>
+        </Application>
+    </Applications>
+
+    <Capabilities>
+        <rescap:Capability Name="runFullTrust" />
+    </Capabilities>
+</Package>

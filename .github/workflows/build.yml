@@ -1,0 +1,146 @@
+name: CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'main'
+      - 'rel/v**'
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-nuget-and-tests:
+    name: Build Nuget and Run Tests
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ windows-latest, ubuntu-latest, macos-latest ]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v2
+      with:
+        dotnet-version: 7.0.x
+    - name: Install and Configure Keyring
+      if: ${{ matrix.os == 'ubuntu-latest' }}
+      run: |
+        sudo apt-get install -y gnome-keyring
+        export $(dbus-launch --sh-syntax)
+        export $(echo 'anypass_just_to_unlock' | gnome-keyring-daemon --unlock)
+        export $(echo 'anypass_just_to_unlock' | gnome-keyring-daemon --start --components=gpg,pkcs11,secrets,ssh)
+    - name: Install NBGV tool
+      run: dotnet tool install --tool-path . nbgv
+    - name: Set Version
+      run: ./nbgv cloud
+    - name: Restore dependencies
+      run: dotnet restore MSStore.CLI.sln /p:Configuration=Release
+    - name: Build
+      run: dotnet build MSStore.CLI.sln --no-restore /p:Configuration=Release
+    - name: Test
+      env:
+        CollectCoverage: true
+        CoverletOutputFormat: cobertura
+      run: dotnet test MSStore.CLI.sln --no-restore /p:Configuration=Release --logger trx
+    - name: Display test results
+      uses: dorny/test-reporter@v1
+      if: always()
+      with:
+        name: Test - Results - ${{ matrix.os }}
+        path: MSStore.CLI.UnitTests/TestResults/*.trx
+        reporter: dotnet-trx
+    - name: Install ReportGenerator
+      run: dotnet tool install --global dotnet-reportgenerator-globaltool --version 5.1.10
+    - name: Merge code coverage files
+      run: reportgenerator "-reports:${{ github.workspace }}/**/*coverage.*.cobertura.xml" "-targetdir:${{ github.workspace }}/report" "-reporttypes:Cobertura" "-filefilters:-*GenerationContext*.g.cs"
+    - name: Publish code coverage results
+      if: ${{ !env.ACT }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: Cobertura
+        path: ${{ github.workspace }}/report/Cobertura.xml
+    # TODO: Publish github comment with code coverage
+    - name: Pack NuGet
+      if: ${{ matrix.os == 'ubuntu-latest' }}
+      run: dotnet pack MSStore.API --no-build -c Release
+    - name: Upload Artifact - NuGet
+      if: ${{ matrix.os == 'ubuntu-latest' && !env.ACT }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: NuGet
+        path: MSStore.API/bin/Release/*.nupkg
+  
+  build-cli:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ windows-latest, ubuntu-latest, macos-latest ]
+        dotnet-configuration: [ 'Release' ]
+        dotnet-arch: ['x64', 'arm64' ]
+        include:
+          - os: windows-latest
+            dotnet-os: win
+            dotnet-framework: net7.0-windows10.0.17763.0
+          - os: ubuntu-latest
+            dotnet-os: linux
+            dotnet-framework: net7.0
+          - os: macos-latest
+            dotnet-os: osx.12
+            dotnet-framework: net7.0
+    runs-on: ${{ matrix.os }}
+
+    name: Build CLI - ${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }}
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v2
+      with:
+        dotnet-version: 7.0.x
+    - name: Add msbuild to PATH
+      if: ${{ matrix.os == 'windows-latest' }}
+      uses: microsoft/setup-msbuild@v1.1
+    - name: Install NBGV tool
+      run: dotnet tool install --tool-path . nbgv
+    - name: Set Version
+      run: ./nbgv cloud
+    - name: Restore CLI
+      run: dotnet restore MSStore.CLI -r ${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }} /p:Configuration=Release /p:PublishReadyToRun=true
+    - name: Build CLI
+      run: dotnet build MSStore.CLI --no-restore --no-self-contained -r ${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }} -f ${{ matrix.dotnet-framework }} /p:Configuration=Release
+    - name: Publish SelfContained CLI
+      run: dotnet publish MSStore.CLI --no-build --no-self-contained -r ${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }} -f ${{ matrix.dotnet-framework }} /p:Configuration=Release /p:PublishProfile=${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }}
+    - run: |
+         New-Item -ItemType File -Path ".\MSStore.CLI.MSIX\obj\${{ matrix.dotnet-arch }}\appxmanifest.xml" -Force
+         Copy-Item ".\MSStore.CLI.MSIX\Package.appxmanifest" -Destination ".\MSStore.CLI.MSIX\obj\${{ matrix.dotnet-arch }}\appxmanifest.xml" -Force
+         [xml]$manifest = get-content ".\MSStore.CLI.MSIX\obj\${{ matrix.dotnet-arch }}\appxmanifest.xml"
+         $manifest.Package.Identity.Version = '${{ env.GitBuildVersionSimple }}.0'
+         $manifest.Package.Identity.SetAttribute('ProcessorArchitecture', '${{ matrix.dotnet-arch }}')
+         $manifest.Save((Resolve-Path ".\MSStore.CLI.MSIX\obj\${{ matrix.dotnet-arch }}\appxmanifest.xml"))
+      if: ${{ matrix.os == 'windows-latest' }}
+      name: Version Package Manifest
+    - name: Build CLI MSIX
+      if: ${{ matrix.os == 'windows-latest' }}
+      env:
+        Configuration: Release
+      run: dotnet msbuild .\MSStore.CLI.MSIX\MSStore.CLI.MSIX.proj -target:MakeMSIX /p:Platform=${{ matrix.dotnet-arch }} /p:MakeMsixOutputFilename='MSStore.CLI.MSIX_${{ env.GitBuildVersionSimple }}.0_${{ matrix.dotnet-arch }}_Test.msix' /p:PublishFolderPath='${{ github.workspace }}/MSStore.CLI/bin/Release/${{ matrix.dotnet-framework }}/${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }}/publish/'
+    - name: Sign CLI MSIX
+      if: ${{ matrix.os == 'windows-latest' }}
+      run: ."C:\Program Files (x86)\Windows Kits\10\App Certification Kit\SignTool.exe" sign /fd SHA256 /a /f .\MSStore.CLI.MSIX\MSStore.CLI.MSIX_TemporaryKey.pfx ${{ github.workspace }}/MSStore.CLI.MSIX/AppPackages/${{ matrix.dotnet-arch }}/MSStore.CLI.MSIX_${{ env.GitBuildVersionSimple }}.0_${{ matrix.dotnet-arch }}_Test.msix
+    - name: Upload Artifact - CLI
+      if: ${{ !env.ACT }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: CLI-${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }}
+        path: ${{ github.workspace }}/MSStore.CLI/bin/Release/${{ matrix.dotnet-framework }}/${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }}/publish/**/*
+    - name: Upload Artifact - MSIX
+      if: ${{ matrix.os == 'windows-latest' && !env.ACT }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: CLI-MSIX-${{ matrix.dotnet-arch }}
+        path: ${{ github.workspace }}/MSStore.CLI.MSIX/AppPackages/${{ matrix.dotnet-arch }}/MSStore.CLI.MSIX_${{ env.GitBuildVersionSimple }}.0_${{ matrix.dotnet-arch }}_Test.msix

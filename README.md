@@ -1,5 +1,7 @@
 # Microsoft Store Command Line Interface (CLI)
 
+[![CI](https://github.com/microsoft/msstore-cli/actions/workflows/build.yml/badge.svg)](https://github.com/microsoft/msstore-cli/actions/workflows/build.yml)
+
 ## About
 The Microsoft Store Command Line Interface is a cross-platform (Windows, MacOS, Linux) CLI that helps developers access the APIs Microsoft Store APIs, for both managed (MSIX), as well as un-managed (MSI/EXE) applications. It helps developers by creating required online resources (credentials), as well as later setting up their application projects (UWPs, Win32s, Flutter, PWAs, as well as many other types of Windows application) to be ready to ship to the Microsoft Store, going from the initial steps of configuring the application's manifest, as well as the actual publishing of an MSIX or MSI/EXE.
 
@@ -24,3 +26,15 @@ trademarks or logos is subject to and must follow
 [Microsoft's Trademark & Brand Guidelines](https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks/usage/general).
 Use of Microsoft trademarks or logos in modified versions of this project must not cause confusion or imply Microsoft sponsorship.
 Any use of third-party trademarks or logos are subject to those third-party's policies.
+
+## Data/Telemetry
+
+The `msstore.exe` client is instrumented to collect usage and diagnostic (error) data and sends it to Microsoft to help improve the product.
+
+If you build the client yourself the instrumentation will not be enabled and no data will be sent to Microsoft.
+
+See the [privacy statement](privacy.md) for more details.
+
+### Telemetry Configuration
+
+Telemetry collection is on by default. To opt out, please run `msstore settings --enableTelemetry false` to turn it off.

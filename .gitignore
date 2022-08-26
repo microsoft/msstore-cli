@@ -9,6 +9,7 @@
 *.user
 *.userosscache
 *.sln.docstates
+*.lutconfig
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
@@ -140,6 +141,8 @@ _TeamCity*
 # Visual Studio code coverage results
 *.coverage
 *.coveragexml
+*Cobertura.xml
+report
 
 # NCrunch
 _NCrunch_*
@@ -348,3 +351,7 @@ MigrationBackup/
 
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
+
+/MSStore.CLI/Properties/launchSettings.json
+/MSStore.CLI.UnitTests/coverage.json
+/testEnvironments.json
