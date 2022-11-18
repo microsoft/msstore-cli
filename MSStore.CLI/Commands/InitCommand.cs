@@ -202,7 +202,12 @@ namespace MSStore.CLI.Commands
             {
                 var appList = await GetAppListAsync(storePackagedAPI, ct);
 
-                if (appList?.Any() != true)
+                if (appList == null)
+                {
+                    return null;
+                }
+
+                if (appList.Any() != true)
                 {
                     AnsiConsole.WriteLine("Your account has no registered apps yet.");
                     AnsiConsole.MarkupLine("[b]Lets create one![/]");
