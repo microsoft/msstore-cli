@@ -112,15 +112,19 @@ namespace MSStore.CLI.Services
             {
                 if (!_graphClient.Enabled || await _consoleReader.YesNoConfirmationAsync("Do you have a client+secret?'", ct))
                 {
-                    string? guidStr = await _consoleReader.RequestStringAsync("Client Id", false, ct);
-                    Guid guid;
-                    if (!Guid.TryParse(guidStr, out guid))
+                    if (!config.ClientId.HasValue)
                     {
-                        AnsiConsole.MarkupLine("[bold red]Invalid Client Id[/]");
-                        return false;
+                        string? guidStr = await _consoleReader.RequestStringAsync("Client Id", false, ct);
+                        Guid guid;
+                        if (!Guid.TryParse(guidStr, out guid))
+                        {
+                            AnsiConsole.MarkupLine("[bold red]Invalid Client Id[/]");
+                            return false;
+                        }
+
+                        config.ClientId = guid;
                     }
 
-                    config.ClientId = guid;
                     clientSecret = await _consoleReader.RequestStringAsync("Client Secret", true, ct);
                     if (string.IsNullOrEmpty(clientSecret))
                     {
