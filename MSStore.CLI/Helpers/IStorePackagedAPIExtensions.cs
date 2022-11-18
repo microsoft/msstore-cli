@@ -240,5 +240,40 @@ namespace MSStore.CLI.Helpers
 
             return 0;
         }
+
+        public static async Task<bool> DeleteSubmissionAsync(this IStorePackagedAPI storePackagedAPI, string appId, string pendingSubmissionId, IBrowserLauncher browserLauncher, ILogger logger, CancellationToken ct)
+        {
+            return await AnsiConsole.Status().StartAsync("Deleting existing Submission", async ctx =>
+            {
+                try
+                {
+                    var devCenterError = await storePackagedAPI.DeleteSubmissionAsync(appId, pendingSubmissionId, ct);
+                    if (devCenterError != null)
+                    {
+                        AnsiConsole.WriteLine(devCenterError.Message ?? string.Empty);
+                        if (devCenterError.Code == "InvalidOperation" &&
+                            devCenterError.Source == "Ingestion Api" &&
+                            devCenterError.Target == "applicationSubmission")
+                        {
+                            var existingSubmission = await storePackagedAPI.GetSubmissionAsync(appId, pendingSubmissionId, ct);
+                            AnsiConsole.WriteLine(existingSubmission.Id ?? string.Empty);
+
+                            browserLauncher.OpenBrowser($"https://partner.microsoft.com/dashboard/products/{appId}/submissions/{existingSubmission.Id}");
+                            return false;
+                        }
+                    }
+
+                    ctx.SuccessStatus("Existing submission deleted!");
+                }
+                catch (Exception err)
+                {
+                    logger.LogError(err, "Error while deleting existing submission.");
+                    ctx.ErrorStatus("Error while deleting existing submission. Please try again.");
+                    return false;
+                }
+
+                return true;
+            });
+        }
     }
 }

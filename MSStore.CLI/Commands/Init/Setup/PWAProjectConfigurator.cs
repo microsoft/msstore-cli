@@ -93,7 +93,7 @@ namespace MSStore.CLI.Commands.Init.Setup
             // Do not delete if first submission
             if (pendingSubmissionId != null && app.LastPublishedApplicationSubmission != null)
             {
-                success = await DeleteSubmissionAsync(storePackagedAPI, app.Id, pendingSubmissionId, ct);
+                success = await storePackagedAPI.DeleteSubmissionAsync(app.Id, pendingSubmissionId, _browserLauncher, _logger, ct);
 
                 if (!success)
                 {
@@ -125,7 +125,7 @@ namespace MSStore.CLI.Commands.Init.Setup
                 var qs = System.Web.HttpUtility.ParseQueryString(submission.FileUploadUrl);
                 if (!DateTime.TryParse(qs["se"], out var fileUploadExpire) || fileUploadExpire < DateTime.UtcNow)
                 {
-                    success = await DeleteSubmissionAsync(storePackagedAPI, app.Id, submission.Id, ct);
+                    success = await storePackagedAPI.DeleteSubmissionAsync(app.Id, submission.Id, _browserLauncher, _logger, ct);
 
                     if (!success)
                     {
@@ -169,7 +169,13 @@ namespace MSStore.CLI.Commands.Init.Setup
                 return -1;
             }
 
-            var uploadZipFilePath = await ConfigureSubmissionAsync(uri, publisherDisplayName, app, submission, ct);
+            var zipPath = await ConfigureSubmissionAsync(submission, uri, publisherDisplayName, app, ct);
+            if (zipPath == null)
+            {
+                return -1;
+            }
+
+            var uploadZipFilePath = await PrepareBundleAsync(submission, zipPath, ct);
 
             if (uploadZipFilePath == null)
             {
@@ -223,7 +229,7 @@ namespace MSStore.CLI.Commands.Init.Setup
             return await storePackagedAPI.HandleLastSubmissionStatusAsync(lastSubmissionStatus, app.Id, submission.Id, _consoleReader, _browserLauncher, _logger, ct);
         }
 
-        public async Task<string?> ConfigureSubmissionAsync(Uri uri, string publisherDisplayName, DevCenterApplication app, DevCenterSubmission submission, CancellationToken ct)
+        public async Task<string?> ConfigureSubmissionAsync(DevCenterSubmission submission, Uri uri, string publisherDisplayName, DevCenterApplication app, CancellationToken ct)
         {
             if (submission.ApplicationPackages == null)
             {
@@ -329,7 +335,7 @@ namespace MSStore.CLI.Commands.Init.Setup
                 return null;
             }
 
-            return await PrepareBundleAsync(submission, zipPath, ct);
+            return zipPath;
         }
 
         private async Task FulfillApplicationAsync(DevCenterApplication app, DevCenterSubmission submission, WebManifestJson? webManifest, CancellationToken ct)
@@ -558,41 +564,6 @@ namespace MSStore.CLI.Commands.Init.Setup
                     AnsiConsole.MarkupLine($":collision: [bold red]Error while preparing bundle.[/]");
                     return null;
                 }
-            });
-        }
-
-        private async Task<bool> DeleteSubmissionAsync(IStorePackagedAPI storePackagedAPI, string appId, string pendingSubmissionId, CancellationToken ct)
-        {
-            return await AnsiConsole.Status().StartAsync("Deleting existing Submission", async ctx =>
-            {
-                try
-                {
-                    var devCenterError = await storePackagedAPI.DeleteSubmissionAsync(appId, pendingSubmissionId, ct);
-                    if (devCenterError != null)
-                    {
-                        AnsiConsole.WriteLine(devCenterError.Message ?? string.Empty);
-                        if (devCenterError.Code == "InvalidOperation" &&
-                            devCenterError.Source == "Ingestion Api" &&
-                            devCenterError.Target == "applicationSubmission")
-                        {
-                            var existingSubmission = await storePackagedAPI.GetSubmissionAsync(appId, pendingSubmissionId, ct);
-                            AnsiConsole.WriteLine(existingSubmission.Id ?? string.Empty);
-
-                            _browserLauncher.OpenBrowser($"https://partner.microsoft.com/dashboard/products/{appId}/submissions/{existingSubmission.Id}");
-                            return false;
-                        }
-                    }
-
-                    ctx.SuccessStatus("Existing submission deleted!");
-                }
-                catch (Exception err)
-                {
-                    _logger.LogError(err, "Error while deleting existing submission.");
-                    ctx.ErrorStatus("Error while deleting existing submission. Please try again.");
-                    return false;
-                }
-
-                return true;
             });
         }
     }
