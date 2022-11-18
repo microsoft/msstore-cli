@@ -21,7 +21,7 @@ namespace MSStore.CLI.Commands
             SkipInitialPolling = new Option<bool>(
                 aliases: new string[] { "--skipInitialPolling", "-s" },
                 getDefaultValue: () => false,
-                description: "Skip the initial polling before exeuting the action.");
+                description: "Skip the initial polling before executing the action.");
             ProductIdArgument = new Argument<string>(
                 name: "productId",
                 description: "The product ID.");
