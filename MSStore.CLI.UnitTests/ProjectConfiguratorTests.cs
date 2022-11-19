@@ -45,6 +45,15 @@ namespace MSStore.CLI.UnitTests
             var path = CopyFilesRecursively("FlutterProject");
 
             ExternalCommandExecutor
+                .Setup(x => x.RunAsync(It.Is<string>(s => s == "flutter pub get"), It.Is<string>(s => s == new DirectoryInfo(path).FullName), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Services.ExternalCommandExecutionResult
+                {
+                    ExitCode = 0,
+                    StdOut = string.Empty,
+                    StdErr = string.Empty
+                });
+
+            ExternalCommandExecutor
                 .Setup(x => x.RunAsync(It.Is<string>(s => s == "flutter pub add --dev msix --dry-run"), It.Is<string>(s => s == new DirectoryInfo(path).FullName), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult
                 {
@@ -77,6 +86,15 @@ namespace MSStore.CLI.UnitTests
         public async Task ProjectConfiguratorParsesAlreadyConfiguredFlutterProject()
         {
             var path = CopyFilesRecursively("FlutterProject");
+
+            ExternalCommandExecutor
+                .Setup(x => x.RunAsync(It.Is<string>(s => s == "flutter pub get"), It.Is<string>(s => s == new DirectoryInfo(path).FullName), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Services.ExternalCommandExecutionResult
+                {
+                    ExitCode = 0,
+                    StdOut = string.Empty,
+                    StdErr = string.Empty
+                });
 
             ExternalCommandExecutor
                 .Setup(x => x.RunAsync(It.Is<string>(s => s == "flutter pub add --dev msix --dry-run"), It.Is<string>(s => s == new DirectoryInfo(path).FullName), It.IsAny<CancellationToken>()))

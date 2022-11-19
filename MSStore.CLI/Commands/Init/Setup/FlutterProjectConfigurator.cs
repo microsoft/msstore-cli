@@ -14,13 +14,15 @@ using Spectre.Console;
 
 namespace MSStore.CLI.Commands.Init.Setup
 {
-    internal class FlutterProjectConfigurator : IProjectConfigurator
+    internal class FlutterProjectConfigurator : IProjectConfigurator, IProjectPackager, IProjectPublisher
     {
         private readonly IExternalCommandExecutor _externalCommandExecutor;
+        private readonly IImageConverter _imageConverter;
 
-        public FlutterProjectConfigurator(IExternalCommandExecutor externalCommandExecutor)
+        public FlutterProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IImageConverter imageConverter)
         {
             _externalCommandExecutor = externalCommandExecutor ?? throw new ArgumentNullException(nameof(externalCommandExecutor));
+            _imageConverter = imageConverter ?? throw new ArgumentNullException(nameof(imageConverter));
         }
 
         public string ConfiguratorProjectType { get; } = "Flutter";
@@ -45,17 +47,24 @@ namespace MSStore.CLI.Commands.Init.Setup
             }
         }
 
-        public async Task<int> ConfigureAsync(string pathOrUrl, string publisherDisplayName, DevCenterApplication app, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        private (DirectoryInfo projectRootPath, FileInfo flutterProjectFiles) GetInfo(string pathOrUrl)
         {
             DirectoryInfo projectRootPath = new DirectoryInfo(pathOrUrl);
-            var flutterProjectFiles = projectRootPath.GetFiles(SupportedProjectPattern.First(), SearchOption.TopDirectoryOnly);
+            FileInfo[] flutterProjectFiles = projectRootPath.GetFiles(SupportedProjectPattern.First(), SearchOption.TopDirectoryOnly);
 
             if (flutterProjectFiles.Length == 0)
             {
-                throw new InvalidOperationException("No pubspec.yaml file found in the project root directory.");
+                throw new MSStoreException("No pubspec.yaml file found in the project root directory.");
             }
 
             var flutterProjectFile = flutterProjectFiles.First();
+
+            return (projectRootPath, flutterProjectFile);
+        }
+
+        public async Task<int> ConfigureAsync(string pathOrUrl, string publisherDisplayName, DevCenterApplication app, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        {
+            var (projectRootPath, flutterProjectFile) = GetInfo(pathOrUrl);
 
             await InstallMsixDependencyAsync(projectRootPath, ct);
 
@@ -83,6 +92,7 @@ namespace MSStore.CLI.Commands.Init.Setup
                         if (commentStartIndex == -1 || commentStartIndex > indexOfMsixConfig)
                         {
                             msixConfigExists = true;
+                            break;
                         }
                     }
                 }
@@ -90,6 +100,13 @@ namespace MSStore.CLI.Commands.Init.Setup
 
             if (!msixConfigExists)
             {
+                var imagePath = await GenerateImageFromIcoAsync(projectRootPath, ct);
+
+                if (imagePath == null)
+                {
+                    return -2;
+                }
+
                 fileStream.Seek(0, SeekOrigin.End);
 
                 if (!string.IsNullOrWhiteSpace(yamlLines.Last()))
@@ -102,26 +119,62 @@ namespace MSStore.CLI.Commands.Init.Setup
                 streamWriter.WriteLine($"msix_config:");
                 streamWriter.WriteLine($"  display_name: {app.PrimaryName}");
                 streamWriter.WriteLine($"  publisher_display_name: {publisherDisplayName}");
+                streamWriter.WriteLine($"  publisher: {app.PublisherName}");
                 streamWriter.WriteLine($"  identity_name: {app.PackageIdentityName}");
                 streamWriter.WriteLine($"  msix_version: 0.0.1.0");
-                streamWriter.WriteLine($"  logo_path: C:\\path\\to\\logo.png");
-                streamWriter.WriteLine($"  capabilities: internetClient");
+                if (!string.IsNullOrEmpty(imagePath))
+                {
+                    streamWriter.WriteLine($"  logo_path: {Path.GetRelativePath(projectRootPath.FullName, imagePath)}");
+                }
+
+                streamWriter.WriteLine($"  msstore_appId: {app.Id}");
 
                 AnsiConsole.WriteLine($"Flutter project '{flutterProjectFile.FullName}' is now configured to build to the Microsoft Store!");
                 AnsiConsole.WriteLine("For more information on building your Flutter project to the Microsoft Store, see https://pub.dev/packages/msix#microsoft-store-icon-publishing-to-the-microsoft-store");
-
-                return 0;
             }
-            else
-            {
-                AnsiConsole.WriteLine();
 
-                return -1;
+            return 0;
+        }
+
+        private async Task<string?> GenerateImageFromIcoAsync(DirectoryInfo projectRootPath, CancellationToken ct)
+        {
+            try
+            {
+                var resourcesDirInfo = new DirectoryInfo(Path.Combine(projectRootPath.FullName, "windows", "runner", "resources"));
+                if (!resourcesDirInfo.Exists)
+                {
+                    return string.Empty;
+                }
+
+                var icons = resourcesDirInfo.GetFiles("*.ico");
+                var icon = icons.FirstOrDefault();
+                if (icon == null)
+                {
+                    return null;
+                }
+
+                var logoPath = Path.Combine(resourcesDirInfo.FullName, Path.GetFileNameWithoutExtension(icon.Name) + ".png");
+
+                await _imageConverter.ConvertIcoToPngAsync(icon.FullName, logoPath, ct);
+
+                return logoPath;
+            }
+            catch (Exception ex)
+            {
+                AnsiConsole.MarkupLine($"[red]Error generating logo.png from icon.ico: {ex.Message}[/]");
+                return null;
             }
         }
 
         private async Task InstallMsixDependencyAsync(DirectoryInfo projectRootPath, CancellationToken ct)
         {
+            var pubGet = await RunPubGet(projectRootPath, ct);
+
+            if (!pubGet)
+            {
+                throw new MSStoreException("Failed to run 'flutter pub get'.");
+            }
+
             var msixInstalled = await AnsiConsole.Status().StartAsync("Checking if package 'msix' is already installed...", async ctx =>
             {
                 try
@@ -162,15 +215,199 @@ namespace MSStore.CLI.Commands.Init.Setup
                     }
 
                     ctx.SuccessStatus("'msix' package installed successfully!");
+                }
+                catch (Exception)
+                {
+                    // _logger...
+                    throw new MSStoreException("Failed to install msix package.");
+                }
+            });
+        }
+
+        private async Task<bool> RunPubGet(DirectoryInfo projectRootPath, CancellationToken ct)
+        {
+            return await AnsiConsole.Status().StartAsync("Running 'flutter pub get'...", async ctx =>
+            {
+                try
+                {
+                    var result = await _externalCommandExecutor.RunAsync("flutter pub get", projectRootPath.FullName, ct);
+                    if (result.ExitCode == 0)
+                    {
+                        ctx.SuccessStatus("'flutter pub get' ran successfully.");
+                        return true;
+                    }
+
+                    ctx.ErrorStatus("'flutter pub get' failed.");
+
+                    return false;
+                }
+                catch (Exception)
+                {
+                    // _logger...
+                    throw new MSStoreException("Failed to run 'flutter pub get'.");
+                }
+            });
+        }
+
+        public async Task<int> PackageAsync(string pathOrUrl, DevCenterApplication? app, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        {
+            var (projectRootPath, flutterProjectFile) = GetInfo(pathOrUrl);
+
+            if (app == null)
+            {
+                var pubGet = await RunPubGet(projectRootPath, ct);
+
+                if (!pubGet)
+                {
+                    throw new MSStoreException("Failed to run 'flutter pub get'.");
+                }
+            }
+
+            return await AnsiConsole.Status().StartAsync("Packaging 'msix'...", async ctx =>
+            {
+                try
+                {
+                    var result = await _externalCommandExecutor.RunAsync("flutter pub run msix:build --store", projectRootPath.FullName, ct);
+
+                    if (result.ExitCode != 0)
+                    {
+                        throw new MSStoreException(result.StdErr);
+                    }
+
+                    ctx.SuccessStatus("Store package built successfully!");
+
+                    result = await _externalCommandExecutor.RunAsync("flutter pub run msix:pack --store", projectRootPath.FullName, ct);
+
+                    if (result.ExitCode != 0)
+                    {
+                        throw new MSStoreException(result.StdErr);
+                    }
+
+                    var msixLine = result.StdOut.Split(Environment.NewLine).LastOrDefault(line => line.Contains("msix created:"));
+                    if (msixLine == null)
+                    {
+                        throw new MSStoreException("Failed to find the path to the packaged msix file.");
+                    }
+
+                    var msixPath = msixLine.Split(":").LastOrDefault()?.Trim();
+
+                    AnsiConsole.MarkupLine("[green bold]Store package packaged successfully:[/]");
+                    AnsiConsole.WriteLine($"{msixPath}");
 
                     return 0;
                 }
                 catch (Exception ex)
                 {
                     // _logger...
-                    throw new InvalidOperationException("Failed to install msix package.", ex);
+                    throw new MSStoreException("Failed to generate msix package.", ex);
                 }
             });
+        }
+
+        public async Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        {
+            var (projectRootPath, flutterProjectFile) = GetInfo(pathOrUrl);
+
+            if (app == null)
+            {
+                // Try to find AppId inside the pubspec.yaml file
+                using var fileStream = flutterProjectFile.Open(FileMode.Open, FileAccess.ReadWrite);
+
+                string[] yamlLines;
+
+                using var streamReader = new StreamReader(fileStream);
+
+                var yaml = await streamReader.ReadToEndAsync(ct);
+
+                yamlLines = yaml.Split(Environment.NewLine);
+
+                string? appId = null;
+                foreach (var line in yamlLines)
+                {
+                    if (!string.IsNullOrWhiteSpace(line))
+                    {
+                        try
+                        {
+                            var indexOfMsstoreAppId = line.IndexOf("msstore_appId", StringComparison.OrdinalIgnoreCase);
+                            if (indexOfMsstoreAppId > -1)
+                            {
+                                var commentStartIndex = line.IndexOf('#');
+                                if (commentStartIndex == -1 || commentStartIndex > indexOfMsstoreAppId)
+                                {
+                                    if (commentStartIndex > indexOfMsstoreAppId)
+                                    {
+                                        appId = line.Substring(0, commentStartIndex).Split(':').LastOrDefault()?.Trim();
+                                    }
+                                    else
+                                    {
+                                        appId = line.Split(':').LastOrDefault()?.Trim();
+                                    }
+
+                                    if (string.IsNullOrEmpty(appId))
+                                    {
+                                        throw new MSStoreException("Failed to find the 'msstore_appId' in the pubspec.yaml file.");
+                                    }
+
+                                    break;
+                                }
+                            }
+                        }
+                        catch
+                        {
+                        }
+                    }
+                }
+
+                if (appId == null)
+                {
+                    throw new MSStoreException("Failed to find the AppId in the pubspec.yaml file.");
+                }
+
+                var success = await AnsiConsole.Status().StartAsync("Retrieving application...", async ctx =>
+                {
+                    try
+                    {
+                        app = await storePackagedAPI.GetApplicationAsync(appId, ct);
+
+                        ctx.SuccessStatus("Ok! Found the app!");
+                    }
+                    catch (Exception)
+                    {
+                        ctx.ErrorStatus("Could not retrieve your application. Please make sure you have the correct AppId.");
+
+                        return false;
+                    }
+
+                    return true;
+                });
+
+                if (!success)
+                {
+                    return -1;
+                }
+            }
+
+            if (app?.Id == null)
+            {
+                return -1;
+            }
+
+            AnsiConsole.MarkupLine($"AppId: [green bold]{app.Id}[/]");
+
+            var buildDirInfo = new DirectoryInfo(Path.Combine(projectRootPath.FullName, "build", "windows", "runner", "Release"));
+            var msixs = buildDirInfo.GetFiles("*.msix");
+            var msix = msixs.FirstOrDefault();
+            if (msix == null)
+            {
+                return -1;
+            }
+
+            var msixPath = msix.FullName;
+            AnsiConsole.MarkupLine($"MSIX: [green bold]{msixPath}[/]");
+
+            AnsiConsole.MarkupLine("[yellow]TODO: Publish[/]");
+
+            return -1;
         }
     }
 }

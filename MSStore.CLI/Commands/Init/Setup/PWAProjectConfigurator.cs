@@ -17,7 +17,7 @@ using Spectre.Console;
 
 namespace MSStore.CLI.Commands.Init.Setup
 {
-    internal class PWAProjectConfigurator : IProjectConfigurator
+    internal class PWAProjectConfigurator : IProjectConfigurator, IProjectPackager, IProjectPublisher
     {
         private readonly IConsoleReader _consoleReader;
         private readonly IBrowserLauncher _browserLauncher;
@@ -565,6 +565,16 @@ namespace MSStore.CLI.Commands.Init.Setup
                     return null;
                 }
             });
+        }
+
+        public Task<int> PackageAsync(string pathOrUrl, DevCenterApplication? app, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        {
+            throw new NotImplementedException();
         }
     }
 }

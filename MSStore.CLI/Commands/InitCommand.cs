@@ -25,11 +25,12 @@ namespace MSStore.CLI.Commands
 {
     internal class InitCommand : Command
     {
-        public InitCommand()
-            : base("init", "Helps you setup your Microsoft Account to be a Microsoft Store Developer.")
+        internal static readonly Argument PathOrUrl;
+
+        static InitCommand()
         {
-            var pathOrUrl = new Argument<string>("pathOrUrl", "The root directory path where the project file is, or a public URL that points to a PWA to be packaged.");
-            pathOrUrl.AddValidator(result =>
+            PathOrUrl = new Argument<string>("pathOrUrl", "The root directory path where the project file is, or a public URL that points to a PWA.");
+            PathOrUrl.AddValidator((result) =>
             {
                 var pathOrUrl = result.Tokens.Single().Value;
 
@@ -56,13 +57,30 @@ namespace MSStore.CLI.Commands
                     }
                 }
             });
-            AddArgument(pathOrUrl);
+        }
+
+        public InitCommand()
+            : base("init", "Helps you setup your Microsoft Account to be a Microsoft Store Developer.")
+        {
+            AddArgument(PathOrUrl);
 
             var publisherDisplayName = new Option<string>(
                 aliases: new string[] { "--publisherDisplayName", "-n" },
                 description: "The Publisher Display Name used to configure the application. If provided, avoids an extra APIs call.");
 
             AddOption(publisherDisplayName);
+
+            var package = new Option<bool>(
+                aliases: new string[] { "--package" },
+                description: "If supported by the app type, automatically packs the project.");
+
+            AddOption(package);
+
+            var publish = new Option<bool>(
+                aliases: new string[] { "--publish" },
+                description: "If supported by the app type, automatically publishes the project. Implies '--package true'");
+
+            AddOption(publish);
         }
 
         public new class Handler : ICommandHandler
@@ -79,6 +97,10 @@ namespace MSStore.CLI.Commands
             public string PathOrUrl { get; set; } = null!;
 
             public string? PublisherDisplayName { get; set; } = null!;
+
+            public bool? Package { get; set; }
+
+            public bool? Publish { get; set; }
 
             public Handler(
                 ILogger<Handler> logger,
@@ -111,7 +133,12 @@ namespace MSStore.CLI.Commands
 
                 var configurator = _projectConfiguratorFactory.FindProjectConfigurator(PathOrUrl);
 
-                var props = new Dictionary<string, string>();
+                var props = new Dictionary<string, string>
+                {
+                    { "withPDN", (PublisherDisplayName != null).ToString() },
+                    { "Package", (Package == true).ToString() },
+                    { "Publish", (Publish == true).ToString() }
+                };
 
                 if (configurator == null)
                 {
@@ -194,8 +221,43 @@ namespace MSStore.CLI.Commands
                 AnsiConsole.WriteLine("Lets set it up for you!");
                 AnsiConsole.WriteLine();
 
-                return await _telemetryClient.TrackCommandEventAsync<Handler>(
-                    await configurator.ConfigureAsync(PathOrUrl, PublisherDisplayName, app, storePackagedAPI, ct), props, ct);
+                var result = await configurator.ConfigureAsync(PathOrUrl, PublisherDisplayName, app, storePackagedAPI, ct);
+
+                if (result != 0)
+                {
+                    return await _telemetryClient.TrackCommandEventAsync<Handler>(result, props, ct);
+                }
+
+                if (Package == true || Publish == true)
+                {
+                    var projectPackager = configurator as IProjectPackager;
+                    if (projectPackager == null)
+                    {
+                        AnsiConsole.WriteLine(CultureInfo.InvariantCulture, "We can't package this type of project.");
+                        return await _telemetryClient.TrackCommandEventAsync<Handler>(-4, props, ct);
+                    }
+
+                    result = await projectPackager.PackageAsync(PathOrUrl, app, storePackagedAPI, ct);
+                }
+
+                if (result != 0)
+                {
+                    return await _telemetryClient.TrackCommandEventAsync<Handler>(result, props, ct);
+                }
+
+                if (Publish == true)
+                {
+                    var projectPublisher = configurator as IProjectPublisher;
+                    if (projectPublisher == null)
+                    {
+                        AnsiConsole.WriteLine(CultureInfo.InvariantCulture, "We can't publish this type of project.");
+                        return await _telemetryClient.TrackCommandEventAsync<Handler>(-5, props, ct);
+                    }
+
+                    result = await projectPublisher.PublishAsync(PathOrUrl, app, storePackagedAPI, ct);
+                }
+
+                return await _telemetryClient.TrackCommandEventAsync<Handler>(result, props, ct);
             }
 
             private async Task<DevCenterApplication?> SelectAppAsync(IStorePackagedAPI storePackagedAPI, CancellationToken ct)

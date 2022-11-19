@@ -165,6 +165,11 @@ namespace MSStore.CLI.UnitTests
                 .Setup(x => x.DownloadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IProgress<double>>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
 
+            var imageConverter = new Mock<IImageConverter>();
+            imageConverter
+                .Setup(x => x.ConvertIcoToPngAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
+
             var zipFileManager = new Mock<IZipFileManager>();
 
             TokenManager = new Mock<ITokenManager>();
@@ -199,6 +204,7 @@ namespace MSStore.CLI.UnitTests
                         .AddScoped(sp => zipFileManager.Object)
                         .AddScoped(sp => TokenManager.Object)
                         .AddScoped(sp => fileDownloader.Object)
+                        .AddScoped(sp => imageConverter.Object)
                         .AddSingleton(Cli);
                 })
                 .ConfigureStoreCLICommands()

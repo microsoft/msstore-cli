@@ -10,9 +10,9 @@ namespace MSStore.CLI.Commands.Init.Setup
 {
     internal interface IProjectConfigurator
     {
-        public string ConfiguratorProjectType { get; }
+        string ConfiguratorProjectType { get; }
 
-        public bool CanConfigure(string pathOrUrl);
+        bool CanConfigure(string pathOrUrl);
 
         Task<int> ConfigureAsync(string pathOrUrl, string publisherDisplayName, DevCenterApplication app, IStorePackagedAPI storePackagedAPI, CancellationToken ct);
     }

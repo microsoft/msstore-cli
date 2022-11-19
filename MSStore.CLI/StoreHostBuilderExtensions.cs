@@ -24,6 +24,8 @@ namespace MSStore.CLI
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Commands.Submission.UpdateCommand.Handler))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Commands.Submission.PollCommand.Handler))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Commands.Submission.PublishCommand.Handler))]
+        [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(PackageCommand.Handler))]
+        [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(PublishCommand.Handler))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(MicrosoftStoreCLI.Handler))]
         public static IHostBuilder ConfigureStoreCLICommands(this IHostBuilder builder)
         {
@@ -32,6 +34,8 @@ namespace MSStore.CLI
                   .UseCommandHandler<InfoCommand, InfoCommand.Handler>()
                   .UseCommandHandler<ReconfigureCommand, ReconfigureCommand.Handler>()
                   .UseCommandHandler<SettingsCommand, SettingsCommand.Handler>()
+                  .UseCommandHandler<PackageCommand, PackageCommand.Handler>()
+                  .UseCommandHandler<PublishCommand, PublishCommand.Handler>()
                   .UseCommandHandler<Commands.Apps.ListCommand, Commands.Apps.ListCommand.Handler>()
                   .UseCommandHandler<Commands.Apps.GetCommand, Commands.Apps.GetCommand.Handler>()
                   .UseCommandHandler<Commands.Submission.StatusCommand, Commands.Submission.StatusCommand.Handler>()

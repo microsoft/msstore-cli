@@ -45,6 +45,8 @@ namespace MSStore.CLI
             AddCommand(new AppsCommand());
             AddCommand(new SubmissionCommand());
             AddCommand(new InitCommand());
+            AddCommand(new PackageCommand());
+            AddCommand(new PublishCommand());
 
             this.SetHandler(() =>
             {

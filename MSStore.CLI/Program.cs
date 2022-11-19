@@ -85,6 +85,7 @@ namespace MSStore.CLI
                         .AddScoped<ITokenManager, MSALTokenManager>()
                         .AddScoped<IPartnerCenterManager, PartnerCenterManager>()
                         .AddScoped<IFileDownloader, FileDownloader>()
+                        .AddScoped<IImageConverter, ImageConverter>()
                         .AddSingleton(telemetryClient);
                 })
                 .ConfigureStoreCLICommands()

@@ -36,7 +36,7 @@ namespace MSStore.CLI.Commands
             AddCommand(new UpdateMetadataCommand());
             AddCommand(new UpdateCommand());
             AddCommand(new PollCommand());
-            AddCommand(new PublishCommand());
+            AddCommand(new Submission.PublishCommand());
             this.SetDefaultHelpHandler();
         }
     }
