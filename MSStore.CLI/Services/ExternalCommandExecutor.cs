@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,25 +16,53 @@ namespace MSStore.CLI.Services
             {
                 cmd.StartInfo.WorkingDirectory = workingDirectory;
                 cmd.StartInfo.FileName = "cmd.exe";
-                cmd.StartInfo.Arguments = $"/C \"{command}\"";
+                if (command.StartsWith("\"") || command.StartsWith("("))
+                {
+                    cmd.StartInfo.Arguments = $"/C {command}";
+                }
+                else
+                {
+                    cmd.StartInfo.Arguments = $"/C \"{command}\"";
+                }
+
                 cmd.StartInfo.RedirectStandardInput = true;
                 cmd.StartInfo.RedirectStandardOutput = true;
                 cmd.StartInfo.RedirectStandardError = true;
                 cmd.StartInfo.CreateNoWindow = true;
                 cmd.StartInfo.UseShellExecute = false;
+
+                var stdOut = new StringBuilder();
+                var stdErr = new StringBuilder();
+
+                cmd.OutputDataReceived += (sender, e) =>
+                {
+                    if (!string.IsNullOrEmpty(e.Data))
+                    {
+                        Debug.WriteLine(e.Data);
+                        stdOut.Append(e.Data);
+                    }
+                };
+                cmd.ErrorDataReceived += (sender, e) =>
+                {
+                    if (!string.IsNullOrEmpty(e.Data))
+                    {
+                        Debug.WriteLine(e.Data);
+                        stdErr.Append(e.Data);
+                    }
+                };
                 cmd.Start();
+
+                cmd.BeginOutputReadLine();
+                cmd.BeginErrorReadLine();
 
                 cmd.StandardInput.Close();
                 await cmd.WaitForExitAsync(ct);
 
-                var stdOut = await cmd.StandardOutput.ReadToEndAsync(ct);
-                var stdErr = await cmd.StandardError.ReadToEndAsync(ct);
-
                 return new ExternalCommandExecutionResult
                 {
                     ExitCode = cmd.ExitCode,
-                    StdOut = stdOut,
-                    StdErr = stdErr
+                    StdOut = stdOut.ToString(),
+                    StdErr = stdErr.ToString()
                 };
             }
         }

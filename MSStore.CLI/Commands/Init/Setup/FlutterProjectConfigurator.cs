@@ -311,52 +311,7 @@ namespace MSStore.CLI.Commands.Init.Setup
             if (app == null)
             {
                 // Try to find AppId inside the pubspec.yaml file
-                using var fileStream = flutterProjectFile.Open(FileMode.Open, FileAccess.ReadWrite);
-
-                string[] yamlLines;
-
-                using var streamReader = new StreamReader(fileStream);
-
-                var yaml = await streamReader.ReadToEndAsync(ct);
-
-                yamlLines = yaml.Split(Environment.NewLine);
-
-                string? appId = null;
-                foreach (var line in yamlLines)
-                {
-                    if (!string.IsNullOrWhiteSpace(line))
-                    {
-                        try
-                        {
-                            var indexOfMsstoreAppId = line.IndexOf("msstore_appId", StringComparison.OrdinalIgnoreCase);
-                            if (indexOfMsstoreAppId > -1)
-                            {
-                                var commentStartIndex = line.IndexOf('#');
-                                if (commentStartIndex == -1 || commentStartIndex > indexOfMsstoreAppId)
-                                {
-                                    if (commentStartIndex > indexOfMsstoreAppId)
-                                    {
-                                        appId = line.Substring(0, commentStartIndex).Split(':').LastOrDefault()?.Trim();
-                                    }
-                                    else
-                                    {
-                                        appId = line.Split(':').LastOrDefault()?.Trim();
-                                    }
-
-                                    if (string.IsNullOrEmpty(appId))
-                                    {
-                                        throw new MSStoreException("Failed to find the 'msstore_appId' in the pubspec.yaml file.");
-                                    }
-
-                                    break;
-                                }
-                            }
-                        }
-                        catch
-                        {
-                        }
-                    }
-                }
+                string? appId = await GetAppIdFromPubSpecAsync(flutterProjectFile, ct);
 
                 if (appId == null)
                 {
@@ -408,6 +363,56 @@ namespace MSStore.CLI.Commands.Init.Setup
             AnsiConsole.MarkupLine("[yellow]TODO: Publish[/]");
 
             return -1;
+        }
+
+        private async Task<string?> GetAppIdFromPubSpecAsync(FileInfo flutterProjectFile, CancellationToken ct)
+        {
+            string? appId = null;
+            using var fileStream = flutterProjectFile.Open(FileMode.Open, FileAccess.ReadWrite);
+
+            string[] yamlLines;
+
+            using var streamReader = new StreamReader(fileStream);
+
+            var yaml = await streamReader.ReadToEndAsync(ct);
+
+            yamlLines = yaml.Split(Environment.NewLine);
+
+            foreach (var line in yamlLines)
+            {
+                if (!string.IsNullOrWhiteSpace(line))
+                {
+                    try
+                    {
+                        var indexOfMsstoreAppId = line.IndexOf("msstore_appId", StringComparison.OrdinalIgnoreCase);
+                        if (indexOfMsstoreAppId > -1)
+                        {
+                            var commentStartIndex = line.IndexOf('#');
+                            if (commentStartIndex == -1 || commentStartIndex > indexOfMsstoreAppId)
+                            {
+                                if (commentStartIndex > indexOfMsstoreAppId)
+                                {
+                                    appId = line.Substring(0, commentStartIndex).Split(':').LastOrDefault()?.Trim();
+                                }
+                                else
+                                {
+                                    appId = line.Split(':').LastOrDefault()?.Trim();
+                                }
+
+                                if (string.IsNullOrEmpty(appId))
+                                {
+                                    throw new MSStoreException("Failed to find the 'msstore_appId' in the pubspec.yaml file.");
+                                }
+                            }
+                        }
+                    }
+                    catch
+                    {
+                    }
+                }
+            }
+
+            return appId;
         }
     }
 }
