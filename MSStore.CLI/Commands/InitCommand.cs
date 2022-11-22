@@ -26,6 +26,7 @@ namespace MSStore.CLI.Commands
     internal class InitCommand : Command
     {
         internal static readonly Argument PathOrUrl;
+        internal static readonly Option<DirectoryInfo?> Output;
 
         static InitCommand()
         {
@@ -57,6 +58,10 @@ namespace MSStore.CLI.Commands
                     }
                 }
             });
+
+            Output = new Option<DirectoryInfo?>(
+                aliases: new string[] { "--output", "-o" },
+                description: "The output directory where the packaged app will be stored. If not provided, the default directory for each different type of app will be used.");
         }
 
         public InitCommand()
@@ -81,6 +86,8 @@ namespace MSStore.CLI.Commands
                 description: "If supported by the app type, automatically publishes the project. Implies '--package true'");
 
             AddOption(publish);
+
+            AddOption(Output);
         }
 
         public new class Handler : ICommandHandler
@@ -101,6 +108,8 @@ namespace MSStore.CLI.Commands
             public bool? Package { get; set; }
 
             public bool? Publish { get; set; }
+
+            public DirectoryInfo? Output { get; set; } = null!;
 
             public Handler(
                 ILogger<Handler> logger,
@@ -228,6 +237,7 @@ namespace MSStore.CLI.Commands
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(result, props, ct);
                 }
 
+                FileInfo? outputFile = null;
                 if (Package == true || Publish == true)
                 {
                     var projectPackager = configurator as IProjectPackager;
@@ -237,7 +247,7 @@ namespace MSStore.CLI.Commands
                         return await _telemetryClient.TrackCommandEventAsync<Handler>(-4, props, ct);
                     }
 
-                    result = await projectPackager.PackageAsync(PathOrUrl, app, storePackagedAPI, ct);
+                    (result, outputFile) = await projectPackager.PackageAsync(PathOrUrl, app, Output, storePackagedAPI, ct);
                 }
 
                 if (result != 0)
@@ -254,7 +264,7 @@ namespace MSStore.CLI.Commands
                         return await _telemetryClient.TrackCommandEventAsync<Handler>(-5, props, ct);
                     }
 
-                    result = await projectPublisher.PublishAsync(PathOrUrl, app, storePackagedAPI, ct);
+                    result = await projectPublisher.PublishAsync(PathOrUrl, app, outputFile, storePackagedAPI, ct);
                 }
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(result, props, ct);

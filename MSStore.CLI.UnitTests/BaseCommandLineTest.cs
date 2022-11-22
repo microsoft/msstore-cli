@@ -7,6 +7,7 @@ using System.CommandLine.Hosting;
 using System.CommandLine.Invocation;
 using System.CommandLine.IO;
 using System.CommandLine.Parsing;
+using System.Runtime.CompilerServices;
 using System.Text;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Extensibility;
@@ -74,6 +75,27 @@ namespace MSStore.CLI.UnitTests
         };
 
         private Parser _parser = null!;
+
+        protected static string CopyFilesRecursively(string sourcePath, [CallerMemberName] string caller = null!)
+        {
+            sourcePath = Path.Combine("TestData", sourcePath);
+
+            var targetPath = Path.Combine(caller, sourcePath);
+
+            Directory.CreateDirectory(targetPath);
+
+            foreach (string dirPath in Directory.GetDirectories(sourcePath, "*", SearchOption.AllDirectories))
+            {
+                Directory.CreateDirectory(dirPath.Replace(sourcePath, targetPath));
+            }
+
+            foreach (string newPath in Directory.GetFiles(sourcePath, "*.*", SearchOption.AllDirectories))
+            {
+                File.Copy(newPath, newPath.Replace(sourcePath, targetPath), true);
+            }
+
+            return targetPath;
+        }
 
         [TestInitialize]
         public void Initialize()

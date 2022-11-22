@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Runtime.CompilerServices;
 using MSStore.API.Packaged.Models;
 using MSStore.CLI.Services.PWABuilder;
 
@@ -16,27 +15,6 @@ namespace MSStore.CLI.UnitTests
             FakeLogin();
             AddDefaultFakeAccount();
             AddFakeApps();
-        }
-
-        private static string CopyFilesRecursively(string sourcePath, [CallerMemberName] string caller = null!)
-        {
-            sourcePath = Path.Combine("TestData", sourcePath);
-
-            var targetPath = Path.Combine(caller, sourcePath);
-
-            Directory.CreateDirectory(targetPath);
-
-            foreach (string dirPath in Directory.GetDirectories(sourcePath, "*", SearchOption.AllDirectories))
-            {
-                Directory.CreateDirectory(dirPath.Replace(sourcePath, targetPath));
-            }
-
-            foreach (string newPath in Directory.GetFiles(sourcePath, "*.*", SearchOption.AllDirectories))
-            {
-                File.Copy(newPath, newPath.Replace(sourcePath, targetPath), true);
-            }
-
-            return targetPath;
         }
 
         [TestMethod]
@@ -164,20 +142,13 @@ namespace MSStore.CLI.UnitTests
                 .ReturnsAsync("en-US");
 
             PWABuilderClient
-                .Setup(x => x.GenerateZipAsync(It.IsAny<GenerateZipRequest>(), It.IsAny<IProgress<double>>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync((GenerateZipRequest generateZipRequest, IProgress<double> progress, CancellationToken ct) =>
+                .Setup(x => x.GenerateZipAsync(It.IsAny<GenerateZipRequest>(), It.IsAny<string>(), It.IsAny<IProgress<double>>(), It.IsAny<CancellationToken>()))
+                .Returns((GenerateZipRequest generateZipRequest, string outputZipPath, IProgress<double> progress, CancellationToken ct) =>
                 {
                     progress.Report(0);
-
-                    var rootDir = Path.Combine(Path.GetTempPath(), "MSStore", "PWAZips");
-
-                    Directory.CreateDirectory(rootDir);
-
-                    var filePath = Path.Combine(rootDir, Path.ChangeExtension(Path.GetRandomFileName(), "zip"));
-
                     progress.Report(100);
 
-                    return filePath;
+                    return Task.CompletedTask;
                 });
             PWABuilderClient
                 .Setup(x => x.FetchWebManifestAsync(It.IsAny<Uri>(), It.IsAny<CancellationToken>()))

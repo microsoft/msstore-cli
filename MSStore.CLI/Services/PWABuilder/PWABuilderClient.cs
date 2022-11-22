@@ -107,7 +107,7 @@ namespace MSStore.CLI.Services.PWABuilder
             }
         }
 
-        public async Task<string> GenerateZipAsync(GenerateZipRequest generateZipRequest, IProgress<double> progress, CancellationToken ct)
+        public async Task GenerateZipAsync(GenerateZipRequest generateZipRequest, string outputZipPath, IProgress<double> progress, CancellationToken ct)
         {
             using var request = new HttpRequestMessage(HttpMethod.Post, "generatezip");
 
@@ -126,15 +126,9 @@ namespace MSStore.CLI.Services.PWABuilder
 
             using var stream = await response.Content.ReadAsStreamAsync(ct);
 
-            var rootDir = Path.Combine(Path.GetTempPath(), "MSStore", "PWAZips");
-
-            Directory.CreateDirectory(rootDir);
-
-            var filePath = Path.Combine(rootDir, Path.ChangeExtension(Path.GetRandomFileName(), "zip"));
-
             const int bufferSize = 81920;
 
-            using (var file = File.OpenWrite(filePath))
+            using (var file = File.OpenWrite(outputZipPath))
             {
                 var buffer = new byte[bufferSize];
                 long totalBytesRead = 0;
@@ -151,8 +145,6 @@ namespace MSStore.CLI.Services.PWABuilder
             }
 
             progress.Report(100);
-
-            return filePath;
         }
 
         public async Task<WebManifestFetchResponse> FetchWebManifestAsync(Uri site, CancellationToken ct)

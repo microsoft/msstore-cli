@@ -279,7 +279,11 @@ namespace MSStore.CLI.Commands.Init.Setup
             AnsiConsole.WriteLine($"You've provided a URL, so we'll use PWABuilder.com to setup your PWA and upload it to the Microsoft Store.");
             AnsiConsole.WriteLine();
 
-            var zipPath = string.Empty;
+            var rootDir = Path.Combine(Path.GetTempPath(), "MSStore", "PWAZips");
+            Directory.CreateDirectory(rootDir);
+
+            var outputZipPath = Path.Combine(rootDir, Path.ChangeExtension(Path.GetRandomFileName(), "zip"));
+
             bool success = await AnsiConsole.Progress()
                 .StartAsync(async ctx =>
                 {
@@ -289,7 +293,7 @@ namespace MSStore.CLI.Commands.Init.Setup
                     {
                         var classicVersion = new Version(maxVersion.Major, maxVersion.Minor, maxVersion.Build + 1);
                         var version = new Version(maxVersion.Major, maxVersion.Minor, maxVersion.Build + 2);
-                        zipPath = await _pwaBuilderClient.GenerateZipAsync(
+                        await _pwaBuilderClient.GenerateZipAsync(
                             new GenerateZipRequest
                             {
                                 Url = uri.ToString(),
@@ -308,6 +312,7 @@ namespace MSStore.CLI.Commands.Init.Setup
                                     CommonName = app.PublisherName
                                 }
                             },
+                            outputZipPath,
                             task,
                             ct);
 
@@ -335,7 +340,7 @@ namespace MSStore.CLI.Commands.Init.Setup
                 return null;
             }
 
-            return zipPath;
+            return outputZipPath;
         }
 
         private async Task FulfillApplicationAsync(DevCenterApplication app, DevCenterSubmission submission, WebManifestJson? webManifest, CancellationToken ct)
@@ -473,7 +478,7 @@ namespace MSStore.CLI.Commands.Init.Setup
             {
                 try
                 {
-                    var zipDir = Path.GetDirectoryName(zipPath) ?? Path.GetTempPath();
+                    var zipDir = Path.GetDirectoryName(zipPath) ?? throw new NotSupportedException("UNC paths are not supported.");
 
                     var extractedZipDir = Path.Combine(zipDir, Path.GetFileNameWithoutExtension(zipPath));
 
@@ -567,12 +572,12 @@ namespace MSStore.CLI.Commands.Init.Setup
             });
         }
 
-        public Task<int> PackageAsync(string pathOrUrl, DevCenterApplication? app, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public Task<(int returnCode, FileInfo? outputFile)> PackageAsync(string pathOrUrl, DevCenterApplication? app, DirectoryInfo? output, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             throw new NotImplementedException();
         }
 
-        public Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, FileInfo? input, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             throw new NotImplementedException();
         }

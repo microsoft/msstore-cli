@@ -249,7 +249,7 @@ namespace MSStore.CLI.Commands.Init.Setup
             });
         }
 
-        public async Task<int> PackageAsync(string pathOrUrl, DevCenterApplication? app, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public async Task<(int returnCode, FileInfo? outputFile)> PackageAsync(string pathOrUrl, DevCenterApplication? app, DirectoryInfo? output, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             var (projectRootPath, flutterProjectFile) = GetInfo(pathOrUrl);
 
@@ -267,7 +267,13 @@ namespace MSStore.CLI.Commands.Init.Setup
             {
                 try
                 {
-                    var result = await _externalCommandExecutor.RunAsync("flutter pub run msix:build --store", projectRootPath.FullName, ct);
+                    var args = "--store";
+                    if (output != null)
+                    {
+                        args += $" --output-path \"{output.FullName}\"";
+                    }
+
+                    var result = await _externalCommandExecutor.RunAsync($"flutter pub run msix:build {args}", projectRootPath.FullName, ct);
 
                     if (result.ExitCode != 0)
                     {
@@ -276,25 +282,38 @@ namespace MSStore.CLI.Commands.Init.Setup
 
                     ctx.SuccessStatus("Store package built successfully!");
 
-                    result = await _externalCommandExecutor.RunAsync("flutter pub run msix:pack --store", projectRootPath.FullName, ct);
+                    result = await _externalCommandExecutor.RunAsync($"flutter pub run msix:pack {args}", projectRootPath.FullName, ct);
 
                     if (result.ExitCode != 0)
                     {
                         throw new MSStoreException(result.StdErr);
                     }
 
-                    var msixLine = result.StdOut.Split(Environment.NewLine).LastOrDefault(line => line.Contains("msix created:"));
-                    if (msixLine == null)
+                    var cleanedStdOut = System.Text.RegularExpressions.Regex.Replace(result.StdOut, @"\e([^\[\]]|\[.*?[a-zA-Z]|\].*?\a)", string.Empty);
+
+                    var msixLine = cleanedStdOut.Split(new string[] { "\n", Environment.NewLine }, StringSplitOptions.None).LastOrDefault(line => line.Contains("msix created:"));
+                    int index;
+                    if (msixLine == null || (index = msixLine.IndexOf(": ")) == -1)
                     {
                         throw new MSStoreException("Failed to find the path to the packaged msix file.");
                     }
 
-                    var msixPath = msixLine.Split(":").LastOrDefault()?.Trim();
+                    var msixPath = msixLine.Substring(index + 1).Trim();
 
-                    AnsiConsole.MarkupLine("[green bold]Store package packaged successfully:[/]");
-                    AnsiConsole.WriteLine($"{msixPath}");
+                    FileInfo? msixFile = null;
+                    if (msixPath != null)
+                    {
+                        if (Path.IsPathFullyQualified(msixPath))
+                        {
+                            msixFile = new FileInfo(msixPath);
+                        }
+                        else
+                        {
+                            msixFile = new FileInfo(Path.Join(projectRootPath.FullName, msixPath));
+                        }
+                    }
 
-                    return 0;
+                    return (0, msixFile);
                 }
                 catch (Exception ex)
                 {
@@ -304,7 +323,7 @@ namespace MSStore.CLI.Commands.Init.Setup
             });
         }
 
-        public async Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public async Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, FileInfo? input, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             var (projectRootPath, flutterProjectFile) = GetInfo(pathOrUrl);
 
@@ -349,15 +368,20 @@ namespace MSStore.CLI.Commands.Init.Setup
 
             AnsiConsole.MarkupLine($"AppId: [green bold]{app.Id}[/]");
 
-            var buildDirInfo = new DirectoryInfo(Path.Combine(projectRootPath.FullName, "build", "windows", "runner", "Release"));
-            var msixs = buildDirInfo.GetFiles("*.msix");
-            var msix = msixs.FirstOrDefault();
-            if (msix == null)
+            DirectoryInfo buildDirInfo;
+            if (input == null)
             {
-                return -1;
+                buildDirInfo = new DirectoryInfo(Path.Combine(projectRootPath.FullName, "build", "windows", "runner", "Release"));
+
+                var msixs = buildDirInfo.GetFiles("*.msix");
+                input = msixs.FirstOrDefault();
+                if (input == null)
+                {
+                    return -1;
+                }
             }
 
-            var msixPath = msix.FullName;
+            var msixPath = input.FullName;
             AnsiConsole.MarkupLine($"MSIX: [green bold]{msixPath}[/]");
 
             AnsiConsole.MarkupLine("[yellow]TODO: Publish[/]");

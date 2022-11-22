@@ -22,7 +22,7 @@ namespace MSStore.CLI.Services
                 }
                 else
                 {
-                    cmd.StartInfo.Arguments = $"/C \"{command}\"";
+                    cmd.StartInfo.Arguments = $"/C ({command})";
                 }
 
                 cmd.StartInfo.RedirectStandardInput = true;

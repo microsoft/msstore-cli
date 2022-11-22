@@ -189,14 +189,14 @@ namespace MSStore.CLI.Commands.Init.Setup
             return Task.FromResult(0);
         }
 
-        public async Task<int> PackageAsync(string pathOrUrl, DevCenterApplication? app, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public async Task<(int returnCode, FileInfo? outputFile)> PackageAsync(string pathOrUrl, DevCenterApplication? app, DirectoryInfo? output, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             var (projectRootPath, manifestFile) = GetInfo(pathOrUrl);
 
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 AnsiConsole.MarkupLine("[red]Packaging UWP apps is only supported on Windows[/]");
-                return -1;
+                return (-1, null);
             }
 
             var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
@@ -206,7 +206,7 @@ namespace MSStore.CLI.Commands.Init.Setup
             if (!File.Exists(vswhere))
             {
                 AnsiConsole.MarkupLine("[red]Visual Studio 2017 or later is required to package UWP apps[/]");
-                return -1;
+                return (-1, null);
             }
 
             var msbuildPath = await AnsiConsole.Status().StartAsync("Finding MSBuild...", async ctx =>
@@ -233,21 +233,8 @@ namespace MSStore.CLI.Commands.Init.Setup
 
             if (string.IsNullOrEmpty(msbuildPath))
             {
-                return -1;
+                return (-1, null);
             }
-
-            var acceptedProjectExtensions = new[] { ".csproj", ".vcxproj" };
-            var projectFiles = projectRootPath.GetFiles("*.*", SearchOption.TopDirectoryOnly)
-                                .Where(f => acceptedProjectExtensions.Contains(f.Extension.ToLower()))
-                                .ToList();
-
-            if (!projectFiles.Any())
-            {
-                var extensionsString = string.Join(", ", acceptedProjectExtensions.Select(e => $"'{e}'"));
-                throw new InvalidOperationException($"No project file ({extensionsString}) found in the project root directory.");
-            }
-
-            var projectFile = projectFiles.First();
 
             await AnsiConsole.Status().StartAsync("Restoring packages...", async ctx =>
             {
@@ -269,11 +256,16 @@ namespace MSStore.CLI.Commands.Init.Setup
                 }
             });
 
+            if (output == null)
+            {
+                output = new DirectoryInfo(Path.Join(projectRootPath.FullName, "AppPackages"));
+            }
+
             var msixUploadFile = await AnsiConsole.Status().StartAsync("Building MSIX...", async ctx =>
             {
                 try
                 {
-                    var msBuildParams = $"/p:Configuration=Release;AppxBundle=Always;Platform=x64;AppxBundlePlatforms=\"x64|ARM64\";UapAppxPackageBuildMode=StoreUpload";
+                    var msBuildParams = $"/p:Configuration=Release;AppxBundle=Always;Platform=x64;AppxBundlePlatforms=\"x64|ARM64\";AppxPackageDir=\"{output.FullName}\";UapAppxPackageBuildMode=StoreUpload";
                     var result = await _externalCommandExecutor.RunAsync($"(\"{msbuildPath}\" {msBuildParams})", projectRootPath.FullName, ct);
                     if (result.ExitCode != 0)
                     {
@@ -304,10 +296,10 @@ namespace MSStore.CLI.Commands.Init.Setup
                 }
             });
 
-            return 0;
+            return (0, msixUploadFile != null ? new FileInfo(msixUploadFile) : null);
         }
 
-        public async Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public async Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, FileInfo? input, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             var (projectRootPath, manifestFile) = GetInfo(pathOrUrl);
 
@@ -352,15 +344,18 @@ namespace MSStore.CLI.Commands.Init.Setup
 
             AnsiConsole.MarkupLine($"AppId: [green bold]{app.Id}[/]");
 
-            var buildDirInfo = new DirectoryInfo(Path.Combine(projectRootPath.FullName, "AppPackages"));
-            var msixUploads = buildDirInfo.GetFiles("*.msixupload");
-            var msixUpload = msixUploads.FirstOrDefault();
-            if (msixUpload == null)
+            if (input == null)
             {
-                return -1;
+                var buildDirInfo = new DirectoryInfo(Path.Combine(projectRootPath.FullName, "AppPackages"));
+                var msixUploads = buildDirInfo.GetFiles("*.msixupload");
+                input = msixUploads.FirstOrDefault();
+                if (input == null)
+                {
+                    return -1;
+                }
             }
 
-            var msixUploadPath = msixUpload.FullName;
+            var msixUploadPath = input.FullName;
             AnsiConsole.MarkupLine($"MSIX: [green bold]{msixUploadPath}[/]");
 
             AnsiConsole.MarkupLine("[yellow]TODO: Publish[/]");

@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Globalization;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using MSStore.CLI.Commands.Init.Setup;
@@ -21,6 +23,30 @@ namespace MSStore.CLI.Commands
             : base("publish", "Publishes your Application to the Microsoft Store.")
         {
             AddArgument(InitCommand.PathOrUrl);
+
+            var input = new Option<FileInfo?>(
+                aliases: new string[] { "--input", "-i" },
+                description: "The '.msixupload' or '.zip' file to be used for the publishing command. If not provided, the cli will try to find the best candidate based on the 'pathOrUrl' argument.",
+                parseArgument: result =>
+                {
+                    if (result.Tokens.Count == 0)
+                    {
+                        return null;
+                    }
+
+                    string? filePath = result.Tokens.Single().Value;
+                    if (!File.Exists(filePath))
+                    {
+                        result.ErrorMessage = "Input file does not exist.";
+                        return null;
+                    }
+                    else
+                    {
+                        return new FileInfo(filePath);
+                    }
+                });
+
+            AddOption(input);
         }
 
         public new class Handler : ICommandHandler
@@ -30,6 +56,8 @@ namespace MSStore.CLI.Commands
             private readonly TelemetryClient _telemetryClient;
 
             public string PathOrUrl { get; set; } = null!;
+
+            public FileInfo? Input { get; set; } = null!;
 
             public Handler(
                 IProjectConfiguratorFactory projectConfiguratorFactory,
@@ -75,7 +103,7 @@ namespace MSStore.CLI.Commands
                 }
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(
-                    await projectPublisher.PublishAsync(PathOrUrl, null, storePackagedAPI, ct), props, ct);
+                    await projectPublisher.PublishAsync(PathOrUrl, null, Input, storePackagedAPI, ct), props, ct);
             }
         }
     }

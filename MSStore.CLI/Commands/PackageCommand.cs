@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Globalization;
+using System.IO;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using MSStore.CLI.Commands.Init.Setup;
@@ -21,6 +22,7 @@ namespace MSStore.CLI.Commands
             : base("package", "Helps you package your Microsoft Store Application as an MSIX.")
         {
             AddArgument(InitCommand.PathOrUrl);
+            AddOption(InitCommand.Output);
         }
 
         public new class Handler : ICommandHandler
@@ -30,6 +32,8 @@ namespace MSStore.CLI.Commands
             private readonly TelemetryClient _telemetryClient;
 
             public string PathOrUrl { get; set; } = null!;
+
+            public DirectoryInfo? Output { get; set; } = null!;
 
             public Handler(
                 IProjectConfiguratorFactory projectConfiguratorFactory,
@@ -74,8 +78,15 @@ namespace MSStore.CLI.Commands
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(-4, props, ct);
                 }
 
-                return await _telemetryClient.TrackCommandEventAsync<Handler>(
-                    await projectPackager.PackageAsync(PathOrUrl, null, storePackagedAPI, ct), props, ct);
+                var (returnCode, outputFile) = await projectPackager.PackageAsync(PathOrUrl, null, Output, storePackagedAPI, ct);
+
+                if (returnCode == 0 && outputFile != null)
+                {
+                    AnsiConsole.WriteLine($"The packaged app is here:");
+                    AnsiConsole.MarkupLine($"[green bold]{outputFile}[/]");
+                }
+
+                return await _telemetryClient.TrackCommandEventAsync<Handler>(returnCode, props, ct);
             }
         }
     }

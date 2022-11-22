@@ -29,7 +29,7 @@ namespace MSStore.CLI.UnitTests
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                Assert.Inconclusive();
+                Assert.Inconclusive("This test is only valid on non-Windows platforms");
             }
 
             var secret = _credentialManagerUnix.ReadCredential("testUserName");
@@ -42,7 +42,7 @@ namespace MSStore.CLI.UnitTests
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                Assert.Inconclusive();
+                Assert.Inconclusive("This test is only valid on non-Windows platforms");
             }
 
             _credentialManagerUnix.WriteCredential("testUserName", "testSecret");
