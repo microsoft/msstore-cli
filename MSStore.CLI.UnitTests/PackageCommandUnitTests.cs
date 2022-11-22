@@ -73,18 +73,20 @@ namespace MSStore.CLI.UnitTests
             var path = CopyFilesRecursively("UWPProject");
             DefaultMSBuildExecution(path);
 
+            var customPath = Path.Combine(Path.GetTempPath(), "CustomPath");
+
             ExternalCommandExecutor
                 .Setup(x => x.RunAsync(
                     It.Is<string>(s =>
                         s.Contains("\"MSBuild.exe\" /p:Configuration=Release;AppxBundle=Always;Platform=x64;AppxBundlePlatforms=\"x64|ARM64\"")
-                        && s.Contains("AppxPackageDir=\"C:\\CustomPath\"")
+                        && s.Contains($"AppxPackageDir=\"{customPath}\"")
                         && s.EndsWith("UapAppxPackageBuildMode=StoreUpload)")),
                     It.Is<string>(s => s == new DirectoryInfo(path).FullName),
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult
                 {
                     ExitCode = 0,
-                    StdOut = $"{Environment.NewLine}...{Environment.NewLine}abc -> C:\\CustomPath\\TestFile.msixupload{Environment.NewLine}",
+                    StdOut = $"{Environment.NewLine}...{Environment.NewLine}abc -> {Path.Combine(customPath, "TestFile.msixupload")}{Environment.NewLine}",
                     StdErr = string.Empty
                 });
 
@@ -94,12 +96,12 @@ namespace MSStore.CLI.UnitTests
                     "package",
                     path,
                     "--output",
-                    "C:\\CustomPath",
+                    customPath,
                     "--verbose"
                 });
 
             result.Should().Contain("The packaged app is here:");
-            result.Should().Contain("C:\\CustomPath\\TestFile.msix");
+            result.Should().Contain(Path.Combine(customPath, "TestFile.msixupload"));
 
             ExternalCommandExecutor.VerifyAll();
         }
@@ -195,8 +197,10 @@ namespace MSStore.CLI.UnitTests
             var path = CopyFilesRecursively("FlutterProject");
             SetupPubGet(path);
 
+            var customPath = Path.Combine(Path.GetTempPath(), "CustomPath");
+
             ExternalCommandExecutor
-                .Setup(x => x.RunAsync(It.Is<string>(s => s == "flutter pub run msix:build --store --output-path \"C:\\CustomPath\""), It.Is<string>(s => s == new DirectoryInfo(path).FullName), It.IsAny<CancellationToken>()))
+                .Setup(x => x.RunAsync(It.Is<string>(s => s == $"flutter pub run msix:build --store --output-path \"{customPath}\""), It.Is<string>(s => s == new DirectoryInfo(path).FullName), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult
                 {
                     ExitCode = 0,
@@ -205,11 +209,11 @@ namespace MSStore.CLI.UnitTests
                 });
 
             ExternalCommandExecutor
-                .Setup(x => x.RunAsync(It.Is<string>(s => s == "flutter pub run msix:pack --store --output-path \"C:\\CustomPath\""), It.Is<string>(s => s == new DirectoryInfo(path).FullName), It.IsAny<CancellationToken>()))
+                .Setup(x => x.RunAsync(It.Is<string>(s => s == $"flutter pub run msix:pack --store --output-path \"{customPath}\""), It.Is<string>(s => s == new DirectoryInfo(path).FullName), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult
                 {
                     ExitCode = 0,
-                    StdOut = "msix created: C:\\CustomPath\\TestFile.msix",
+                    StdOut = $"msix created: {Path.Combine(customPath, "TestFile.msix")}",
                     StdErr = string.Empty
                 });
 
@@ -219,12 +223,12 @@ namespace MSStore.CLI.UnitTests
                     "package",
                     path,
                     "--output",
-                    "C:\\CustomPath",
+                    customPath,
                     "--verbose"
                 });
 
             result.Should().Contain("The packaged app is here:");
-            result.Should().Contain("C:\\CustomPath\\TestFile.msix");
+            result.Should().Contain(Path.Combine(customPath, "TestFile.msix"));
         }
 
         private void SetupPubGet(string path)
