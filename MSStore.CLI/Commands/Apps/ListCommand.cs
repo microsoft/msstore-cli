@@ -37,7 +37,7 @@ namespace MSStore.CLI.Commands.Apps
 
             public int Invoke(InvocationContext context)
             {
-                throw new NotImplementedException();
+                return -1001;
             }
 
             public async Task<int> InvokeAsync(InvocationContext context)

@@ -207,7 +207,7 @@ namespace MSStore.CLI.Services.CredentialManager.Unix
             }
             else
             {
-                throw new NotImplementedException($"{nameof(CredentialManagerUnix)} supports only Linux and OSX.");
+                throw new PlatformNotSupportedException($"{nameof(CredentialManagerUnix)} supports only Linux and OSX.");
             }
         }
 
@@ -262,7 +262,7 @@ namespace MSStore.CLI.Services.CredentialManager.Unix
             }
             else
             {
-                throw new NotImplementedException($"{nameof(CredentialManagerUnix)} supports only Linux and OSX.");
+                throw new PlatformNotSupportedException($"{nameof(CredentialManagerUnix)} supports only Linux and OSX.");
             }
         }
 
