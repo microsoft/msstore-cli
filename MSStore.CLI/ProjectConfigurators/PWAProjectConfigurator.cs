@@ -240,6 +240,11 @@ namespace MSStore.CLI.ProjectConfigurators
 
             var extractedZipDir = Path.Combine(zipDir, Path.GetFileNameWithoutExtension(outputZipPath) + "_PWABuilderExtractedBundle");
 
+            if (Path.Exists(extractedZipDir))
+            {
+                Directory.Delete(extractedZipDir, true);
+            }
+
             _zipFileManager.ExtractZip(outputZipPath, extractedZipDir);
             var extractedZipDirInfo = new DirectoryInfo(extractedZipDir);
 

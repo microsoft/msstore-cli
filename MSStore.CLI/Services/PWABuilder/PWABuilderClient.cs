@@ -130,6 +130,9 @@ namespace MSStore.CLI.Services.PWABuilder
 
             using (var file = File.OpenWrite(outputZipPath))
             {
+                file.SetLength(0);
+                await file.FlushAsync(ct);
+                file.Position = 0;
                 var buffer = new byte[bufferSize];
                 long totalBytesRead = 0;
                 int bytesRead;
