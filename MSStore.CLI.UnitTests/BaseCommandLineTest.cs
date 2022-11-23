@@ -42,6 +42,7 @@ namespace MSStore.CLI.UnitTests
         internal Mock<IPWABuilderClient> PWABuilderClient { get; private set; } = null!;
         internal Mock<IGraphClient> GraphClient { get; private set; } = null!;
         internal Mock<ITokenManager> TokenManager { get; private set; } = null!;
+        internal Mock<IPWAAppInfoManager> PWAAppInfoManager { get; private set; } = null!;
         internal List<string> UserNames { get; } = new List<string>();
         internal List<string> Secrets { get; } = new List<string>();
 
@@ -192,6 +193,8 @@ namespace MSStore.CLI.UnitTests
                 .Setup(x => x.ConvertIcoToPngAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
 
+            PWAAppInfoManager = new Mock<IPWAAppInfoManager>();
+
             var zipFileManager = new Mock<IZipFileManager>();
 
             TokenManager = new Mock<ITokenManager>();
@@ -227,6 +230,7 @@ namespace MSStore.CLI.UnitTests
                         .AddScoped(sp => TokenManager.Object)
                         .AddScoped(sp => fileDownloader.Object)
                         .AddScoped(sp => imageConverter.Object)
+                        .AddScoped(sp => PWAAppInfoManager.Object)
                         .AddSingleton(Cli);
                 })
                 .ConfigureStoreCLICommands()

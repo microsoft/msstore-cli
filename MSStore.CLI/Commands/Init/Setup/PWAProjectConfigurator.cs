@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -27,6 +26,7 @@ namespace MSStore.CLI.Commands.Init.Setup
         private readonly IZipFileManager _zipFileManager;
         private readonly IAzureBlobManager _azureBlobManager;
         private readonly IFileDownloader _fileDownloader;
+        private readonly IPWAAppInfoManager _pwaAppInfoManager;
         private readonly ILogger _logger;
 
         public PWAProjectConfigurator(
@@ -35,16 +35,18 @@ namespace MSStore.CLI.Commands.Init.Setup
             IPWABuilderClient pwaBuilderClient,
             IZipFileManager zipFileManager,
             IAzureBlobManager azureBlobManager,
-            ILogger<PWAProjectConfigurator> logger,
-            IFileDownloader fileDownloader)
+            IFileDownloader fileDownloader,
+            IPWAAppInfoManager pwaAppInfoManager,
+            ILogger<PWAProjectConfigurator> logger)
         {
             _consoleReader = consoleReader ?? throw new ArgumentNullException(nameof(consoleReader));
             _browserLauncher = browserLauncher ?? throw new ArgumentNullException(nameof(browserLauncher));
             _pwaBuilderClient = pwaBuilderClient ?? throw new ArgumentNullException(nameof(pwaBuilderClient));
             _zipFileManager = zipFileManager ?? throw new ArgumentNullException(nameof(zipFileManager));
             _azureBlobManager = azureBlobManager ?? throw new ArgumentNullException(nameof(azureBlobManager));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _fileDownloader = fileDownloader ?? throw new ArgumentNullException(nameof(fileDownloader));
+            _pwaAppInfoManager = pwaAppInfoManager ?? throw new ArgumentNullException(nameof(pwaAppInfoManager));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         public string ConfiguratorProjectType => "PWA";
@@ -243,18 +245,13 @@ namespace MSStore.CLI.Commands.Init.Setup
 
             _logger.LogInformation("Extracted '{ZipPath}' to: '{ExtractedZipDirFullName}'", outputZipPath, extractedZipDirInfo.FullName);
 
-            var appInfoPath = Path.Combine(zipDir, "pwaAppInfo.json");
-            using var file = File.Open(appInfoPath, FileMode.OpenOrCreate);
-            file.SetLength(0);
-            file.Position = 0;
-            await JsonSerializer.SerializeAsync(
-                file,
+            await _pwaAppInfoManager.SaveAsync(
                 new PWAAppInfo
                 {
                     AppId = app.Id,
                     Uri = uri,
                 },
-                PWAAppInfoSourceGenerationContext.Default.PWAAppInfo,
+                zipDir,
                 ct);
 
             return (0, output);
@@ -529,7 +526,9 @@ namespace MSStore.CLI.Commands.Init.Setup
         {
             bool success = true;
 
-            if (GetUri(pathOrUrl) != null && input != null)
+            Uri? uri = GetUri(pathOrUrl);
+
+            if (uri != null && input != null)
             {
                 pathOrUrl = input.FullName;
             }
@@ -540,24 +539,24 @@ namespace MSStore.CLI.Commands.Init.Setup
             }
 
             string? appId = app?.Id;
-            Uri uri;
             try
             {
-                var appInfoPath = Path.Combine(pathOrUrl, "pwaAppInfo.json");
-                using var file = File.Open(appInfoPath, FileMode.Open);
-
                 // Try to find AppId inside the pwaAppInfo.json file
-                var pwaAppInfo = await JsonSerializer.DeserializeAsync(file, PWAAppInfoSourceGenerationContext.Default.PWAAppInfo, ct);
+                var pwaAppInfo = await _pwaAppInfoManager.LoadAsync(pathOrUrl, ct);
 
-                appId ??= pwaAppInfo?.AppId;
-                uri = pwaAppInfo?.Uri ?? throw new Exception("Uri is null");
-                if (appId == null)
+                appId ??= pwaAppInfo.AppId;
+                uri = pwaAppInfo.Uri ?? uri;
+                if (appId == null || uri == null)
                 {
-                    throw new MSStoreException("Failed to find the AppId in the pubspec.yaml file.");
+                    AnsiConsole.MarkupLine($":collision: [bold red]AppId or Uri is not defined.[/]");
+                    _logger.LogError("This folder has not been initialized with a PWA. Could not find the AppId or Uri in the pwaAppInfo.json file.");
+                    return -1;
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                AnsiConsole.MarkupLine($":collision: [bold red]Error while loading pwaAppInfo.json file.[/]");
+                _logger.LogError(ex, "Error while loading pwaAppInfo.json file.");
                 return -1;
             }
 

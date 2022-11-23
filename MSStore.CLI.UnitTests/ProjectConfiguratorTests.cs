@@ -192,6 +192,14 @@ namespace MSStore.CLI.UnitTests
                 {
                     Status = "CommitStarted",
                 });
+
+            PWAAppInfoManager
+                .Setup(x => x.LoadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new PWAAppInfo
+                {
+                    AppId = FakeApps[0].Id,
+                    Uri = new Uri("https://www.microsoft.com")
+                });
         }
 
         [TestMethod]
