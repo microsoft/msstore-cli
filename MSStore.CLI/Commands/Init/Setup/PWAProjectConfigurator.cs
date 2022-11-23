@@ -5,9 +5,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using MSStore.API;
 using MSStore.API.Packaged;
 using MSStore.API.Packaged.Models;
 using MSStore.CLI.Helpers;
@@ -51,7 +53,20 @@ namespace MSStore.CLI.Commands.Init.Setup
         {
             var uri = GetUri(pathOrUrl);
 
-            return uri != null;
+            return uri != null || ContainsPWAAppInfoJson(pathOrUrl);
+        }
+
+        private static bool ContainsPWAAppInfoJson(string pathOrUrl)
+        {
+            try
+            {
+                DirectoryInfo directoryPath = new DirectoryInfo(pathOrUrl);
+                return directoryPath.GetFiles("pwaAppInfo.json").Any();
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private static Uri? GetUri(string pathOrUrl)
@@ -72,188 +87,44 @@ namespace MSStore.CLI.Commands.Init.Setup
             return uri;
         }
 
-        public async Task<int> ConfigureAsync(string pathOrUrl, string publisherDisplayName, DevCenterApplication app, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public async Task<(int returnCode, DirectoryInfo? outputDirectory)> ConfigureAsync(string pathOrUrl, DirectoryInfo? output, string publisherDisplayName, DevCenterApplication app, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             var uri = GetUri(pathOrUrl);
 
             if (uri == null)
             {
-                return -1;
+                return (-1, null);
             }
 
             if (string.IsNullOrEmpty(app.Id))
             {
-                return -1;
+                return (-1, null);
             }
 
-            var pendingSubmissionId = app.PendingApplicationSubmission?.Id;
+            AnsiConsole.WriteLine($"You've provided a URL, so we'll use PWABuilder.com to setup your PWA and upload it to the Microsoft Store.");
+            AnsiConsole.WriteLine();
 
-            bool success = true;
-
-            // Do not delete if first submission
-            if (pendingSubmissionId != null && app.LastPublishedApplicationSubmission != null)
+            string outputZipPath;
+            string fileName;
+            if (output == null)
             {
-                success = await storePackagedAPI.DeleteSubmissionAsync(app.Id, pendingSubmissionId, _browserLauncher, _logger, ct);
-
-                if (!success)
+                fileName = Path.GetRandomFileName();
+                output = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "MSStore", "PWAZips", Path.GetFileNameWithoutExtension(fileName)));
+            }
+            else
+            {
+                fileName = Path.GetFileName(output.FullName) ?? throw new NotSupportedException("UNC paths are not supported.");
+                if (!output.Exists)
                 {
-                    return -1;
+                    output.Create();
                 }
             }
 
-            DevCenterSubmission? submission = null;
-
-            // If first submission, just use it // TODO, check that can update
-            if (pendingSubmissionId != null && app.LastPublishedApplicationSubmission == null)
-            {
-                submission = await storePackagedAPI.GetExistingSubmission(app.Id, pendingSubmissionId, _logger, ct);
-
-                if (submission == null || submission.Id == null)
-                {
-                    _logger.LogError("Could not create or retrieve submission. Please try again.");
-                    AnsiConsole.WriteLine("Could not retrieve submission. Please try again.");
-                    return -1;
-                }
-
-                if (submission.FileUploadUrl == null)
-                {
-                    _logger.LogError("Retrieved a submission that was created in Partner Center. Please, delete it and try again.");
-                    AnsiConsole.WriteLine("Retrieved a submission that was created in Partner Center. Please, delete it and try again.");
-                    return -1;
-                }
-
-                var qs = System.Web.HttpUtility.ParseQueryString(submission.FileUploadUrl);
-                if (!DateTime.TryParse(qs["se"], out var fileUploadExpire) || fileUploadExpire < DateTime.UtcNow)
-                {
-                    success = await storePackagedAPI.DeleteSubmissionAsync(app.Id, submission.Id, _browserLauncher, _logger, ct);
-
-                    if (!success)
-                    {
-                        return -1;
-                    }
-
-                    submission = null;
-                }
-            }
-
-            if (submission == null)
-            {
-                var newSubmission = await storePackagedAPI.CreateNewSubmissionAsync(app.Id, _logger, ct);
-                if (newSubmission != null)
-                {
-                    submission = newSubmission;
-                }
-
-                success = submission != null;
-            }
-
-            if (!success || submission == null || submission.Id == null || submission.FileUploadUrl == null)
-            {
-                _logger.LogError("Could not create or retrieve submission. Please try again.");
-                AnsiConsole.WriteLine("Could not retrieve submission. Please try again.");
-                return -1;
-            }
-
-            submission = await storePackagedAPI.GetExistingSubmission(app.Id, submission.Id, _logger, ct);
-
-            if (submission == null || submission.Id == null || submission.FileUploadUrl == null)
-            {
-                _logger.LogError("Could not retrieve submission. Please try again.");
-                AnsiConsole.WriteLine("Could not retrieve submission. Please try again.");
-                return -1;
-            }
-
-            if (submission.ApplicationPackages == null)
-            {
-                AnsiConsole.WriteLine("No application packages found.");
-                return -1;
-            }
-
-            var zipPath = await ConfigureSubmissionAsync(submission, uri, publisherDisplayName, app, ct);
-            if (zipPath == null)
-            {
-                return -1;
-            }
-
-            var uploadZipFilePath = await PrepareBundleAsync(submission, zipPath, ct);
-
-            if (uploadZipFilePath == null)
-            {
-                return -1;
-            }
-
-            submission = await storePackagedAPI.UpdateSubmissionAsync(app.Id, submission.Id, submission, ct);
-
-            if (submission == null || submission.Id == null || submission.FileUploadUrl == null)
-            {
-                _logger.LogError("Could not retrieve FileUploadUrl. Please try again.");
-                AnsiConsole.WriteLine("Could not retrieve FileUploadUrl. Please try again.");
-                return -1;
-            }
-
-            success = await AnsiConsole.Progress()
-                .StartAsync(async ctx =>
-                {
-                    var task = ctx.AddTask("[green]Uploading Bundle to [u]Azure blob[/][/]");
-                    try
-                    {
-                        await _azureBlobManager.UploadFileAsync(submission.FileUploadUrl, uploadZipFilePath, task, ct);
-                        AnsiConsole.MarkupLine($":check_mark_button: [green]Successfully uploaded the application package.[/]");
-                        return true;
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Error while uploading the application package.");
-                        AnsiConsole.WriteLine("Error while uploading the application package.");
-                        return false;
-                    }
-                });
-
-            if (!success)
-            {
-                return -1;
-            }
-
-            var submissionCommit = await storePackagedAPI.CommitSubmissionAsync(app.Id, submission.Id, ct);
-
-            AnsiConsole.WriteLine("Waiting for the submission commit processing to complete. This may take a couple of minutes.");
-            AnsiConsole.MarkupLine($"Submission Committed - Status=[green u]{submissionCommit.Status}[/]");
-
-            var lastSubmissionStatus = await storePackagedAPI.PollSubmissionStatusAsync(app.Id, submission.Id, true, _logger, ct: ct);
-
-            if (lastSubmissionStatus == null)
-            {
-                return -1;
-            }
-
-            return await storePackagedAPI.HandleLastSubmissionStatusAsync(lastSubmissionStatus, app.Id, submission.Id, _consoleReader, _browserLauncher, _logger, ct);
-        }
-
-        public async Task<string?> ConfigureSubmissionAsync(DevCenterSubmission submission, Uri uri, string publisherDisplayName, DevCenterApplication app, CancellationToken ct)
-        {
-            if (submission.ApplicationPackages == null)
-            {
-                AnsiConsole.WriteLine("No application packages found.");
-                return null;
-            }
-
-            var webManifest = await AnsiConsole.Status().StartAsync("Prepating Bundle...", async ctx =>
-            {
-                try
-                {
-                    return await _pwaBuilderClient.FetchWebManifestAsync(uri, ct);
-                }
-                catch (Exception err)
-                {
-                    _logger.LogError(err, "Error while preparing bundle.");
-                    ctx.ErrorStatus("Error while preparing bundle.");
-                    return null;
-                }
-            });
-
-            await FulfillApplicationAsync(app, submission, webManifest?.Content?.Json, ct);
+            outputZipPath = Path.Combine(output.FullName, Path.ChangeExtension(fileName, "zip"));
 
             var maxVersion = new Version();
+            /*
+            // TODO: Add version parameter back
             foreach (var applicationPackage in submission.ApplicationPackages)
             {
                 if (applicationPackage.Version != null)
@@ -265,26 +136,14 @@ namespace MSStore.CLI.Commands.Init.Setup
                     }
                 }
             }
+            */
 
             if (maxVersion.ToString() == "0.0")
             {
                 maxVersion = new Version(1, 0, 0);
             }
 
-            AnsiConsole.MarkupLine("New Submission [green]properly configured[/].");
-            _logger.LogInformation("New Submission properly configured. FileUploadUrl: {FileUploadUrl}", submission.FileUploadUrl);
-
-            AnsiConsole.WriteLine();
-
-            AnsiConsole.WriteLine($"You've provided a URL, so we'll use PWABuilder.com to setup your PWA and upload it to the Microsoft Store.");
-            AnsiConsole.WriteLine();
-
-            var rootDir = Path.Combine(Path.GetTempPath(), "MSStore", "PWAZips");
-            Directory.CreateDirectory(rootDir);
-
-            var outputZipPath = Path.Combine(rootDir, Path.ChangeExtension(Path.GetRandomFileName(), "zip"));
-
-            bool success = await AnsiConsole.Progress()
+            var success = await AnsiConsole.Progress()
                 .StartAsync(async ctx =>
                 {
                     var task = ctx.AddTask("[green]Downloading PWA Bundle From [u]PWABuilder.com[/][/]");
@@ -335,12 +194,65 @@ namespace MSStore.CLI.Commands.Init.Setup
                     return true;
                 });
 
-            if (!success)
+            if (!success || outputZipPath == null)
             {
-                return null;
+                return (-1, null);
             }
 
-            return outputZipPath;
+            var zipDir = Path.GetDirectoryName(outputZipPath) ?? throw new NotSupportedException("UNC paths are not supported.");
+
+            var extractedZipDir = Path.Combine(zipDir, Path.GetFileNameWithoutExtension(outputZipPath) + "_PWABuilderExtractedBundle");
+
+            _zipFileManager.ExtractZip(outputZipPath, extractedZipDir);
+            var extractedZipDirInfo = new DirectoryInfo(extractedZipDir);
+
+            _logger.LogInformation("Extracted '{ZipPath}' to: '{ExtractedZipDirFullName}'", outputZipPath, extractedZipDirInfo.FullName);
+
+            var appInfoPath = Path.Combine(zipDir, "pwaAppInfo.json");
+            using var file = File.Open(appInfoPath, FileMode.OpenOrCreate);
+            file.SetLength(0);
+            file.Position = 0;
+            await JsonSerializer.SerializeAsync(
+                file,
+                new PWAAppInfo
+                {
+                    AppId = app.Id,
+                    Uri = uri,
+                },
+                PWAAppInfoSourceGenerationContext.Default.PWAAppInfo,
+                ct);
+
+            return (0, output);
+        }
+
+        public async Task<bool> ConfigureSubmissionAsync(DevCenterSubmission submission, Uri uri, DevCenterApplication app, CancellationToken ct)
+        {
+            if (submission.ApplicationPackages == null)
+            {
+                AnsiConsole.WriteLine("No application packages found.");
+                return false;
+            }
+
+            var webManifest = await AnsiConsole.Status().StartAsync("Prepating Bundle...", async ctx =>
+            {
+                try
+                {
+                    return await _pwaBuilderClient.FetchWebManifestAsync(uri, ct);
+                }
+                catch (Exception err)
+                {
+                    _logger.LogError(err, "Error while preparing bundle.");
+                    ctx.ErrorStatus("Error while preparing bundle.");
+                    return null;
+                }
+            });
+
+            await FulfillApplicationAsync(app, submission, webManifest?.Content?.Json, ct);
+
+            AnsiConsole.MarkupLine("New Submission [green]properly configured[/].");
+            _logger.LogInformation("New Submission properly configured. FileUploadUrl: {FileUploadUrl}", submission.FileUploadUrl);
+
+            return true;
         }
 
         private async Task FulfillApplicationAsync(DevCenterApplication app, DevCenterSubmission submission, WebManifestJson? webManifest, CancellationToken ct)
@@ -464,7 +376,7 @@ namespace MSStore.CLI.Commands.Init.Setup
             }
         }
 
-        private async Task<string?> PrepareBundleAsync(DevCenterSubmission submission, string zipPath, CancellationToken ct)
+        private async Task<string?> PrepareBundleAsync(DevCenterSubmission submission, DirectoryInfo output, CancellationToken ct)
         {
             if (submission?.ApplicationPackages == null)
             {
@@ -478,17 +390,7 @@ namespace MSStore.CLI.Commands.Init.Setup
             {
                 try
                 {
-                    var zipDir = Path.GetDirectoryName(zipPath) ?? throw new NotSupportedException("UNC paths are not supported.");
-
-                    var extractedZipDir = Path.Combine(zipDir, Path.GetFileNameWithoutExtension(zipPath));
-
-                    _zipFileManager.ExtractZip(zipPath, extractedZipDir);
-                    var extractedZipDirInfo = new DirectoryInfo(extractedZipDir);
-
-                    _logger.LogInformation("Extracted '{ZipPath}' to: '{ExtractedZipDirFullName}'", zipPath, extractedZipDirInfo.FullName);
-
-                    var uploadDir = Directory.CreateDirectory(Path.Combine(extractedZipDirInfo.FullName, "Upload"));
-                    var packageFiles = extractedZipDirInfo.GetFiles("*.*", SearchOption.TopDirectoryOnly)
+                    var packageFiles = output.GetFiles("*.*", SearchOption.TopDirectoryOnly)
                                     .Where(f => (f.Extension == ".appxbundle"
                                              || f.Extension == ".msixbundle"
                                              || f.Extension == ".msix")
@@ -496,6 +398,7 @@ namespace MSStore.CLI.Commands.Init.Setup
 
                     var applicationPackages = submission.ApplicationPackages.FilterUnsupported();
 
+                    var uploadDir = Directory.CreateDirectory(Path.Combine(output.FullName, "Upload"));
                     foreach (var file in packageFiles)
                     {
                         var applicationPackage = applicationPackages.FirstOrDefault(p => Path.GetExtension(p.FileName) == file.Extension);
@@ -555,7 +458,7 @@ namespace MSStore.CLI.Commands.Init.Setup
                         await Task.WhenAll(tasks);
                     }
 
-                    var uploadZipFilePath = Path.Combine(extractedZipDirInfo.FullName, "Upload.zip");
+                    var uploadZipFilePath = Path.Combine(output.FullName, "Upload.zip");
 
                     _zipFileManager.CreateFromDirectory(uploadDir.FullName, uploadZipFilePath);
 
@@ -574,12 +477,228 @@ namespace MSStore.CLI.Commands.Init.Setup
 
         public Task<(int returnCode, FileInfo? outputFile)> PackageAsync(string pathOrUrl, DevCenterApplication? app, DirectoryInfo? output, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
-            throw new NotImplementedException();
+            if (GetUri(pathOrUrl) != null && output != null)
+            {
+                pathOrUrl = output.FullName;
+            }
+
+            if (pathOrUrl == null)
+            {
+                return Task.FromResult<(int, FileInfo?)>((-1, null));
+            }
+
+            return Task.FromResult((0, (FileInfo?)new FileInfo(fileName: pathOrUrl)));
         }
 
-        public Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, FileInfo? input, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public async Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, FileInfo? input, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
-            throw new NotImplementedException();
+            bool success = true;
+
+            if (GetUri(pathOrUrl) != null && input != null)
+            {
+                pathOrUrl = input.FullName;
+            }
+
+            if (pathOrUrl == null)
+            {
+                return -1;
+            }
+
+            string? appId = app?.Id;
+            Uri uri;
+            try
+            {
+                var appInfoPath = Path.Combine(pathOrUrl, "pwaAppInfo.json");
+                using var file = File.Open(appInfoPath, FileMode.Open);
+
+                // Try to find AppId inside the pwaAppInfo.json file
+                var pwaAppInfo = await JsonSerializer.DeserializeAsync(file, PWAAppInfoSourceGenerationContext.Default.PWAAppInfo, ct);
+
+                appId ??= pwaAppInfo?.AppId;
+                uri = pwaAppInfo?.Uri ?? throw new Exception("Uri is null");
+                if (appId == null)
+                {
+                    throw new MSStoreException("Failed to find the AppId in the pubspec.yaml file.");
+                }
+            }
+            catch (Exception)
+            {
+                return -1;
+            }
+
+            if (app?.Id == null)
+            {
+                try
+                {
+                    success = await AnsiConsole.Status().StartAsync("Retrieving application...", async ctx =>
+                    {
+                        try
+                        {
+                            app = await storePackagedAPI.GetApplicationAsync(appId, ct);
+
+                            ctx.SuccessStatus("Ok! Found the app!");
+                        }
+                        catch (Exception)
+                        {
+                            ctx.ErrorStatus("Could not retrieve your application. Please make sure you have the correct AppId.");
+
+                            return false;
+                        }
+
+                        return true;
+                    });
+
+                    if (!success || app?.Id == null)
+                    {
+                        return -1;
+                    }
+                }
+                catch (Exception)
+                {
+                    return -1;
+                }
+            }
+
+            AnsiConsole.MarkupLine($"AppId: [green bold]{app.Id}[/]");
+
+            var pendingSubmissionId = app.PendingApplicationSubmission?.Id;
+
+            // Do not delete if first submission
+            if (pendingSubmissionId != null && app.LastPublishedApplicationSubmission != null)
+            {
+                success = await storePackagedAPI.DeleteSubmissionAsync(app.Id, pendingSubmissionId, _browserLauncher, _logger, ct);
+
+                if (!success)
+                {
+                    return -1;
+                }
+            }
+
+            DevCenterSubmission? submission = null;
+
+            // If first submission, just use it // TODO, check that can update
+            if (pendingSubmissionId != null && app.LastPublishedApplicationSubmission == null)
+            {
+                submission = await storePackagedAPI.GetExistingSubmission(app.Id, pendingSubmissionId, _logger, ct);
+
+                if (submission == null || submission.Id == null)
+                {
+                    _logger.LogError("Could not create or retrieve submission. Please try again.");
+                    AnsiConsole.WriteLine("Could not retrieve submission. Please try again.");
+                    return -1;
+                }
+
+                if (submission.FileUploadUrl == null)
+                {
+                    _logger.LogError("Retrieved a submission that was created in Partner Center. Please, delete it and try again.");
+                    AnsiConsole.WriteLine("Retrieved a submission that was created in Partner Center. Please, delete it and try again.");
+                    return -1;
+                }
+
+                var qs = System.Web.HttpUtility.ParseQueryString(submission.FileUploadUrl);
+                if (!DateTime.TryParse(qs["se"], out var fileUploadExpire) || fileUploadExpire < DateTime.UtcNow)
+                {
+                    success = await storePackagedAPI.DeleteSubmissionAsync(app.Id, submission.Id, _browserLauncher, _logger, ct);
+
+                    if (!success)
+                    {
+                        return -1;
+                    }
+
+                    submission = null;
+                }
+            }
+
+            if (submission == null)
+            {
+                var newSubmission = await storePackagedAPI.CreateNewSubmissionAsync(app.Id, _logger, ct);
+                if (newSubmission != null)
+                {
+                    submission = newSubmission;
+                }
+
+                success = submission != null;
+            }
+
+            if (!success || submission == null || submission.Id == null || submission.FileUploadUrl == null)
+            {
+                _logger.LogError("Could not create or retrieve submission. Please try again.");
+                AnsiConsole.WriteLine("Could not retrieve submission. Please try again.");
+                return -1;
+            }
+
+            submission = await storePackagedAPI.GetExistingSubmission(app.Id, submission.Id, _logger, ct);
+
+            if (submission == null || submission.Id == null || submission.FileUploadUrl == null)
+            {
+                _logger.LogError("Could not retrieve submission. Please try again.");
+                AnsiConsole.WriteLine("Could not retrieve submission. Please try again.");
+                return -1;
+            }
+
+            if (submission.ApplicationPackages == null)
+            {
+                AnsiConsole.WriteLine("No application packages found.");
+                return -1;
+            }
+
+            if (await ConfigureSubmissionAsync(submission, uri, app, ct) == false)
+            {
+                return -1;
+            }
+
+            var uploadZipFilePath = await PrepareBundleAsync(submission, new DirectoryInfo(pathOrUrl), ct);
+
+            if (uploadZipFilePath == null)
+            {
+                return -1;
+            }
+
+            submission = await storePackagedAPI.UpdateSubmissionAsync(app.Id, submission.Id, submission, ct);
+
+            if (submission == null || submission.Id == null || submission.FileUploadUrl == null)
+            {
+                _logger.LogError("Could not retrieve FileUploadUrl. Please try again.");
+                AnsiConsole.WriteLine("Could not retrieve FileUploadUrl. Please try again.");
+                return -1;
+            }
+
+            success = await AnsiConsole.Progress()
+                .StartAsync(async ctx =>
+                {
+                    var task = ctx.AddTask("[green]Uploading Bundle to [u]Azure blob[/][/]");
+                    try
+                    {
+                        await _azureBlobManager.UploadFileAsync(submission.FileUploadUrl, uploadZipFilePath, task, ct);
+                        AnsiConsole.MarkupLine($":check_mark_button: [green]Successfully uploaded the application package.[/]");
+                        return true;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error while uploading the application package.");
+                        AnsiConsole.WriteLine("Error while uploading the application package.");
+                        return false;
+                    }
+                });
+
+            if (!success)
+            {
+                return -1;
+            }
+
+            var submissionCommit = await storePackagedAPI.CommitSubmissionAsync(app.Id, submission.Id, ct);
+
+            AnsiConsole.WriteLine("Waiting for the submission commit processing to complete. This may take a couple of minutes.");
+            AnsiConsole.MarkupLine($"Submission Committed - Status=[green u]{submissionCommit.Status}[/]");
+
+            var lastSubmissionStatus = await storePackagedAPI.PollSubmissionStatusAsync(app.Id, submission.Id, true, _logger, ct: ct);
+
+            if (lastSubmissionStatus == null)
+            {
+                return -1;
+            }
+
+            return await storePackagedAPI.HandleLastSubmissionStatusAsync(lastSubmissionStatus, app.Id, submission.Id, _consoleReader, _browserLauncher, _logger, ct);
         }
     }
 }

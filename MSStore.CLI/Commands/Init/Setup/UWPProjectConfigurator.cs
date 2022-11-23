@@ -62,7 +62,7 @@ namespace MSStore.CLI.Commands.Init.Setup
             return (projectRootPath, manifestFile);
         }
 
-        public Task<int> ConfigureAsync(string pathOrUrl, string publisherDisplayName, DevCenterApplication app, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public Task<(int returnCode, DirectoryInfo? outputDirectory)> ConfigureAsync(string pathOrUrl, DirectoryInfo? output, string publisherDisplayName, DevCenterApplication app, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             var (projectRootPath, manifestFile) = GetInfo(pathOrUrl);
 
@@ -186,7 +186,7 @@ namespace MSStore.CLI.Commands.Init.Setup
             AnsiConsole.WriteLine($"UWP project at '{projectRootPath.FullName}' is now configured to build to the Microsoft Store!");
             AnsiConsole.WriteLine("For more information on building your UWP project to the Microsoft Store, see https://learn.microsoft.com/windows/msix/package/packaging-uwp-apps");
 
-            return Task.FromResult(0);
+            return Task.FromResult((0, output));
         }
 
         public async Task<(int returnCode, FileInfo? outputFile)> PackageAsync(string pathOrUrl, DevCenterApplication? app, DirectoryInfo? output, IStorePackagedAPI storePackagedAPI, CancellationToken ct)

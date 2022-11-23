@@ -204,6 +204,7 @@ namespace MSStore.CLI.UnitTests
                 {
                     "init",
                     "https://microsoft.com",
+                    "--publish",
                     "--verbose"
                 });
 
@@ -226,6 +227,7 @@ namespace MSStore.CLI.UnitTests
                     "https://microsoft.com",
                     "--publisherDisplayName",
                     "FAKE_PUBLISHER_DISPLAY_NAME",
+                    "--publish",
                     "--verbose"
                 });
 

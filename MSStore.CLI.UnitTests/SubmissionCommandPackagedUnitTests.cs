@@ -188,5 +188,31 @@ namespace MSStore.CLI.UnitTests
 
             result.Should().Contain("Submission commit success!");
         }
+
+        [TestMethod]
+        public async Task PackagedSubmissionDeleteCommand()
+        {
+            FakeApps[0].PendingApplicationSubmission = new ApplicationSubmissionInfo
+            {
+                Id = "123456789"
+            };
+
+            FakeConsole
+                .Setup(x => x.YesNoConfirmationAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
+
+            var result = await ParseAndInvokeAsync(
+                new[]
+                {
+                    "submission",
+                    "delete",
+                    FakeApps[0].Id!
+                });
+
+            FakeConsole.Verify(x => x.YesNoConfirmationAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+
+            result.Should().Contain($"Found Pending Submission with Id '{FakeApps[0].PendingApplicationSubmission!.Id}'");
+            result.Should().Contain("Submission deleted successfully.");
+        }
     }
 }

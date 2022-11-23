@@ -62,7 +62,7 @@ namespace MSStore.CLI.Commands.Init.Setup
             return (projectRootPath, flutterProjectFile);
         }
 
-        public async Task<int> ConfigureAsync(string pathOrUrl, string publisherDisplayName, DevCenterApplication app, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public async Task<(int returnCode, DirectoryInfo? outputDirectory)> ConfigureAsync(string pathOrUrl, DirectoryInfo? output, string publisherDisplayName, DevCenterApplication app, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             var (projectRootPath, flutterProjectFile) = GetInfo(pathOrUrl);
 
@@ -104,7 +104,7 @@ namespace MSStore.CLI.Commands.Init.Setup
 
                 if (imagePath == null)
                 {
-                    return -2;
+                    return (-2, null);
                 }
 
                 fileStream.Seek(0, SeekOrigin.End);
@@ -133,7 +133,7 @@ namespace MSStore.CLI.Commands.Init.Setup
                 AnsiConsole.WriteLine("For more information on building your Flutter project to the Microsoft Store, see https://pub.dev/packages/msix#microsoft-store-icon-publishing-to-the-microsoft-store");
             }
 
-            return 0;
+            return (0, output);
         }
 
         private async Task<string?> GenerateImageFromIcoAsync(DirectoryInfo projectRootPath, CancellationToken ct)

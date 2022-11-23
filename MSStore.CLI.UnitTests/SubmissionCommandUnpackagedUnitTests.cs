@@ -248,5 +248,19 @@ namespace MSStore.CLI.UnitTests
             result.Should().Contain("INPROGRESS");
             result.Should().Contain("PUBLISHED");
         }
+
+        [TestMethod]
+        public async Task UnpackagedSubmissionDeleteCommand()
+        {
+            var result = await ParseAndInvokeAsync(
+                new[]
+                {
+                    "submission",
+                    "delete",
+                    Guid.Empty.ToString()
+                }, -1);
+
+            result.Should().Contain("This command is not supported for unpackaged applications.");
+        }
     }
 }

@@ -230,11 +230,16 @@ namespace MSStore.CLI.Commands
                 AnsiConsole.WriteLine("Lets set it up for you!");
                 AnsiConsole.WriteLine();
 
-                var result = await configurator.ConfigureAsync(PathOrUrl, PublisherDisplayName, app, storePackagedAPI, ct);
+                var (result, outputDirectory) = await configurator.ConfigureAsync(PathOrUrl, Output, PublisherDisplayName, app, storePackagedAPI, ct);
 
                 if (result != 0)
                 {
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(result, props, ct);
+                }
+
+                if (outputDirectory != null)
+                {
+                    Output = outputDirectory;
                 }
 
                 FileInfo? outputFile = null;
