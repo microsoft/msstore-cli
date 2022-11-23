@@ -123,22 +123,57 @@ namespace MSStore.CLI.Commands.Init.Setup
             outputZipPath = Path.Combine(output.FullName, Path.ChangeExtension(fileName, "zip"));
 
             var maxVersion = new Version();
-            /*
-            // TODO: Add version parameter back
-            foreach (var applicationPackage in submission.ApplicationPackages)
+            var submission = await AnsiConsole.Status().StartAsync("Retrieving Submission", async ctx =>
             {
-                if (applicationPackage.Version != null)
+                try
                 {
-                    var packageVersion = new Version(applicationPackage.Version);
-                    if (packageVersion > maxVersion)
+                    if (app.LastPublishedApplicationSubmission?.Id != null)
                     {
-                        maxVersion = packageVersion;
+                        return await storePackagedAPI.GetSubmissionAsync(app.Id, app.LastPublishedApplicationSubmission.Id, ct);
+                    }
+
+                    return null;
+                }
+                catch (MSStoreHttpException err)
+                {
+                    if (err.Response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+                    {
+                        ctx.ErrorStatus("Could not find the Application or submission. Please check the ProductId.");
+                        _logger.LogError(err, "Could not find the Application or submission. Please check the ProductId.");
+                    }
+                    else
+                    {
+                        ctx.ErrorStatus("Error while retrieving submission.");
+                        _logger.LogError(err, "Error while retrieving submission for Application.");
+                    }
+
+                    return null;
+                }
+                catch (Exception err)
+                {
+                    _logger.LogError(err, "Error while retrieving submission.");
+                    ctx.ErrorStatus(err);
+                    return null;
+                }
+            });
+
+            if (submission?.ApplicationPackages != null)
+            {
+                foreach (var applicationPackage in submission.ApplicationPackages)
+                {
+                    if (applicationPackage.Version != null)
+                    {
+                        var packageVersion = new Version(applicationPackage.Version);
+                        if (packageVersion > maxVersion)
+                        {
+                            maxVersion = packageVersion;
+                        }
                     }
                 }
             }
-            */
 
-            if (maxVersion.ToString() == "0.0")
+            // PWABuilder doesn't accept Major = 0
+            if (maxVersion.ToString() == "0.0" || maxVersion.Major == 0)
             {
                 maxVersion = new Version(1, 0, 0);
             }
