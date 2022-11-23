@@ -4,12 +4,10 @@
 using System;
 using System.CommandLine;
 using System.CommandLine.Invocation;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Logging;
 using MSStore.API;
-using MSStore.API.Models;
 using MSStore.CLI.Helpers;
 using MSStore.CLI.Services;
 using Spectre.Console;
@@ -35,17 +33,19 @@ namespace MSStore.CLI.Commands.Submission
             private readonly ILogger _logger;
             private readonly IStoreAPIFactory _storeAPIFactory;
             private readonly IConsoleReader _consoleReader;
+            private readonly IBrowserLauncher _browserLauncher;
             private readonly TelemetryClient _telemetryClient;
 
             public string ProductId { get; set; } = null!;
 
             public bool? NoConfirm { get; set; }
 
-            public Handler(ILogger<Handler> logger, IStoreAPIFactory storeAPIFactory, IConsoleReader consoleReader, TelemetryClient telemetryClient)
+            public Handler(ILogger<Handler> logger, IStoreAPIFactory storeAPIFactory, IConsoleReader consoleReader, IBrowserLauncher browserLauncher, TelemetryClient telemetryClient)
             {
                 _logger = logger ?? throw new ArgumentNullException(nameof(logger));
                 _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
                 _consoleReader = consoleReader ?? throw new ArgumentNullException(nameof(consoleReader));
+                _browserLauncher = browserLauncher ?? throw new ArgumentNullException(nameof(browserLauncher));
                 _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
             }
 
@@ -120,47 +120,12 @@ namespace MSStore.CLI.Commands.Submission
                 AnsiConsole.WriteLine($"Found Pending Submission with Id '{submissionId}'");
                 if (NoConfirm == false && !await _consoleReader.YesNoConfirmationAsync("Do you want to delete the pending submission?", ct))
                 {
-                    return 0;
+                    return -2;
                 }
 
-                var devCenterError = await AnsiConsole.Status().StartAsync("Deleting Submission", async ctx =>
-                {
-                    try
-                    {
-                        var devCenterError = await storePackagedAPI.DeleteSubmissionAsync(ProductId, submissionId, ct);
-                        ctx.SuccessStatus("Submission deleted successfully.");
-                        return devCenterError;
-                    }
-                    catch (MSStoreHttpException err)
-                    {
-                        if (err.Response.StatusCode == System.Net.HttpStatusCode.Forbidden)
-                        {
-                            ctx.ErrorStatus("Could not delete the submission. Please check the ProductId.");
-                            _logger.LogError(err, "Could not delete the submission. Please check the ProductId.");
-                        }
-                        else
-                        {
-                            ctx.ErrorStatus("Error while deleting submission.");
-                            _logger.LogError(err, "Error while deleting application's submission.");
-                        }
+                var success = await storePackagedAPI.DeleteSubmissionAsync(ProductId, submissionId, _browserLauncher, _logger, ct);
 
-                        return null;
-                    }
-                    catch (Exception err)
-                    {
-                        _logger.LogError(err, "Error while deleting submission.");
-                        ctx.ErrorStatus(err);
-                        return null;
-                    }
-                });
-
-                if (devCenterError != null)
-                {
-                    AnsiConsole.WriteLine(JsonSerializer.Serialize(devCenterError, SourceGenerationContext.GetCustom(true).DevCenterError));
-                    return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
-                }
-
-                return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, 0, ct);
+                return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, success ? 0 : -1, ct);
             }
         }
     }

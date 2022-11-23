@@ -212,7 +212,7 @@ namespace MSStore.CLI.UnitTests
             FakeConsole.Verify(x => x.YesNoConfirmationAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
 
             result.Should().Contain($"Found Pending Submission with Id '{FakeApps[0].PendingApplicationSubmission!.Id}'");
-            result.Should().Contain("Submission deleted successfully.");
+            result.Should().Contain("Existing submission deleted!");
         }
     }
 }

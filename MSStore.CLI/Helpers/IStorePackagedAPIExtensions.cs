@@ -8,6 +8,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using MSStore.API;
 using MSStore.API.Packaged;
 using MSStore.API.Packaged.Models;
 using MSStore.CLI.Services;
@@ -256,8 +257,6 @@ namespace MSStore.CLI.Helpers
                             devCenterError.Target == "applicationSubmission")
                         {
                             var existingSubmission = await storePackagedAPI.GetSubmissionAsync(appId, pendingSubmissionId, ct);
-                            AnsiConsole.WriteLine(existingSubmission.Id ?? string.Empty);
-
                             browserLauncher.OpenBrowser($"https://partner.microsoft.com/dashboard/products/{appId}/submissions/{existingSubmission.Id}");
                             return false;
                         }
@@ -265,10 +264,25 @@ namespace MSStore.CLI.Helpers
 
                     ctx.SuccessStatus("Existing submission deleted!");
                 }
+                catch (MSStoreHttpException err)
+                {
+                    if (err.Response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+                    {
+                        logger.LogError(err, "Could not delete the submission.");
+                        ctx.ErrorStatus("Could not delete the submission.");
+                    }
+                    else
+                    {
+                        logger.LogError(err, "Error while deleting application's submission.");
+                        ctx.ErrorStatus("Error while deleting submission.");
+                    }
+
+                    return false;
+                }
                 catch (Exception err)
                 {
-                    logger.LogError(err, "Error while deleting existing submission.");
-                    ctx.ErrorStatus("Error while deleting existing submission. Please try again.");
+                    logger.LogError(err, "Error while deleting submission.");
+                    ctx.ErrorStatus("Error while deleting submission. Please try again.");
                     return false;
                 }
 
