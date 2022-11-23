@@ -12,7 +12,7 @@ using MSStore.API.Packaged.Models;
 using MSStore.CLI.Services;
 using Spectre.Console;
 
-namespace MSStore.CLI.Commands.Init.Setup
+namespace MSStore.CLI.ProjectConfigurators
 {
     internal class FlutterProjectConfigurator : IProjectConfigurator, IProjectPackager, IProjectPublisher
     {

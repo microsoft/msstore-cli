@@ -5,7 +5,7 @@ using System;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace MSStore.CLI.Commands.Init.Setup
+namespace MSStore.CLI.ProjectConfigurators
 {
     internal class ProjectConfiguratorFactory : IProjectConfiguratorFactory
     {

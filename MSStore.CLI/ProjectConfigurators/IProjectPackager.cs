@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using MSStore.API.Packaged;
 using MSStore.API.Packaged.Models;
 
-namespace MSStore.CLI.Commands.Init.Setup
+namespace MSStore.CLI.ProjectConfigurators
 {
     internal interface IProjectPackager
     {

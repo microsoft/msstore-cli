@@ -18,7 +18,7 @@ using MSStore.API;
 using MSStore.API.Packaged;
 using MSStore.API.Packaged.Models;
 using MSStore.CLI.Commands;
-using MSStore.CLI.Commands.Init.Setup;
+using MSStore.CLI.ProjectConfigurators;
 using MSStore.CLI.Services;
 using MSStore.CLI.Services.CredentialManager;
 using MSStore.CLI.Services.Graph;

@@ -9,8 +9,8 @@ using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
-using MSStore.CLI.Commands.Init.Setup;
 using MSStore.CLI.Helpers;
+using MSStore.CLI.ProjectConfigurators;
 using MSStore.CLI.Services;
 using Spectre.Console;
 

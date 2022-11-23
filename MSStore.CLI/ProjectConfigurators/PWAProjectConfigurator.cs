@@ -16,7 +16,7 @@ using MSStore.CLI.Services;
 using MSStore.CLI.Services.PWABuilder;
 using Spectre.Console;
 
-namespace MSStore.CLI.Commands.Init.Setup
+namespace MSStore.CLI.ProjectConfigurators
 {
     internal class PWAProjectConfigurator : IProjectConfigurator, IProjectPackager, IProjectPublisher
     {

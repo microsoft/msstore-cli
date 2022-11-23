@@ -3,7 +3,7 @@
 
 using System.CommandLine.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using MSStore.CLI.Commands.Init.Setup;
+using MSStore.CLI.ProjectConfigurators;
 
 namespace MSStore.CLI.UnitTests
 {

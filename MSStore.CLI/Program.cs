@@ -19,7 +19,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MSStore.CLI.Commands;
-using MSStore.CLI.Commands.Init.Setup;
+using MSStore.CLI.ProjectConfigurators;
 using MSStore.CLI.Services;
 using MSStore.CLI.Services.CredentialManager;
 using MSStore.CLI.Services.Graph;
