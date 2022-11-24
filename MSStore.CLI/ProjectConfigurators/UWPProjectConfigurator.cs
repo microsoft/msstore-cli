@@ -228,7 +228,7 @@ namespace MSStore.CLI.ProjectConfigurators
             {
                 try
                 {
-                    var result = await _externalCommandExecutor.RunAsync($"\"{vswhere}\" -latest -requires Microsoft.Component.MSBuild -find MSBuild\\**\\Bin\\MSBuild.exe", projectRootPath.FullName, ct);
+                    var result = await _externalCommandExecutor.RunAsync($"\"{vswhere}\"", "-latest -requires Microsoft.Component.MSBuild -find MSBuild\\**\\Bin\\MSBuild.exe", projectRootPath.FullName, ct);
                     if (result.ExitCode == 0 && result.StdOut.Contains("MSBuild.exe", StringComparison.OrdinalIgnoreCase))
                     {
                         ctx.SuccessStatus("Found MSBuild.");
@@ -256,7 +256,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 try
                 {
                     var msBuildParams = $"/t:restore";
-                    var result = await _externalCommandExecutor.RunAsync($"\"{msbuildPath}\" {msBuildParams}", projectRootPath.FullName, ct);
+                    var result = await _externalCommandExecutor.RunAsync($"\"{msbuildPath}\"", msBuildParams, projectRootPath.FullName, ct);
                     if (result.ExitCode != 0)
                     {
                         throw new MSStoreException(result.StdErr);
@@ -281,7 +281,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 try
                 {
                     var msBuildParams = $"/p:Configuration=Release;AppxBundle=Always;Platform=x64;AppxBundlePlatforms=\"x64|ARM64\";AppxPackageDir=\"{output.FullName}\";UapAppxPackageBuildMode=StoreUpload";
-                    var result = await _externalCommandExecutor.RunAsync($"(\"{msbuildPath}\" {msBuildParams})", projectRootPath.FullName, ct);
+                    var result = await _externalCommandExecutor.RunAsync($"(\"{msbuildPath}\"", $"{msBuildParams})", projectRootPath.FullName, ct);
                     if (result.ExitCode != 0)
                     {
                         throw new MSStoreException(result.StdErr);

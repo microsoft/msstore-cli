@@ -8,6 +8,6 @@ namespace MSStore.CLI.Services
 {
     internal interface IExternalCommandExecutor
     {
-        Task<ExternalCommandExecutionResult> RunAsync(string command, string workingDirectory, CancellationToken ct);
+        Task<ExternalCommandExecutionResult> RunAsync(string command, string arguments, string workingDirectory, CancellationToken ct);
     }
 }

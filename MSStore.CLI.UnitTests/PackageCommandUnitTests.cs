@@ -40,7 +40,9 @@ namespace MSStore.CLI.UnitTests
             ExternalCommandExecutor
                 .Setup(x => x.RunAsync(
                     It.Is<string>(s =>
-                        s.Contains("\"MSBuild.exe\" /p:Configuration=Release;AppxBundle=Always;Platform=x64;AppxBundlePlatforms=\"x64|ARM64\"")
+                        s.Contains("\"MSBuild.exe\"")),
+                    It.Is<string>(s =>
+                        s.Contains("/p:Configuration=Release;AppxBundle=Always;Platform=x64;AppxBundlePlatforms=\"x64|ARM64\"")
                         && s.EndsWith("UapAppxPackageBuildMode=StoreUpload)")),
                     It.Is<string>(s => s == new DirectoryInfo(path).FullName),
                     It.IsAny<CancellationToken>()))
@@ -78,7 +80,9 @@ namespace MSStore.CLI.UnitTests
             ExternalCommandExecutor
                 .Setup(x => x.RunAsync(
                     It.Is<string>(s =>
-                        s.Contains("\"MSBuild.exe\" /p:Configuration=Release;AppxBundle=Always;Platform=x64;AppxBundlePlatforms=\"x64|ARM64\"")
+                        s.Contains("\"MSBuild.exe\"")),
+                    It.Is<string>(s =>
+                        s.Contains("/p:Configuration=Release;AppxBundle=Always;Platform=x64;AppxBundlePlatforms=\"x64|ARM64\"")
                         && s.Contains($"AppxPackageDir=\"{customPath}\"")
                         && s.EndsWith("UapAppxPackageBuildMode=StoreUpload)")),
                     It.Is<string>(s => s == new DirectoryInfo(path).FullName),
@@ -111,7 +115,9 @@ namespace MSStore.CLI.UnitTests
             ExternalCommandExecutor
                             .Setup(x => x.RunAsync(
                                 It.Is<string>(s =>
-                                    s.Contains("vswhere.exe\" -latest -requires Microsoft.Component.MSBuild -find MSBuild\\**\\Bin\\MSBuild.exe")),
+                                    s.Contains("vswhere.exe")),
+                                It.Is<string>(s =>
+                                    s.Contains("-latest -requires Microsoft.Component.MSBuild -find MSBuild\\**\\Bin\\MSBuild.exe")),
                                 It.Is<string>(s => s == new DirectoryInfo(path).FullName),
                                 It.IsAny<CancellationToken>()))
                             .ReturnsAsync(new Services.ExternalCommandExecutionResult
@@ -123,7 +129,8 @@ namespace MSStore.CLI.UnitTests
 
             ExternalCommandExecutor
                 .Setup(x => x.RunAsync(
-                    It.Is<string>(s => s.Contains("\"MSBuild.exe\" /t:restore")),
+                    It.Is<string>(s => s.Contains("\"MSBuild.exe\"")),
+                    It.Is<string>(s => s.Contains("/t:restore")),
                     It.Is<string>(s => s == new DirectoryInfo(path).FullName),
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult
@@ -162,7 +169,11 @@ namespace MSStore.CLI.UnitTests
             SetupPubGet(path);
 
             ExternalCommandExecutor
-                .Setup(x => x.RunAsync(It.Is<string>(s => s == "flutter pub run msix:build --store"), It.Is<string>(s => s == new DirectoryInfo(path).FullName), It.IsAny<CancellationToken>()))
+                .Setup(x => x.RunAsync(
+                    It.Is<string>(s => s == "flutter"),
+                    It.Is<string>(s => s == "pub run msix:build --store"),
+                    It.Is<string>(s => s == new DirectoryInfo(path).FullName),
+                    It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult
                 {
                     ExitCode = 0,
@@ -171,7 +182,11 @@ namespace MSStore.CLI.UnitTests
                 });
 
             ExternalCommandExecutor
-                .Setup(x => x.RunAsync(It.Is<string>(s => s == "flutter pub run msix:pack --store"), It.Is<string>(s => s == new DirectoryInfo(path).FullName), It.IsAny<CancellationToken>()))
+                .Setup(x => x.RunAsync(
+                    It.Is<string>(s => s == "flutter"),
+                    It.Is<string>(s => s == "pub run msix:pack --store"),
+                    It.Is<string>(s => s == new DirectoryInfo(path).FullName),
+                    It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult
                 {
                     ExitCode = 0,
@@ -200,7 +215,11 @@ namespace MSStore.CLI.UnitTests
             var customPath = Path.Combine(Path.GetTempPath(), "CustomPath");
 
             ExternalCommandExecutor
-                .Setup(x => x.RunAsync(It.Is<string>(s => s == $"flutter pub run msix:build --store --output-path \"{customPath}\""), It.Is<string>(s => s == new DirectoryInfo(path).FullName), It.IsAny<CancellationToken>()))
+                .Setup(x => x.RunAsync(
+                    It.Is<string>(s => s == "flutter"),
+                    It.Is<string>(s => s == $"pub run msix:build --store --output-path \"{customPath}\""),
+                    It.Is<string>(s => s == new DirectoryInfo(path).FullName),
+                    It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult
                 {
                     ExitCode = 0,
@@ -209,7 +228,11 @@ namespace MSStore.CLI.UnitTests
                 });
 
             ExternalCommandExecutor
-                .Setup(x => x.RunAsync(It.Is<string>(s => s == $"flutter pub run msix:pack --store --output-path \"{customPath}\""), It.Is<string>(s => s == new DirectoryInfo(path).FullName), It.IsAny<CancellationToken>()))
+                .Setup(x => x.RunAsync(
+                    It.Is<string>(s => s == "flutter"),
+                    It.Is<string>(s => s == $"pub run msix:pack --store --output-path \"{customPath}\""),
+                    It.Is<string>(s => s == new DirectoryInfo(path).FullName),
+                    It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult
                 {
                     ExitCode = 0,
@@ -234,13 +257,17 @@ namespace MSStore.CLI.UnitTests
         private void SetupPubGet(string path)
         {
             ExternalCommandExecutor
-                            .Setup(x => x.RunAsync(It.Is<string>(s => s == "flutter pub get"), It.Is<string>(s => s == new DirectoryInfo(path).FullName), It.IsAny<CancellationToken>()))
-                            .ReturnsAsync(new Services.ExternalCommandExecutionResult
-                            {
-                                ExitCode = 0,
-                                StdOut = string.Empty,
-                                StdErr = string.Empty
-                            });
+                .Setup(x => x.RunAsync(
+                    It.Is<string>(s => s == "flutter"),
+                    It.Is<string>(s => s == "pub get"),
+                    It.Is<string>(s => s == new DirectoryInfo(path).FullName),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Services.ExternalCommandExecutionResult
+                {
+                    ExitCode = 0,
+                    StdOut = string.Empty,
+                    StdErr = string.Empty
+                });
         }
     }
 }

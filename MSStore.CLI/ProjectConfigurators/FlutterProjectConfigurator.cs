@@ -196,7 +196,7 @@ namespace MSStore.CLI.ProjectConfigurators
             {
                 try
                 {
-                    var result = await _externalCommandExecutor.RunAsync("flutter pub add --dev msix --dry-run", projectRootPath.FullName, ct);
+                    var result = await _externalCommandExecutor.RunAsync("flutter", "pub add --dev msix --dry-run", projectRootPath.FullName, ct);
                     if ((result.ExitCode == 0 && result.StdOut.Contains("No dependencies would change")) ||
                         (result.ExitCode == 65 && result.StdErr.Contains("\"msix\" is already in \"dev_dependencies\"")))
                     {
@@ -225,7 +225,7 @@ namespace MSStore.CLI.ProjectConfigurators
             {
                 try
                 {
-                    var result = await _externalCommandExecutor.RunAsync("flutter pub add --dev msix", projectRootPath.FullName, ct);
+                    var result = await _externalCommandExecutor.RunAsync("flutter", "pub add --dev msix", projectRootPath.FullName, ct);
                     if (result.ExitCode != 0)
                     {
                         throw new MSStoreException(result.StdErr);
@@ -247,7 +247,7 @@ namespace MSStore.CLI.ProjectConfigurators
             {
                 try
                 {
-                    var result = await _externalCommandExecutor.RunAsync("flutter pub get", projectRootPath.FullName, ct);
+                    var result = await _externalCommandExecutor.RunAsync("flutter", "pub get", projectRootPath.FullName, ct);
                     if (result.ExitCode == 0)
                     {
                         ctx.SuccessStatus("'flutter pub get' ran successfully.");
@@ -290,7 +290,7 @@ namespace MSStore.CLI.ProjectConfigurators
                         args += $" --output-path \"{output.FullName}\"";
                     }
 
-                    var result = await _externalCommandExecutor.RunAsync($"flutter pub run msix:build {args}", projectRootPath.FullName, ct);
+                    var result = await _externalCommandExecutor.RunAsync("flutter", $"pub run msix:build {args}", projectRootPath.FullName, ct);
 
                     if (result.ExitCode != 0)
                     {
@@ -299,7 +299,7 @@ namespace MSStore.CLI.ProjectConfigurators
 
                     ctx.SuccessStatus("Store package built successfully!");
 
-                    result = await _externalCommandExecutor.RunAsync($"flutter pub run msix:pack {args}", projectRootPath.FullName, ct);
+                    result = await _externalCommandExecutor.RunAsync("flutter", $"pub run msix:pack {args}", projectRootPath.FullName, ct);
 
                     if (result.ExitCode != 0)
                     {

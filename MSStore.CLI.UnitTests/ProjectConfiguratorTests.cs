@@ -23,7 +23,11 @@ namespace MSStore.CLI.UnitTests
             var path = CopyFilesRecursively("FlutterProject");
 
             ExternalCommandExecutor
-                .Setup(x => x.RunAsync(It.Is<string>(s => s == "flutter pub get"), It.Is<string>(s => s == new DirectoryInfo(path).FullName), It.IsAny<CancellationToken>()))
+                .Setup(x => x.RunAsync(
+                    It.Is<string>(s => s == "flutter"),
+                    It.Is<string>(s => s == "pub get"),
+                    It.Is<string>(s => s == new DirectoryInfo(path).FullName),
+                    It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult
                 {
                     ExitCode = 0,
@@ -32,7 +36,11 @@ namespace MSStore.CLI.UnitTests
                 });
 
             ExternalCommandExecutor
-                .Setup(x => x.RunAsync(It.Is<string>(s => s == "flutter pub add --dev msix --dry-run"), It.Is<string>(s => s == new DirectoryInfo(path).FullName), It.IsAny<CancellationToken>()))
+                .Setup(x => x.RunAsync(
+                    It.Is<string>(s => s == "flutter"),
+                    It.Is<string>(s => s == "pub add --dev msix --dry-run"),
+                    It.Is<string>(s => s == new DirectoryInfo(path).FullName),
+                    It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult
                 {
                     ExitCode = 0,
@@ -66,7 +74,11 @@ namespace MSStore.CLI.UnitTests
             var path = CopyFilesRecursively("FlutterProject");
 
             ExternalCommandExecutor
-                .Setup(x => x.RunAsync(It.Is<string>(s => s == "flutter pub get"), It.Is<string>(s => s == new DirectoryInfo(path).FullName), It.IsAny<CancellationToken>()))
+                .Setup(x => x.RunAsync(
+                    It.Is<string>(s => s == "flutter"),
+                    It.Is<string>(s => s == "pub get"),
+                    It.Is<string>(s => s == new DirectoryInfo(path).FullName),
+                    It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult
                 {
                     ExitCode = 0,
@@ -75,7 +87,11 @@ namespace MSStore.CLI.UnitTests
                 });
 
             ExternalCommandExecutor
-                .Setup(x => x.RunAsync(It.Is<string>(s => s == "flutter pub add --dev msix --dry-run"), It.Is<string>(s => s == new DirectoryInfo(path).FullName), It.IsAny<CancellationToken>()))
+                .Setup(x => x.RunAsync(
+                    It.Is<string>(s => s == "flutter"),
+                    It.Is<string>(s => s == "pub add --dev msix --dry-run"),
+                    It.Is<string>(s => s == new DirectoryInfo(path).FullName),
+                    It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult
                 {
                     ExitCode = 0,
@@ -84,7 +100,11 @@ namespace MSStore.CLI.UnitTests
                 });
 
             ExternalCommandExecutor
-                .Setup(x => x.RunAsync(It.Is<string>(s => s == "flutter pub add --dev msix"), It.Is<string>(s => s == new DirectoryInfo(path).FullName), It.IsAny<CancellationToken>()))
+                .Setup(x => x.RunAsync(
+                    It.Is<string>(s => s == "flutter"),
+                    It.Is<string>(s => s == "pub add --dev msix"),
+                    It.Is<string>(s => s == new DirectoryInfo(path).FullName),
+                    It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult
                 {
                     ExitCode = 0,

@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,19 +11,27 @@ namespace MSStore.CLI.Services
 {
     internal class ExternalCommandExecutor : IExternalCommandExecutor
     {
-        public async Task<ExternalCommandExecutionResult> RunAsync(string command, string workingDirectory, CancellationToken ct)
+        public async Task<ExternalCommandExecutionResult> RunAsync(string command, string arguments, string workingDirectory, CancellationToken ct)
         {
             using (Process cmd = new Process())
             {
                 cmd.StartInfo.WorkingDirectory = workingDirectory;
-                cmd.StartInfo.FileName = "cmd.exe";
-                if (command.StartsWith("\"") || command.StartsWith("("))
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    cmd.StartInfo.Arguments = $"/C {command}";
+                    cmd.StartInfo.FileName = "cmd.exe";
+                    if (command.StartsWith("\"") || command.StartsWith("("))
+                    {
+                        cmd.StartInfo.Arguments = $"/C {command} {arguments}";
+                    }
+                    else
+                    {
+                        cmd.StartInfo.Arguments = $"/C ({command} {arguments})";
+                    }
                 }
                 else
                 {
-                    cmd.StartInfo.Arguments = $"/C ({command})";
+                    cmd.StartInfo.FileName = command;
+                    cmd.StartInfo.Arguments = arguments;
                 }
 
                 cmd.StartInfo.RedirectStandardInput = true;
