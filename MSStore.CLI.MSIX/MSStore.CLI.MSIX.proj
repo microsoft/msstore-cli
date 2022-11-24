@@ -5,6 +5,7 @@
         <MakeMsixInputAssets Include="$(MSBuildThisFileDirectory)Assets\*" />
         <MakeMsixInputs Include="$(MSBuildThisFileDirectory)obj\$(Platform)\appxmanifest.xml" />
         <MakeMsixInputs Include="$(PublishFolderPath)\**\*" />
+        <MakeMsixInputs Remove="$(PublishFolderPath)\**\*.md" />
     </ItemGroup>
 
     <PropertyGroup>
