@@ -2,13 +2,16 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using MSStore.API;
 using MSStore.API.Packaged;
 using MSStore.API.Packaged.Models;
+using MSStore.CLI.Helpers;
 using MSStore.CLI.Services;
 using Spectre.Console;
 
@@ -18,11 +21,23 @@ namespace MSStore.CLI.ProjectConfigurators
     {
         private readonly IExternalCommandExecutor _externalCommandExecutor;
         private readonly IImageConverter _imageConverter;
+        private readonly IBrowserLauncher _browserLauncher;
+        private readonly IConsoleReader _consoleReader;
+        private readonly IZipFileManager _zipFileManager;
+        private readonly IFileDownloader _fileDownloader;
+        private readonly IAzureBlobManager _azureBlobManager;
+        private readonly ILogger _logger;
 
-        public FlutterProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IImageConverter imageConverter)
+        public FlutterProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IImageConverter imageConverter, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, ILogger<FlutterProjectConfigurator> logger)
         {
             _externalCommandExecutor = externalCommandExecutor ?? throw new ArgumentNullException(nameof(externalCommandExecutor));
             _imageConverter = imageConverter ?? throw new ArgumentNullException(nameof(imageConverter));
+            _browserLauncher = browserLauncher ?? throw new ArgumentNullException(nameof(browserLauncher));
+            _consoleReader = consoleReader ?? throw new ArgumentNullException(nameof(consoleReader));
+            _zipFileManager = zipFileManager ?? throw new ArgumentNullException(nameof(zipFileManager));
+            _fileDownloader = fileDownloader ?? throw new ArgumentNullException(nameof(fileDownloader));
+            _azureBlobManager = azureBlobManager ?? throw new ArgumentNullException(nameof(azureBlobManager));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         public string ConfiguratorProjectType { get; } = "Flutter";
@@ -98,6 +113,8 @@ namespace MSStore.CLI.ProjectConfigurators
                 }
             }
 
+            // TODO: This only works for first initialization.
+            // If msix_config section already exists, it won't work.
             if (!msixConfigExists)
             {
                 var imagePath = await GenerateImageFromIcoAsync(projectRootPath, ct);
@@ -249,7 +266,7 @@ namespace MSStore.CLI.ProjectConfigurators
             });
         }
 
-        public async Task<(int returnCode, FileInfo? outputFile)> PackageAsync(string pathOrUrl, DevCenterApplication? app, DirectoryInfo? output, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public async Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(string pathOrUrl, DevCenterApplication? app, DirectoryInfo? output, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             var (projectRootPath, flutterProjectFile) = GetInfo(pathOrUrl);
 
@@ -313,7 +330,7 @@ namespace MSStore.CLI.ProjectConfigurators
                         }
                     }
 
-                    return (0, msixFile);
+                    return (0, msixFile?.Directory);
                 }
                 catch (Exception ex)
                 {
@@ -323,43 +340,15 @@ namespace MSStore.CLI.ProjectConfigurators
             });
         }
 
-        public async Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, FileInfo? input, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public async Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, DirectoryInfo? inputDirectory, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             var (projectRootPath, flutterProjectFile) = GetInfo(pathOrUrl);
 
-            if (app == null)
-            {
-                // Try to find AppId inside the pubspec.yaml file
-                string? appId = await GetAppIdFromPubSpecAsync(flutterProjectFile, ct);
-
-                if (appId == null)
-                {
-                    throw new MSStoreException("Failed to find the AppId in the pubspec.yaml file.");
-                }
-
-                var success = await AnsiConsole.Status().StartAsync("Retrieving application...", async ctx =>
-                {
-                    try
-                    {
-                        app = await storePackagedAPI.GetApplicationAsync(appId, ct);
-
-                        ctx.SuccessStatus("Ok! Found the app!");
-                    }
-                    catch (Exception)
-                    {
-                        ctx.ErrorStatus("Could not retrieve your application. Please make sure you have the correct AppId.");
-
-                        return false;
-                    }
-
-                    return true;
-                });
-
-                if (!success)
-                {
-                    return -1;
-                }
-            }
+            // Try to find AppId inside the pubspec.yaml file
+            app = await storePackagedAPI.EnsureAppInitializedAsync(
+                app,
+                () => GetAppIdFromPubSpecAsync(flutterProjectFile, ct),
+                ct);
 
             if (app?.Id == null)
             {
@@ -368,25 +357,24 @@ namespace MSStore.CLI.ProjectConfigurators
 
             AnsiConsole.MarkupLine($"AppId: [green bold]{app.Id}[/]");
 
-            DirectoryInfo buildDirInfo;
-            if (input == null)
+            if (inputDirectory == null)
             {
-                buildDirInfo = new DirectoryInfo(Path.Combine(projectRootPath.FullName, "build", "windows", "runner", "Release"));
-
-                var msixs = buildDirInfo.GetFiles("*.msix");
-                input = msixs.FirstOrDefault();
-                if (input == null)
-                {
-                    return -1;
-                }
+                inputDirectory = new DirectoryInfo(Path.Combine(projectRootPath.FullName, "build", "windows", "runner", "Release"));
             }
 
-            var msixPath = input.FullName;
-            AnsiConsole.MarkupLine($"MSIX: [green bold]{msixPath}[/]");
+            var output = projectRootPath.CreateSubdirectory(Path.Join("build", "windows", "MSStore.CLI"));
 
-            AnsiConsole.MarkupLine("[yellow]TODO: Publish[/]");
+            var packageFiles = inputDirectory.GetFiles("*.*", SearchOption.TopDirectoryOnly)
+                                     .Where(f => f.Extension == ".msix");
 
-            return -1;
+            return await storePackagedAPI.PublishAsync(app, GetFirstSubmissionDataAsync, output, packageFiles, _browserLauncher, _consoleReader, _zipFileManager, _fileDownloader, _azureBlobManager, _logger, ct);
+        }
+
+        private Task<(string?, List<SubmissionImage>)> GetFirstSubmissionDataAsync(string listingLanguage, CancellationToken ct)
+        {
+            var description = "My Flutter App";
+            var images = new List<SubmissionImage>();
+            return Task.FromResult<(string?, List<SubmissionImage>)>((description, images));
         }
 
         private async Task<string?> GetAppIdFromPubSpecAsync(FileInfo flutterProjectFile, CancellationToken ct)

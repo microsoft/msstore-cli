@@ -11,6 +11,6 @@ namespace MSStore.CLI.ProjectConfigurators
 {
     internal interface IProjectPublisher
     {
-        Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, FileInfo? input, IStorePackagedAPI storePackagedAPI, CancellationToken ct);
+        Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, DirectoryInfo? inputDirectory, IStorePackagedAPI storePackagedAPI, CancellationToken ct);
     }
 }

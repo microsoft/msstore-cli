@@ -78,12 +78,12 @@ namespace MSStore.CLI.Commands
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(-4, props, ct);
                 }
 
-                var (returnCode, outputFile) = await projectPackager.PackageAsync(PathOrUrl, null, Output, storePackagedAPI, ct);
+                var (returnCode, outputDirectory) = await projectPackager.PackageAsync(PathOrUrl, null, Output, storePackagedAPI, ct);
 
-                if (returnCode == 0 && outputFile != null)
+                if (returnCode == 0 && outputDirectory != null)
                 {
                     AnsiConsole.WriteLine($"The packaged app is here:");
-                    AnsiConsole.MarkupLine($"[green bold]{outputFile}[/]");
+                    AnsiConsole.MarkupLine($"[green bold]{outputDirectory}[/]");
                 }
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(returnCode, props, ct);

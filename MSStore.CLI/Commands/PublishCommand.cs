@@ -24,9 +24,9 @@ namespace MSStore.CLI.Commands
         {
             AddArgument(InitCommand.PathOrUrl);
 
-            var input = new Option<FileInfo?>(
-                aliases: new string[] { "--input", "-i" },
-                description: "The '.msixupload' or '.zip' file to be used for the publishing command. If not provided, the cli will try to find the best candidate based on the 'pathOrUrl' argument.",
+            var inputDirectory = new Option<DirectoryInfo?>(
+                aliases: new string[] { "--inputDirectory", "-i" },
+                description: "The directory where the '.msix' or '.msixupload' file to be used for the publishing command. If not provided, the cli will try to find the best candidate based on the 'pathOrUrl' argument.",
                 parseArgument: result =>
                 {
                     if (result.Tokens.Count == 0)
@@ -34,19 +34,19 @@ namespace MSStore.CLI.Commands
                         return null;
                     }
 
-                    string? filePath = result.Tokens.Single().Value;
-                    if (!File.Exists(filePath))
+                    string? directoryPath = result.Tokens.Single().Value;
+                    if (!Directory.Exists(directoryPath))
                     {
-                        result.ErrorMessage = "Input file does not exist.";
+                        result.ErrorMessage = "Input directory does not exist.";
                         return null;
                     }
                     else
                     {
-                        return new FileInfo(filePath);
+                        return new DirectoryInfo(directoryPath);
                     }
                 });
 
-            AddOption(input);
+            AddOption(inputDirectory);
         }
 
         public new class Handler : ICommandHandler
@@ -57,7 +57,7 @@ namespace MSStore.CLI.Commands
 
             public string PathOrUrl { get; set; } = null!;
 
-            public FileInfo? Input { get; set; } = null!;
+            public DirectoryInfo? InputDirectory { get; set; } = null!;
 
             public Handler(
                 IProjectConfiguratorFactory projectConfiguratorFactory,
@@ -103,7 +103,7 @@ namespace MSStore.CLI.Commands
                 }
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(
-                    await projectPublisher.PublishAsync(PathOrUrl, null, Input, storePackagedAPI, ct), props, ct);
+                    await projectPublisher.PublishAsync(PathOrUrl, null, InputDirectory, storePackagedAPI, ct), props, ct);
             }
         }
     }

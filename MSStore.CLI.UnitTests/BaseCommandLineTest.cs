@@ -43,6 +43,7 @@ namespace MSStore.CLI.UnitTests
         internal Mock<IGraphClient> GraphClient { get; private set; } = null!;
         internal Mock<ITokenManager> TokenManager { get; private set; } = null!;
         internal Mock<IPWAAppInfoManager> PWAAppInfoManager { get; private set; } = null!;
+        internal Mock<IZipFileManager> ZipFileManager { get; private set; } = null!;
         internal List<string> UserNames { get; } = new List<string>();
         internal List<string> Secrets { get; } = new List<string>();
 
@@ -195,7 +196,7 @@ namespace MSStore.CLI.UnitTests
 
             PWAAppInfoManager = new Mock<IPWAAppInfoManager>();
 
-            var zipFileManager = new Mock<IZipFileManager>();
+            ZipFileManager = new Mock<IZipFileManager>();
 
             TokenManager = new Mock<ITokenManager>();
             TokenManager
@@ -226,7 +227,7 @@ namespace MSStore.CLI.UnitTests
                         .AddScoped(sp => azureBlobManagerMock.Object)
                         .AddScoped(sp => GraphClient.Object)
                         .AddScoped(sp => PartnerCenterManager.Object)
-                        .AddScoped(sp => zipFileManager.Object)
+                        .AddScoped(sp => ZipFileManager.Object)
                         .AddScoped(sp => TokenManager.Object)
                         .AddScoped(sp => fileDownloader.Object)
                         .AddScoped(sp => imageConverter.Object)

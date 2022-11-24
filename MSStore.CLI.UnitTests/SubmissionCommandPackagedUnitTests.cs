@@ -47,8 +47,8 @@ namespace MSStore.CLI.UnitTests
                     FakeApps[0].Id!
                 });
 
-            result.Should().Contain("\"Code\": \"Code1\"");
-            result.Should().Contain("\"Details\": \"Detail1\"");
+            result.Should().Contain("Code1");
+            result.Should().Contain("Detail1");
         }
 
         [TestMethod]

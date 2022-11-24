@@ -101,7 +101,7 @@ namespace MSStore.CLI.UnitTests
                 });
 
             result.Should().Contain("The packaged app is here:");
-            result.Should().Contain(Path.Combine(customPath, "TestFile.msixupload"));
+            result.Should().Contain(customPath);
 
             ExternalCommandExecutor.VerifyAll();
         }
@@ -188,7 +188,7 @@ namespace MSStore.CLI.UnitTests
                 });
 
             result.Should().Contain("The packaged app is here:");
-            result.Should().Contain("TestFile.msix");
+            result.Should().Contain(path);
         }
 
         [TestMethod]
@@ -228,7 +228,7 @@ namespace MSStore.CLI.UnitTests
                 });
 
             result.Should().Contain("The packaged app is here:");
-            result.Should().Contain(Path.Combine(customPath, "TestFile.msix"));
+            result.Should().Contain(customPath);
         }
 
         private void SetupPubGet(string path)

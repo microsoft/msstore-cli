@@ -200,6 +200,16 @@ namespace MSStore.CLI.UnitTests
                     AppId = FakeApps[0].Id,
                     Uri = new Uri("https://www.microsoft.com")
                 });
+
+            ZipFileManager
+                .Setup(x => x.ExtractZip(It.IsAny<string>(), It.IsAny<string>()))
+                .Callback((string zipFile, string destination) =>
+                {
+                    var dir = Directory.CreateDirectory(destination);
+
+                    // Create Fake File
+                    File.WriteAllText(Path.Combine(dir.FullName, "FAKE.msix"), string.Empty);
+                });
         }
 
         [TestMethod]

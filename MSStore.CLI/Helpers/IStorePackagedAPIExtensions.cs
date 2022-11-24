@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -11,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using MSStore.API;
 using MSStore.API.Packaged;
 using MSStore.API.Packaged.Models;
+using MSStore.CLI.ProjectConfigurators;
 using MSStore.CLI.Services;
 using Spectre.Console;
 
@@ -18,6 +20,8 @@ namespace MSStore.CLI.Helpers
 {
     internal static class IStorePackagedAPIExtensions
     {
+        internal delegate Task<(string? Description, List<SubmissionImage> Images)> FirstSubmissionDataCallback(string listingLanguage, CancellationToken ct);
+
         public static async Task<DevCenterSubmission?> GetAnySubmissionAsync(this IStorePackagedAPI storePackagedAPI, DevCenterApplication application, StatusContext ctx, ILogger logger, CancellationToken ct)
         {
             if (application.Id == null)
@@ -230,6 +234,392 @@ namespace MSStore.CLI.Helpers
 
                 return true;
             });
+        }
+
+        public static async Task<DevCenterApplication?> EnsureAppInitializedAsync(this IStorePackagedAPI storePackagedAPI, DevCenterApplication? application, Func<Task<string?>> appIdGetter, CancellationToken ct)
+        {
+            if (application?.Id == null)
+            {
+                var appId = await appIdGetter();
+                if (appId == null)
+                {
+                    throw new MSStoreException("Failed to find the AppId.");
+                }
+
+                await AnsiConsole.Status().StartAsync("Retrieving application...", async ctx =>
+                {
+                    try
+                    {
+                        application = await storePackagedAPI.GetApplicationAsync(appId, ct);
+
+                        ctx.SuccessStatus("Ok! Found the app!");
+                    }
+                    catch (Exception)
+                    {
+                        ctx.ErrorStatus("Could not retrieve your application. Please make sure you have the correct AppId.");
+                    }
+
+                    return true;
+                });
+            }
+
+            return application;
+        }
+
+        public static async Task<int> PublishAsync(this IStorePackagedAPI storePackagedAPI, DevCenterApplication app, FirstSubmissionDataCallback firstSubmissionDataCallback, DirectoryInfo output, IEnumerable<FileInfo> input, IBrowserLauncher _browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, ILogger logger, CancellationToken ct)
+        {
+            if (app?.Id == null)
+            {
+                return -1;
+            }
+
+            var pendingSubmissionId = app.PendingApplicationSubmission?.Id;
+            bool success = true;
+
+            // Do not delete if first submission
+            if (pendingSubmissionId != null && app.LastPublishedApplicationSubmission != null)
+            {
+                success = await storePackagedAPI.DeleteSubmissionAsync(app.Id, pendingSubmissionId, _browserLauncher, logger, ct);
+
+                if (!success)
+                {
+                    return -1;
+                }
+            }
+
+            DevCenterSubmission? submission = null;
+
+            // If first submission, just use it // TODO, check that can update
+            if (pendingSubmissionId != null && app.LastPublishedApplicationSubmission == null)
+            {
+                submission = await storePackagedAPI.GetExistingSubmission(app.Id, pendingSubmissionId, logger, ct);
+
+                if (submission == null || submission.Id == null)
+                {
+                    logger.LogError("Could not create or retrieve submission. Please try again.");
+                    AnsiConsole.WriteLine("Could not retrieve submission. Please try again.");
+                    return -1;
+                }
+
+                if (submission.FileUploadUrl == null)
+                {
+                    var message = "Retrieved a submission that was created in Partner Center. We can't upload the packages for submissions created in Partner Center. Please, delete it and try again.";
+                    logger.LogError(message);
+                    AnsiConsole.WriteLine(message);
+                    return -1;
+                }
+
+                var qs = System.Web.HttpUtility.ParseQueryString(submission.FileUploadUrl);
+                if (!DateTime.TryParse(qs["se"], out var fileUploadExpire) || fileUploadExpire < DateTime.UtcNow)
+                {
+                    success = await storePackagedAPI.DeleteSubmissionAsync(app.Id, submission.Id, _browserLauncher, logger, ct);
+
+                    if (!success)
+                    {
+                        return -1;
+                    }
+
+                    submission = null;
+                }
+            }
+
+            if (submission == null)
+            {
+                var newSubmission = await storePackagedAPI.CreateNewSubmissionAsync(app.Id, logger, ct);
+                if (newSubmission != null)
+                {
+                    submission = newSubmission;
+                }
+
+                success = submission != null;
+            }
+
+            if (!success || submission == null || submission.Id == null || submission.FileUploadUrl == null)
+            {
+                logger.LogError("Could not create or retrieve submission. Please try again.");
+                AnsiConsole.WriteLine("Could not retrieve submission. Please try again.");
+                return -1;
+            }
+
+            submission = await storePackagedAPI.GetExistingSubmission(app.Id, submission.Id, logger, ct);
+
+            if (submission == null || submission.Id == null || submission.FileUploadUrl == null)
+            {
+                logger.LogError("Could not retrieve submission. Please try again.");
+                AnsiConsole.WriteLine("Could not retrieve submission. Please try again.");
+                return -1;
+            }
+
+            if (submission.ApplicationPackages == null)
+            {
+                AnsiConsole.WriteLine("No application packages found.");
+                return -1;
+            }
+
+            if (submission?.Id == null)
+            {
+                return -1;
+            }
+
+            await FulfillApplicationAsync(app, submission, firstSubmissionDataCallback, consoleReader, ct);
+
+            AnsiConsole.MarkupLine("New Submission [green]properly configured[/].");
+            logger.LogInformation("New Submission properly configured. FileUploadUrl: {FileUploadUrl}", submission.FileUploadUrl);
+
+            var uploadZipFilePath = await PrepareBundleAsync(submission, output, input, zipFileManager, fileDownloader, logger, ct);
+
+            if (uploadZipFilePath == null)
+            {
+                return -1;
+            }
+
+            submission = await storePackagedAPI.UpdateSubmissionAsync(app.Id, submission.Id, submission, ct);
+
+            if (submission == null || submission.Id == null || submission.FileUploadUrl == null)
+            {
+                logger.LogError("Could not retrieve FileUploadUrl. Please try again.");
+                AnsiConsole.WriteLine("Could not retrieve FileUploadUrl. Please try again.");
+                return -1;
+            }
+
+            success = await AnsiConsole.Progress()
+                .StartAsync(async ctx =>
+                {
+                    var task = ctx.AddTask("[green]Uploading Bundle to [u]Azure blob[/][/]");
+                    try
+                    {
+                        await azureBlobManager.UploadFileAsync(submission.FileUploadUrl, uploadZipFilePath, task, ct);
+                        AnsiConsole.MarkupLine($":check_mark_button: [green]Successfully uploaded the application package.[/]");
+                        return true;
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Error while uploading the application package.");
+                        AnsiConsole.WriteLine("Error while uploading the application package.");
+                        return false;
+                    }
+                });
+
+            if (!success)
+            {
+                return -1;
+            }
+
+            var submissionCommit = await storePackagedAPI.CommitSubmissionAsync(app.Id, submission.Id, ct);
+
+            AnsiConsole.WriteLine("Waiting for the submission commit processing to complete. This may take a couple of minutes.");
+            AnsiConsole.MarkupLine($"Submission Committed - Status=[green u]{submissionCommit.Status}[/]");
+
+            var lastSubmissionStatus = await storePackagedAPI.PollSubmissionStatusAsync(app.Id, submission.Id, true, logger, ct: ct);
+
+            if (lastSubmissionStatus == null)
+            {
+                return -1;
+            }
+
+            return await storePackagedAPI.HandleLastSubmissionStatusAsync(lastSubmissionStatus, app.Id, submission.Id, consoleReader, _browserLauncher, logger, ct);
+        }
+
+        private static async Task<string?> PrepareBundleAsync(DevCenterSubmission submission, DirectoryInfo output, IEnumerable<FileInfo> packageFiles, IZipFileManager zipFileManager, IFileDownloader fileDownloader, ILogger logger, CancellationToken ct)
+        {
+            if (submission?.ApplicationPackages == null)
+            {
+                return null;
+            }
+
+            AnsiConsole.MarkupLine("Prepating Bundle...");
+
+            return await AnsiConsole.Progress()
+                .StartAsync(async ctx =>
+                {
+                    DirectoryInfo? uploadDir = null;
+                    try
+                    {
+                        var applicationPackages = submission.ApplicationPackages.FilterUnsupported();
+
+                        uploadDir = Directory.CreateDirectory(Path.Combine(output.FullName, $"Upload_{Path.GetFileNameWithoutExtension(Path.GetRandomFileName())}"));
+
+                        foreach (var file in packageFiles)
+                        {
+                            var applicationPackage = applicationPackages.FirstOrDefault(p => Path.GetExtension(p.FileName) == file.Extension);
+                            if (applicationPackage != null)
+                            {
+                                if (applicationPackage.FileStatus == FileStatus.PendingUpload)
+                                {
+                                    submission.ApplicationPackages.Remove(applicationPackage);
+                                }
+                                else
+                                {
+                                    // Mark as Deleted
+                                    applicationPackage.FileStatus = FileStatus.PendingDelete;
+                                }
+                            }
+
+                            var newApplicationPackage = new ApplicationPackage
+                            {
+                                FileStatus = FileStatus.PendingUpload,
+                                FileName = file.Name
+                            };
+
+                            submission.ApplicationPackages.Add(newApplicationPackage);
+
+                            logger.LogInformation("Copying '{FileFullName}' to zip bundle folder.", file.FullName);
+                            File.Copy(file.FullName, Path.Combine(uploadDir.FullName, file.Name));
+                        }
+
+                        // Add images to Bundle
+                        if (submission.Listings != null)
+                        {
+                            var tasks = new List<Task>();
+                            foreach (var listing in submission.Listings)
+                            {
+                                if (listing.Value?.BaseListing?.Images?.Any() == true)
+                                {
+                                    var imagesToDownload = listing.Value.BaseListing.Images.Where(i =>
+                                            i.FileStatus == FileStatus.PendingUpload &&
+                                            i.FileName != null &&
+                                            i.FileName.StartsWith("http", StringComparison.OrdinalIgnoreCase));
+
+                                    if (imagesToDownload.Any())
+                                    {
+                                        var listingUploadDir = Path.Combine(uploadDir.FullName, listing.Key);
+
+                                        Directory.CreateDirectory(listingUploadDir);
+
+                                        foreach (var image in imagesToDownload)
+                                        {
+                                            var task = ctx.AddTask($"[green]Downloading Image '{image.FileName}'[/]");
+                                            tasks.Add(CreateImageAsync(listing.Key, image, listingUploadDir, task, fileDownloader, ct));
+                                        }
+                                    }
+                                }
+                            }
+
+                            await Task.WhenAll(tasks);
+                        }
+
+                        var uploadZipFilePath = Path.Combine(output.FullName, "Upload.zip");
+
+                        zipFileManager.CreateFromDirectory(uploadDir.FullName, uploadZipFilePath);
+
+                        AnsiConsole.MarkupLine(":check_mark_button: [green]Zip Bundle is configured and ready to be uploaded![/]");
+
+                        return uploadZipFilePath;
+                    }
+                    catch (Exception err)
+                    {
+                        logger.LogError(err, "Error while preparing bundle.");
+                        AnsiConsole.MarkupLine($":collision: [bold red]Error while preparing bundle.[/]");
+                        return null;
+                    }
+                    finally
+                    {
+                        uploadDir?.Delete(true);
+                    }
+                });
+        }
+
+        private static async Task CreateImageAsync(string listingKey, Image image, string uploadDir, IProgress<double> progress, IFileDownloader fileDownloader, CancellationToken ct)
+        {
+            var fileName = $"{image.ImageType}_{Path.GetFileName(image.FileName)}";
+
+            var imageDirectory = Path.Combine(uploadDir, fileName);
+            if (image.FileName != null && await fileDownloader.DownloadAsync(image.FileName, imageDirectory, progress, ct))
+            {
+                image.FileName = Path.Combine(listingKey, fileName);
+            }
+        }
+
+        private static async Task FulfillApplicationAsync(DevCenterApplication app, DevCenterSubmission submission, FirstSubmissionDataCallback firstSubmissionDataCallback, IConsoleReader consoleReader, CancellationToken ct)
+        {
+            if (submission.ApplicationCategory == DevCenterApplicationCategory.NotSet)
+            {
+                var categories = Enum.GetNames(typeof(DevCenterApplicationCategory))
+                    .Where(c => c != nameof(DevCenterApplicationCategory.NotSet))
+                    .ToArray();
+
+                var categoryString = await consoleReader.SelectionPromptAsync(
+                    "Please select the Application Category:",
+                    categories,
+                    20,
+                    ct: ct);
+
+                submission.ApplicationCategory = (DevCenterApplicationCategory)Enum.Parse(typeof(DevCenterApplicationCategory), categoryString);
+            }
+
+            if (submission.Listings?.Any() != true)
+            {
+                submission.Listings = new Dictionary<string, DevCenterListing>();
+
+                AnsiConsole.WriteLine("Lets add listings to your application. Please enter the following information:");
+
+                var listingCount = 0;
+                do
+                {
+                    AnsiConsole.WriteLine("\tHow many listings do you want to add? One is enough, but you might want to support more listing languages.");
+                    var listingCountString = await consoleReader.ReadNextAsync(false, ct);
+                    if (!int.TryParse(listingCountString, out listingCount))
+                    {
+                        AnsiConsole.WriteLine("Invalid listing count.");
+                    }
+                }
+                while (listingCount == 0);
+
+                for (var i = 0; i < listingCount; i++)
+                {
+                    string? listingLanguage;
+                    do
+                    {
+                        listingLanguage = await consoleReader.RequestStringAsync("\tEnter the language of the listing (e.g. 'en-US')", false, ct);
+                        if (string.IsNullOrEmpty(listingLanguage))
+                        {
+                            AnsiConsole.WriteLine("Invalid listing language.");
+                        }
+                    }
+                    while (string.IsNullOrEmpty(listingLanguage));
+
+                    var submissionData = await firstSubmissionDataCallback(listingLanguage, ct);
+
+                    var listing = new DevCenterListing
+                    {
+                        BaseListing = new BaseListing
+                        {
+                            Title = app.PrimaryName,
+                            Description = submissionData.Description ?? await consoleReader.RequestStringAsync($"\tEnter the description of the listing ({listingLanguage}):", false, ct),
+                        }
+                    };
+
+                    if (listing.BaseListing.Images?.Any() != true)
+                    {
+                        listing.BaseListing.Images = new List<Image>();
+
+                        foreach (var image in submissionData.Images)
+                        {
+                            listing.BaseListing.Images.Add(new Image
+                            {
+                                FileName = image.FileName,
+                                FileStatus = FileStatus.PendingUpload,
+                                ImageType = image.ImageType.ToString()
+                            });
+                        }
+                    }
+
+                    submission.Listings.Add(listingLanguage, listing);
+                }
+            }
+
+            if (submission.AllowTargetFutureDeviceFamilies?.Any() != true)
+            {
+                if (submission.AllowTargetFutureDeviceFamilies == null)
+                {
+                    submission.AllowTargetFutureDeviceFamilies = new Dictionary<string, bool>();
+                }
+
+                submission.AllowTargetFutureDeviceFamilies["Desktop"] = true;
+                submission.AllowTargetFutureDeviceFamilies["Mobile"] = false;
+                submission.AllowTargetFutureDeviceFamilies["Holographic"] = true;
+                submission.AllowTargetFutureDeviceFamilies["Xbox"] = false;
+            }
         }
     }
 }

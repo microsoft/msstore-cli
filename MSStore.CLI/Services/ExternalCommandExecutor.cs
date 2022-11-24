@@ -39,7 +39,7 @@ namespace MSStore.CLI.Services
                     if (!string.IsNullOrEmpty(e.Data))
                     {
                         Debug.WriteLine(e.Data);
-                        stdOut.Append(e.Data);
+                        stdOut.AppendLine(e.Data);
                     }
                 };
                 cmd.ErrorDataReceived += (sender, e) =>
@@ -47,7 +47,7 @@ namespace MSStore.CLI.Services
                     if (!string.IsNullOrEmpty(e.Data))
                     {
                         Debug.WriteLine(e.Data);
-                        stdErr.Append(e.Data);
+                        stdErr.AppendLine(e.Data);
                     }
                 };
                 cmd.Start();
