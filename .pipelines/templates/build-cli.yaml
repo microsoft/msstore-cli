@@ -40,6 +40,7 @@ steps:
       Pattern: |
         Meziantou.Framework.Win32.CredentialManager.dll,
         Spectre.Console.dll,
+        SkiaSharp.dll,
       signConfigType: inlineSignParams
       inlineOperation: |
         [
