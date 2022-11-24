@@ -53,7 +53,7 @@ namespace MSStore.CLI.UnitTests
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
-                result.StdOut.Should().Contain("Mac OS X");
+                result.StdOut.Should().ContainAny("Mac OS X", "macOS", "macOS Server");
             }
 
             result.StdErr.Should().BeEmpty();
