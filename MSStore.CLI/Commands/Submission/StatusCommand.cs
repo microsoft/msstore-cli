@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Logging;
 using MSStore.API.Models;
+using MSStore.API.Packaged.Models;
 using MSStore.CLI.Helpers;
 using MSStore.CLI.Services;
 using Spectre.Console;
@@ -63,7 +64,7 @@ namespace MSStore.CLI.Commands.Submission
                                 return null;
                             }
 
-                            return (await storePackagedAPI.GetAnySubmissionAsync(application, ctx, _logger, ct))?.StatusDetails;
+                            return await storePackagedAPI.GetAnySubmissionAsync(application, ctx, _logger, ct);
                         }
                         else
                         {
@@ -85,7 +86,14 @@ namespace MSStore.CLI.Commands.Submission
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
                 }
 
-                AnsiConsole.WriteLine(JsonSerializer.Serialize(status, status.GetType(), SourceGenerationContext.GetCustom(true)));
+                if (status is DevCenterSubmission devCenterSubmission && devCenterSubmission.Id != null)
+                {
+                    devCenterSubmission?.StatusDetails?.PrintAllTables(ProductId, devCenterSubmission.Id, _logger);
+                }
+                else
+                {
+                    AnsiConsole.WriteLine(JsonSerializer.Serialize(status, status.GetType(), SourceGenerationContext.GetCustom(true)));
+                }
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, 0, ct);
             }

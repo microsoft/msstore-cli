@@ -116,65 +116,7 @@ namespace MSStore.CLI.Helpers
             await foreach (var submissionStatus in storePackagedAPI.EnumerateSubmissionStatusAsync(productId, submissionId, waitFirst, ct: ct))
             {
                 AnsiConsole.MarkupLine($"Submission Status - [green]{submissionStatus.Status}[/]");
-                if (submissionStatus.StatusDetails?.Errors?.Any() == true)
-                {
-                    var table = new Table
-                    {
-                        Title = new TableTitle($":red_exclamation_mark: [b]Submission Errors[/]")
-                    };
-                    table.AddColumns("Code", "Details");
-                    foreach (var error in submissionStatus.StatusDetails.Errors)
-                    {
-                        table.AddRow($"[bold u]{error.Code}[/]", error.Details!);
-                    }
-
-                    AnsiConsole.Write(table);
-                }
-
-                if (submissionStatus.StatusDetails?.Warnings?.Any() == true)
-                {
-                    var onlyLogCodes = new List<string>()
-                    {
-                        "SalesUnsupportedWarning"
-                    };
-
-                    var filteredOut = submissionStatus.StatusDetails.Warnings.Where(w => !onlyLogCodes.Contains(w.Code!));
-                    if (filteredOut.Any())
-                    {
-                        var table = new Table
-                        {
-                            Title = new TableTitle($":warning: [b]Submission Warnings[/]")
-                        };
-                        table.AddColumns("Code", "Details");
-                        foreach (var warning in filteredOut)
-                        {
-                            table.AddRow($"[bold u]{warning.Code}[/]", warning.Details!);
-                        }
-
-                        AnsiConsole.Write(table);
-                    }
-
-                    foreach (var error in submissionStatus.StatusDetails.Warnings.Where(w => onlyLogCodes.Contains(w.Code!)))
-                    {
-                        logger?.LogInformation("{Code} - {Details}", error.Code, error.Details);
-                    }
-                }
-
-                if (submissionStatus.StatusDetails?.CertificationReports?.Any() == true)
-                {
-                    var table = new Table
-                    {
-                        Title = new TableTitle($":paperclip: [b]Certification Reports[/]")
-                    };
-                    table.AddColumns("Date", "Report");
-                    foreach (var certificationReport in submissionStatus.StatusDetails.CertificationReports)
-                    {
-                        var url = $"https://partner.microsoft.com/dashboard/products/{productId}/submissions/{submissionId}";
-                        table.AddRow($"[bold u]{certificationReport.Date}[/]", $"[bold u]{url}[/]");
-                    }
-
-                    AnsiConsole.Write(table);
-                }
+                submissionStatus.StatusDetails?.PrintAllTables(productId, submissionId, logger);
 
                 AnsiConsole.WriteLine();
 

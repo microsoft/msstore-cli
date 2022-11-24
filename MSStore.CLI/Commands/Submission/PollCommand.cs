@@ -104,19 +104,14 @@ namespace MSStore.CLI.Commands.Submission
                             await foreach (var submissionStatus in storeAPI.PollSubmissionStatusAsync(ProductId, status.ResponseData.OngoingSubmissionId, false, ct))
                             {
                                 AnsiConsole.MarkupLine($"Submission Status - [green]{submissionStatus.ResponseData?.PublishingStatus}[/]");
-                                if (submissionStatus.Errors?.Any() == true)
+                                if (submissionStatus.Errors != null)
                                 {
-                                    var table = new Table
-                                    {
-                                        Title = new TableTitle($":red_exclamation_mark: [b]Submission Errors[/]")
-                                    };
-                                    table.AddColumns("Code", "Details");
-                                    foreach (var error in submissionStatus.Errors)
-                                    {
-                                        table.AddRow($"[bold u]{error.Code}[/]", error.Message!);
-                                    }
-
-                                    AnsiConsole.Write(table);
+                                    StatusDetailsExtensions.PrintErrorsTable(submissionStatus.Errors
+                                        .Select(e => new CodeAndDetail
+                                        {
+                                            Code = e.Code,
+                                            Details = e.Message
+                                        }));
                                 }
 
                                 AnsiConsole.WriteLine();
