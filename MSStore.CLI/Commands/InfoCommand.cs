@@ -15,7 +15,7 @@ namespace MSStore.CLI.Commands
     internal class InfoCommand : Command
     {
         public InfoCommand()
-            : base("info", "Print existing configuration..")
+            : base("info", "Print existing configuration.")
         {
         }
 
