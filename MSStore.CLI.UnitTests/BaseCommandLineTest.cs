@@ -199,9 +199,6 @@ namespace MSStore.CLI.UnitTests
             ZipFileManager = new Mock<IZipFileManager>();
 
             TokenManager = new Mock<ITokenManager>();
-            TokenManager
-                .Setup(x => x.GetTokenAsync(It.IsAny<string[]>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync((Microsoft.Identity.Client.AuthenticationResult?)null);
 
             var builder = new CommandLineBuilder(Cli);
             _parser = builder.UseHost(_ => Host.CreateDefaultBuilder(null), (builder) => builder
@@ -303,10 +300,21 @@ namespace MSStore.CLI.UnitTests
                 .Returns("testUserName@fakedomain.com");
             mockAccount
                 .Setup(a => a.HomeAccountId)
-                .Returns(new Microsoft.Identity.Client.AccountId("id", "123", "41261775-DB6D-4B44-9A36-7EB8565C7D22"));
+                .Returns(new Microsoft.Identity.Client.AccountId("id", "123", DefaultOrganization.Id.ToString()));
             TokenManager
                 .Setup(x => x.CurrentUser)
-                .Returns(mockAccount.Object);
+                .Returns((Microsoft.Identity.Client.IAccount?)null);
+            TokenManager
+                .Setup(x => x.GetTokenAsync(It.IsAny<string[]>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((Microsoft.Identity.Client.AuthenticationResult?)null);
+            TokenManager
+                .Setup(x => x.SelectAccountAsync(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+                .Callback(() =>
+                {
+                    TokenManager
+                        .Setup(x => x.CurrentUser)
+                        .Returns(mockAccount.Object);
+                });
         }
 
         internal void AddFakeAccount(AccountEnrollment? accountEnrollment)

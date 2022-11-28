@@ -94,6 +94,8 @@ namespace MSStore.CLI.UnitTests
         [TestMethod]
         public async Task ReconfigureCommandWithCredentialsAndTenantShouldReturnZero()
         {
+            AddDefaultGraphOrg();
+
             FakeConsole
                 .SetupSequence(x => x.YesNoConfirmationAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true)
@@ -115,7 +117,7 @@ namespace MSStore.CLI.UnitTests
                 });
 
             TokenManager
-                .Verify(x => x.SelectAccountAsync(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
+                .Verify(x => x.SelectAccountAsync(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Once);
             TokenManager
                 .Verify(x => x.GetTokenAsync(It.IsAny<string[]>(), It.IsAny<CancellationToken>()), Times.Never);
 

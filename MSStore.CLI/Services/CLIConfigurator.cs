@@ -73,24 +73,10 @@ namespace MSStore.CLI.Services
 
             if (tenantId == null)
             {
-                if (!_partnerCenterManager.Enabled)
+                organization = await GetOrganizationAsync(config, true, ct);
+                if (organization == null)
                 {
-                    string? guidStr = await _consoleReader.RequestStringAsync("Please, provide your TenantId", false, ct);
-                    if (!Guid.TryParse(guidStr, out var possibleTenantId))
-                    {
-                        AnsiConsole.MarkupLine("[bold red]Invalid Tenant Id[/]");
-                        return false;
-                    }
-
-                    config.TenantId = tenantId = possibleTenantId;
-                }
-                else
-                {
-                    organization = await GetOrganizationAsync(config, true, ct);
-                    if (organization == null)
-                    {
-                        return false;
-                    }
+                    return false;
                 }
             }
             else
@@ -110,10 +96,67 @@ namespace MSStore.CLI.Services
 
             if (config.ClientId == null || clientSecret == null)
             {
-                if (!_graphClient.Enabled || await _consoleReader.YesNoConfirmationAsync("Do you have a client+secret?'", ct))
+                string GetDisplayName(string sufix) => $"MSStoreCLIAccess - {sufix}";
+                string RandomString() => Path.GetFileNameWithoutExtension(Path.GetRandomFileName());
+
+                string? machineName = null;
+                try
+                {
+                    machineName = Environment.MachineName;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogInformation(ex, "Failed to get machine name");
+                }
+
+                string displayName;
+
+                if (!_graphClient.Enabled || await _consoleReader.YesNoConfirmationAsync("Do you have a client+secret?", ct))
                 {
                     if (!config.ClientId.HasValue)
                     {
+                        if (machineName != null)
+                        {
+                            displayName = GetDisplayName(machineName);
+                        }
+                        else
+                        {
+                            // Fallback in case we can't get the machine's name
+                            displayName = GetDisplayName(RandomString());
+                        }
+
+                        organization = await GetOrganizationAsync(config, organization == null, ct);
+                        if (organization == null)
+                        {
+                            return false;
+                        }
+
+                        AnsiConsole.WriteLine();
+
+                        AnsiConsole.MarkupLine("We can't automatically do this (yet!)...");
+                        AnsiConsole.MarkupLine("At the Partner Center website, at the [b green]Account settings[/]/[b green]User management[/]/[b green]Azure AD applications[/] page:");
+                        var domainsString = string.Empty;
+                        if (organization.Domain != null)
+                        {
+                            domainsString = organization.Domain;
+                        }
+
+                        await OpenPartnerCenterUserManagementPageAsync("usermanagement#apps", ct);
+
+                        var randomString = RandomString();
+
+                        AnsiConsole.MarkupLine($"1) Signin with your administrator account from this domain: [b green]{domainsString}[/].");
+                        AnsiConsole.MarkupLine("2) Click on [b green]Azure AD applications[/].");
+                        AnsiConsole.MarkupLine("3) Click on [b green]Add Azure AD Application[/].");
+                        AnsiConsole.MarkupLine("4) Select [b green]Create Azure AD Application[/] and click on [b green]Continue[/].");
+                        AnsiConsole.MarkupLine("5) Fill the form. Here are some values that can help you with the setup:");
+                        AnsiConsole.MarkupLine($"   - Name: [b green]{displayName}[/]");
+                        AnsiConsole.MarkupLine($"   - Reply URI: [b green]https://{organization.Domain}/MSStoreCLIAccess_{randomString}[/]");
+                        AnsiConsole.MarkupLine($"   - App ID URI: [b green]https://{organization.Domain}/MSStoreCLIAccess_{randomString}[/]");
+                        AnsiConsole.MarkupLine("6) Click on [b green]Next[/].");
+                        AnsiConsole.MarkupLine("7) Select [b green]Manager(Windows)[/] and click on [b green]Create[/].");
+                        AnsiConsole.MarkupLine("8) Copy the GUID from the application that you just created and paste it here:");
+
                         string? guidStr = await _consoleReader.RequestStringAsync("Client Id", false, ct);
                         Guid guid;
                         if (!Guid.TryParse(guidStr, out guid))
@@ -123,6 +166,9 @@ namespace MSStore.CLI.Services
                         }
 
                         config.ClientId = guid;
+
+                        AnsiConsole.MarkupLine("Now click on the application that you just provided the GUID for, and click on [b green]Add new key[/]");
+                        AnsiConsole.MarkupLine("Copy the [b green]Key[/] value and paste it here:");
                     }
 
                     clientSecret = await _consoleReader.RequestStringAsync("Client Secret", true, ct);
@@ -134,20 +180,6 @@ namespace MSStore.CLI.Services
                 }
                 else
                 {
-                    string GetDisplayName(string sufix) => $"MSStoreCLIAccess - {sufix}";
-                    string RandomString() => Path.GetFileNameWithoutExtension(Path.GetRandomFileName());
-
-                    string? machineName = null;
-                    try
-                    {
-                        machineName = Environment.MachineName;
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogInformation(ex, "Failed to get machine name");
-                    }
-
-                    string displayName;
                     if (machineName != null)
                     {
                         displayName = GetDisplayName(machineName);
@@ -206,30 +238,26 @@ namespace MSStore.CLI.Services
 
                     clientSecret = newClientSecret;
 
-                    AnsiConsole.WriteLine("We can't automatically do this (yet!)...");
-                    AnsiConsole.WriteLine("At the Partner Center website, at the 'Account settings'/'User management'/'Azure AD applications' page:");
+                    AnsiConsole.MarkupLine("We can't automatically do this (yet!)...");
+                    AnsiConsole.MarkupLine("At the Partner Center website, at the [b green]Account settings[/]/[b green]User management[/]/[b green]Azure AD applications[/] page:");
                     var domainsString = string.Empty;
                     if (organization.Domain != null)
                     {
                         domainsString = organization.Domain;
                     }
 
-                    AnsiConsole.WriteLine($"1) Signin with your administrator account from this domain: '{domainsString}'.");
-                    AnsiConsole.WriteLine("2) Click on 'Add Azure AD Application'.");
-                    AnsiConsole.WriteLine("3) Select 'Add Azure AD Application' and click on 'Continue'.");
-                    AnsiConsole.MarkupLine($"4) Select the app that we just created for you: [bold green]{displayName}[/] and click on 'Next'.");
-                    AnsiConsole.WriteLine("5) Select 'Manager(Windows)' and click on 'Add'.");
-                    AnsiConsole.WriteLine("6) Return here.");
+                    AnsiConsole.MarkupLine($"1) Signin with your administrator account from this domain: [b green]{domainsString}[/].");
+                    AnsiConsole.MarkupLine("2) Click on [b green]Add Azure AD Application[/].");
+                    AnsiConsole.MarkupLine("3) Select [b green]Add Azure AD Application[/] and click on [b green]Continue[/].");
+                    AnsiConsole.MarkupLine($"4) Select the app that we just created for you: [bold green]{displayName}[/] and click on [b green]Next[/].");
+                    AnsiConsole.MarkupLine("5) Select [b green]Manager(Windows)[/] and click on [b green]Add[/].");
+                    AnsiConsole.MarkupLine("6) Return here.");
                     AnsiConsole.WriteLine();
 
                     bool yesNo;
                     do
                     {
-                        AnsiConsole.WriteLine("Press 'Enter' to open the browser at the right page...");
-
-                        await _consoleReader.ReadNextAsync(false, ct);
-
-                        _browserLauncher.OpenBrowser($"https://partner.microsoft.com/dashboard/account/v3/usermanagement#apps");
+                        await OpenPartnerCenterUserManagementPageAsync("usermanagement#apps", ct);
 
                         yesNo = await _consoleReader.YesNoConfirmationAsync("Have you finished the steps above?", ct);
                     }
@@ -247,6 +275,11 @@ namespace MSStore.CLI.Services
             config.SellerId = await RetrieveSellerId(sellerId, ct);
             if (config.SellerId == null)
             {
+                AnsiConsole.MarkupLine("At the Partner Center website, at the [b green]Account settings[/]/[b green]Organization profile[/]/[b green]Legal info[/] page:");
+                await OpenPartnerCenterUserManagementPageAsync("organization/legalinfo#mpn", ct);
+
+                AnsiConsole.MarkupLine("Copy the [b green]Seller Id[/] value here:");
+
                 try
                 {
                     config.SellerId = Convert.ToInt32(await _consoleReader.RequestStringAsync("Seller Id", false, ct), CultureInfo.InvariantCulture);
@@ -282,7 +315,7 @@ namespace MSStore.CLI.Services
                                 break;
                             }
 
-                            AnsiConsole.WriteLine($"Failed to auth... Might just need to wait a little bit. Retrying again in {delay} seconds({i + 1}/{maxRetry})...");
+                            AnsiConsole.MarkupLine($"Failed to auth... Might just need to wait a little bit. Retrying again in [b green]{delay}[/] seconds([b green]{i + 1}/{maxRetry}[/])...");
                             await Task.Delay(TimeSpan.FromSeconds(delay), ct);
                         }
                     }
@@ -315,10 +348,20 @@ namespace MSStore.CLI.Services
             return result;
         }
 
+        private async Task OpenPartnerCenterUserManagementPageAsync(string specificPage, CancellationToken ct)
+        {
+            AnsiConsole.MarkupLine("Press [b green]Enter[/] to open the browser at the right page...");
+
+            await _consoleReader.ReadNextAsync(false, ct);
+
+            _browserLauncher.OpenBrowser($"https://partner.microsoft.com/dashboard/account/v3/{specificPage}");
+        }
+
         private async Task<Organization?> GetOrganizationAsync(Configurations config, bool forceSelection, CancellationToken ct)
         {
             if (_tokenManager.CurrentUser == null)
             {
+                // Try to use cached account
                 await _tokenManager.SelectAccountAsync(false, forceSelection, ct);
             }
 
@@ -335,22 +378,22 @@ namespace MSStore.CLI.Services
                 AnsiConsole.MarkupLine("[b]1) [/][yellow]Not registered as a [green]Microsoft Store Developer[/][/]; and/or");
                 AnsiConsole.MarkupLine("[b]2) [/][yellow]Not associated with an [green]Azure AD Tenant[/].[/]");
 
-                if (await _consoleReader.YesNoConfirmationAsync("Do you know if you are already registed?'", ct))
+                if (await _consoleReader.YesNoConfirmationAsync("Do you know if you are already registed?", ct))
                 {
                     AnsiConsole.MarkupLine("Lets then associate your account with an [green]Azure AD Tenant[/].");
 
                     AnsiConsole.WriteLine();
 
-                    AnsiConsole.WriteLine("We can't automatically do this...");
-                    AnsiConsole.WriteLine("At the Partner Center website, at the 'Account settings'/'Organization profile'/'Tenants' page:");
-                    AnsiConsole.WriteLine("1) Either associate an Azure AD with your Partner Center account, or Create a new Azure Ad.");
-                    AnsiConsole.WriteLine("2) Then close the browser and return here.");
+                    AnsiConsole.MarkupLine("We can't automatically do this...");
+                    AnsiConsole.MarkupLine("At the Partner Center website, at the [b green]Account settings[/]/[b green]Organization profile[/]/[b green]Tenants[/] page:");
+                    AnsiConsole.MarkupLine("1) Either associate an Azure AD with your Partner Center account, or Create a new Azure Ad.");
+                    AnsiConsole.MarkupLine("2) Then close the browser and return here.");
                     AnsiConsole.WriteLine();
 
                     bool yesNo;
                     do
                     {
-                        AnsiConsole.WriteLine("Press 'Enter' to open the browser at the Tenant Setup page...");
+                        AnsiConsole.MarkupLine("Press [b green]Enter[/] to open the browser at the Tenant Setup page...");
 
                         await _consoleReader.ReadNextAsync(false, ct);
 
@@ -364,7 +407,7 @@ namespace MSStore.CLI.Services
                 }
                 else
                 {
-                    AnsiConsole.WriteLine("Press 'Enter' to open the browser at the Account Registration page...");
+                    AnsiConsole.MarkupLine("Press [b green]Enter[/] to open the browser at the Account Registration page...");
 
                     await _consoleReader.ReadNextAsync(false, ct);
 
@@ -376,10 +419,13 @@ namespace MSStore.CLI.Services
 
             if (config.TenantId != null && organization.Id != config.TenantId)
             {
-                throw new InvalidOperationException($"Could not find Graph Organization/Tenant with Id '{config.TenantId}' in signed in user.");
+                throw new InvalidOperationException($"Could not find Graph Organization/Tenant with Id [b green]{config.TenantId}[/] in signed in user.");
             }
 
-            AnsiConsole.MarkupLine($"Found Organization/Tenant [green b]{organization.Id}[/]");
+            if (organization.Id != config.TenantId)
+            {
+                AnsiConsole.MarkupLine($"Found Organization/Tenant [green b]{organization.Id}[/]");
+            }
 
             config.TenantId = organization.Id;
 
@@ -420,12 +466,12 @@ namespace MSStore.CLI.Services
             if (!string.IsNullOrEmpty(accountEnrollment?.Id))
             {
                 _logger.LogInformation("Enrollment account Id: '{AccountEnrollmentId}'", accountEnrollment?.Id);
-                AnsiConsole.WriteLine("Found an enrollment account, using it.");
+                AnsiConsole.MarkupLine("Found an enrollment account, using it.");
                 return Convert.ToInt32(accountEnrollment?.Id, CultureInfo.InvariantCulture);
             }
             else
             {
-                // AnsiConsole.WriteLine("No enrollment account found, so we couln't automatically find your Seller Id.");
+                // AnsiConsole.MarkupLine("No enrollment account found, so we couln't automatically find your Seller Id.");
                 return null;
             }
         }
@@ -436,12 +482,6 @@ namespace MSStore.CLI.Services
             {
                 try
                 {
-                    if (_tokenManager.CurrentUser == null)
-                    {
-                        // Try to use cached account
-                        await _tokenManager.SelectAccountAsync(false, false, ct);
-                    }
-
                     if (_tokenManager.CurrentUser == null)
                     {
                         // If no cache, then get an access token, which will ask for credentials interactively
