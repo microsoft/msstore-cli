@@ -209,7 +209,8 @@ namespace MSStore.CLI.ProjectConfigurators
                                 {
                                     DisplayName = publisherDisplayName,
                                     CommonName = app.PublisherName
-                                }
+                                },
+                                ResourceLanguage = "en-us", // TODO: parametrize this
                             },
                             outputZipPath,
                             task,

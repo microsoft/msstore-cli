@@ -12,5 +12,6 @@ namespace MSStore.CLI.Services.PWABuilder
         public bool AllowSigning { get; set; }
         public ClassicPackage? ClassicPackage { get; set; }
         public Publisher? Publisher { get; set; }
+        public string? ResourceLanguage { get; set; }
     }
 }
