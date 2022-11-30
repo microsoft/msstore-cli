@@ -9,6 +9,7 @@ using System.CommandLine.Parsing;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -214,7 +215,7 @@ namespace MSStore.CLI
 
             telemetryClient.Context.User.Id = telemetryConfigurations.TelemetryGuid;
             telemetryClient.Context.Session.Id = Guid.NewGuid().ToString();
-            telemetryClient.Context.Component.Version = typeof(Program).Assembly.GetName().Version?.ToString();
+            telemetryClient.Context.Component.Version = typeof(Program).Assembly.GetCustomAttributes<AssemblyInformationalVersionAttribute>().First().InformationalVersion;
             telemetryClient.Context.Device.OperatingSystem = RuntimeInformation.RuntimeIdentifier;
             telemetryClient.Context.Cloud.RoleInstance = "-";
             telemetryClient.Context.GetInternalContext().NodeName = "-";
