@@ -36,7 +36,7 @@ namespace MSStore.CLI
         public static async Task<int> Main(params string[] args)
         {
 #if WINDOWS
-            Console.OutputEncoding = System.Text.Encoding.Unicode;
+            Console.OutputEncoding = System.Text.Encoding.UTF8;
 #endif
 
             var storeCLI = new MicrosoftStoreCLI();
