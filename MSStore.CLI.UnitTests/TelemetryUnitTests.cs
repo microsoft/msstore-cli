@@ -23,6 +23,10 @@ namespace MSStore.CLI.UnitTests
         {
             AddDefaultGraphOrg();
 
+            FakeConsole
+                .Setup(x => x.YesNoConfirmationAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
+
             var result = await ParseAndInvokeAsync(Array.Empty<string>(), null);
 
             result.Should().Contain("https://aka.ms/privacy");

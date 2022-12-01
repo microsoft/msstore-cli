@@ -450,6 +450,10 @@ namespace MSStore.CLI.UnitTests
             {
                 result.Should().Be(expectedResult.Value);
             }
+            else
+            {
+                outputCapture.Captured.ToString().Should().NotContain("💥");
+            }
 
             return outputCapture.Captured.ToString() ?? string.Empty;
         }
