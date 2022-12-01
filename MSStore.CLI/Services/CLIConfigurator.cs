@@ -115,47 +115,50 @@ namespace MSStore.CLI.Services
                 {
                     if (!config.ClientId.HasValue)
                     {
-                        if (machineName != null)
+                        if (!_graphClient.Enabled)
                         {
-                            displayName = GetDisplayName(machineName);
+                            if (machineName != null)
+                            {
+                                displayName = GetDisplayName(machineName);
+                            }
+                            else
+                            {
+                                // Fallback in case we can't get the machine's name
+                                displayName = GetDisplayName(RandomString());
+                            }
+
+                            organization = await GetOrganizationAsync(config, organization == null, ct);
+                            if (organization == null)
+                            {
+                                return false;
+                            }
+
+                            AnsiConsole.WriteLine();
+
+                            AnsiConsole.MarkupLine("We can't automatically do this (yet!)...");
+                            AnsiConsole.MarkupLine("At the Partner Center website, at the [b green]Account settings[/]/[b green]User management[/]/[b green]Azure AD applications[/] page:");
+                            var domainsString = string.Empty;
+                            if (organization.Domain != null)
+                            {
+                                domainsString = organization.Domain;
+                            }
+
+                            await OpenPartnerCenterUserManagementPageAsync("usermanagement#apps", ct);
+
+                            var randomString = RandomString();
+
+                            AnsiConsole.MarkupLine($"1) Signin with your administrator account from this domain: [b green]{domainsString}[/].");
+                            AnsiConsole.MarkupLine("2) Click on [b green]Azure AD applications[/].");
+                            AnsiConsole.MarkupLine("3) Click on [b green]Add Azure AD Application[/].");
+                            AnsiConsole.MarkupLine("4) Select [b green]Create Azure AD Application[/] and click on [b green]Continue[/].");
+                            AnsiConsole.MarkupLine("5) Fill the form. Here are some values that can help you with the setup:");
+                            AnsiConsole.MarkupLine($"   - Name: [b green]{displayName}[/]");
+                            AnsiConsole.MarkupLine($"   - Reply URI: [b green]https://{organization.Domain}/MSStoreCLIAccess_{randomString}[/]");
+                            AnsiConsole.MarkupLine($"   - App ID URI: [b green]https://{organization.Domain}/MSStoreCLIAccess_{randomString}[/]");
+                            AnsiConsole.MarkupLine("6) Click on [b green]Next[/].");
+                            AnsiConsole.MarkupLine("7) Select [b green]Manager(Windows)[/] and click on [b green]Create[/].");
+                            AnsiConsole.MarkupLine("8) Copy the GUID from the application that you just created and paste it here:");
                         }
-                        else
-                        {
-                            // Fallback in case we can't get the machine's name
-                            displayName = GetDisplayName(RandomString());
-                        }
-
-                        organization = await GetOrganizationAsync(config, organization == null, ct);
-                        if (organization == null)
-                        {
-                            return false;
-                        }
-
-                        AnsiConsole.WriteLine();
-
-                        AnsiConsole.MarkupLine("We can't automatically do this (yet!)...");
-                        AnsiConsole.MarkupLine("At the Partner Center website, at the [b green]Account settings[/]/[b green]User management[/]/[b green]Azure AD applications[/] page:");
-                        var domainsString = string.Empty;
-                        if (organization.Domain != null)
-                        {
-                            domainsString = organization.Domain;
-                        }
-
-                        await OpenPartnerCenterUserManagementPageAsync("usermanagement#apps", ct);
-
-                        var randomString = RandomString();
-
-                        AnsiConsole.MarkupLine($"1) Signin with your administrator account from this domain: [b green]{domainsString}[/].");
-                        AnsiConsole.MarkupLine("2) Click on [b green]Azure AD applications[/].");
-                        AnsiConsole.MarkupLine("3) Click on [b green]Add Azure AD Application[/].");
-                        AnsiConsole.MarkupLine("4) Select [b green]Create Azure AD Application[/] and click on [b green]Continue[/].");
-                        AnsiConsole.MarkupLine("5) Fill the form. Here are some values that can help you with the setup:");
-                        AnsiConsole.MarkupLine($"   - Name: [b green]{displayName}[/]");
-                        AnsiConsole.MarkupLine($"   - Reply URI: [b green]https://{organization.Domain}/MSStoreCLIAccess_{randomString}[/]");
-                        AnsiConsole.MarkupLine($"   - App ID URI: [b green]https://{organization.Domain}/MSStoreCLIAccess_{randomString}[/]");
-                        AnsiConsole.MarkupLine("6) Click on [b green]Next[/].");
-                        AnsiConsole.MarkupLine("7) Select [b green]Manager(Windows)[/] and click on [b green]Create[/].");
-                        AnsiConsole.MarkupLine("8) Copy the GUID from the application that you just created and paste it here:");
 
                         string? guidStr = await _consoleReader.RequestStringAsync("Client Id", false, ct);
                         Guid guid;
@@ -167,8 +170,11 @@ namespace MSStore.CLI.Services
 
                         config.ClientId = guid;
 
-                        AnsiConsole.MarkupLine("Now click on the application that you just provided the GUID for, and click on [b green]Add new key[/]");
-                        AnsiConsole.MarkupLine("Copy the [b green]Key[/] value and paste it here:");
+                        if (!_graphClient.Enabled)
+                        {
+                            AnsiConsole.MarkupLine("Now click on the application that you just provided the GUID for, and click on [b green]Add new key[/]");
+                            AnsiConsole.MarkupLine("Copy the [b green]Key[/] value and paste it here:");
+                        }
                     }
 
                     clientSecret = await _consoleReader.RequestStringAsync("Client Secret", true, ct);

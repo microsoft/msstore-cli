@@ -91,8 +91,7 @@ namespace MSStore.CLI.UnitTests
             result.Should().Contain("Awesome! It seems to be working!");
         }
 
-        [TestMethod]
-        public async Task ReconfigureCommandWithCredentialsAndTenantShouldReturnZero()
+        private Task<string> ParseSetupSuccessWithCredentialsAndTenantAsync()
         {
             AddDefaultGraphOrg();
 
@@ -106,7 +105,7 @@ namespace MSStore.CLI.UnitTests
                 .ReturnsAsync("3F0BCAEF-6334-48CF-837F-81CB0F1F2C45")
                 .ReturnsAsync("ClientSecret");
 
-            var result = await ParseAndInvokeAsync(
+            return ParseAndInvokeAsync(
                 new string[]
                 {
                     "reconfigure",
@@ -115,9 +114,35 @@ namespace MSStore.CLI.UnitTests
                     "--sellerId",
                     "12345"
                 });
+        }
+
+        [TestMethod]
+        public async Task ReconfigureCommandWithCredentialsAndTenantShouldCallTokenManagerIfGraphIsDisabled()
+        {
+            PartnerCenterManager
+                .Setup(x => x.Enabled)
+                .Returns(false);
+            GraphClient
+                .Setup(x => x.Enabled)
+                .Returns(false);
+
+            var result = await ParseSetupSuccessWithCredentialsAndTenantAsync();
 
             TokenManager
                 .Verify(x => x.SelectAccountAsync(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Once);
+            TokenManager
+                .Verify(x => x.GetTokenAsync(It.IsAny<string[]>(), It.IsAny<CancellationToken>()), Times.Never);
+
+            result.Should().Contain("Awesome! It seems to be working!");
+        }
+
+        [TestMethod]
+        public async Task ReconfigureCommandWithCredentialsAndTenantShouldNotCallTokenManagerIfGraphIsEnabled()
+        {
+            var result = await ParseSetupSuccessWithCredentialsAndTenantAsync();
+
+            TokenManager
+                .Verify(x => x.SelectAccountAsync(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
             TokenManager
                 .Verify(x => x.GetTokenAsync(It.IsAny<string[]>(), It.IsAny<CancellationToken>()), Times.Never);
 
