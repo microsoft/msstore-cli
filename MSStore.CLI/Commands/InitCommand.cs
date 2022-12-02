@@ -65,7 +65,7 @@ namespace MSStore.CLI.Commands
         }
 
         public InitCommand()
-            : base("init", "Helps you setup your Microsoft Account to be a Microsoft Store Developer.")
+            : base("init", "Helps you setup your application to publish to the Microsoft Store.")
         {
             AddArgument(PathOrUrl);
 
