@@ -130,6 +130,7 @@ namespace MSStore.CLI
                 .UseTypoCorrections()
                 .UseParseErrorReporting()
                 .UseExceptionHandler()
+                .UseHelp()
                 .CancelOnProcessTermination()
                 .Build();
 

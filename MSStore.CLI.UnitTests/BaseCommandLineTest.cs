@@ -264,6 +264,16 @@ namespace MSStore.CLI.UnitTests
                             await next(context).ConfigureAwait(false);
                         }
                     }, MiddlewareOrder.Default)
+                .UseVersionOption()
+                .UseEnvironmentVariableDirective()
+                .UseParseDirective()
+                .UseSuggestDirective()
+                .RegisterWithDotnetSuggest()
+                .UseTypoCorrections()
+                .UseParseErrorReporting()
+                .UseExceptionHandler()
+                .UseHelp()
+                .CancelOnProcessTermination()
                 .Build();
         }
 
