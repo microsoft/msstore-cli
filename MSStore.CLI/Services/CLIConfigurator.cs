@@ -135,8 +135,7 @@ namespace MSStore.CLI.Services
 
                             AnsiConsole.WriteLine();
 
-                            AnsiConsole.MarkupLine("We can't automatically do this (yet!)...");
-                            AnsiConsole.MarkupLine("At the Partner Center website, at the [b green]Account settings[/]/[b green]User management[/]/[b green]Azure AD applications[/] page:");
+                            AnsiConsole.MarkupLine("We are going to open the Partner Center website, at the right page.");
                             var domainsString = string.Empty;
                             if (organization.Domain != null)
                             {
@@ -147,17 +146,18 @@ namespace MSStore.CLI.Services
 
                             var randomString = RandomString();
 
-                            AnsiConsole.MarkupLine($"1) Signin with your administrator account from this domain: [b green]{domainsString}[/].");
-                            AnsiConsole.MarkupLine("2) Click on [b green]Azure AD applications[/].");
-                            AnsiConsole.MarkupLine("3) Click on [b green]Add Azure AD Application[/].");
-                            AnsiConsole.MarkupLine("4) Select [b green]Create Azure AD Application[/] and click on [b green]Continue[/].");
-                            AnsiConsole.MarkupLine("5) Fill the form. Here are some values that can help you with the setup:");
+                            AnsiConsole.MarkupLine("1) At [b green]Account settings[/]/[b green]User management[/]/[b green]Azure AD applications[/] page...");
+                            AnsiConsole.MarkupLine($"2) Make sure you are signed-in with your administrator account from this domain: [b green]{domainsString}[/].");
+                            AnsiConsole.MarkupLine("3) Click on [b green]Azure AD applications[/].");
+                            AnsiConsole.MarkupLine("4) Click on [b green]Add Azure AD Application[/].");
+                            AnsiConsole.MarkupLine("5) Select [b green]Create Azure AD Application[/] and click on [b green]Continue[/].");
+                            AnsiConsole.MarkupLine("6) Fill the form. Here are some values that can help you with the setup:");
                             AnsiConsole.MarkupLine($"   - Name: [b green]{displayName}[/]");
                             AnsiConsole.MarkupLine($"   - Reply URI: [b green]https://{organization.Domain}/MSStoreCLIAccess_{randomString}[/]");
                             AnsiConsole.MarkupLine($"   - App ID URI: [b green]https://{organization.Domain}/MSStoreCLIAccess_{randomString}[/]");
-                            AnsiConsole.MarkupLine("6) Click on [b green]Next[/].");
-                            AnsiConsole.MarkupLine("7) Select [b green]Manager(Windows)[/] and click on [b green]Create[/].");
-                            AnsiConsole.MarkupLine("8) Copy the GUID from the application that you just created and paste it here:");
+                            AnsiConsole.MarkupLine("7) Click on [b green]Next[/].");
+                            AnsiConsole.MarkupLine("8) Select [b green]Manager(Windows)[/] and click on [b green]Create[/].");
+                            AnsiConsole.MarkupLine("9) Copy the GUID from the application that you just created and paste it here:");
                         }
 
                         string? guidStr = await _consoleReader.RequestStringAsync("Client Id", false, ct);
