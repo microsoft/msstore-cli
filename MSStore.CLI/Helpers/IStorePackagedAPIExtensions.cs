@@ -608,18 +608,23 @@ namespace MSStore.CLI.Helpers
                 }
             }
 
-            if (submission.AllowTargetFutureDeviceFamilies?.Any() != true)
+            if (submission.AllowTargetFutureDeviceFamilies == null)
             {
-                if (submission.AllowTargetFutureDeviceFamilies == null)
-                {
-                    submission.AllowTargetFutureDeviceFamilies = new Dictionary<string, bool>();
-                }
-
-                submission.AllowTargetFutureDeviceFamilies["Desktop"] = true;
-                submission.AllowTargetFutureDeviceFamilies["Mobile"] = false;
-                submission.AllowTargetFutureDeviceFamilies["Holographic"] = true;
-                submission.AllowTargetFutureDeviceFamilies["Xbox"] = false;
+                submission.AllowTargetFutureDeviceFamilies = new Dictionary<string, bool>();
             }
+
+            void UpdateKeyIfNotSet(string key, bool value)
+            {
+                if (!submission.AllowTargetFutureDeviceFamilies.ContainsKey(key))
+                {
+                    submission.AllowTargetFutureDeviceFamilies[key] = value;
+                }
+            }
+
+            UpdateKeyIfNotSet("Desktop", true);
+            UpdateKeyIfNotSet("Mobile", false);
+            UpdateKeyIfNotSet("Holographic", true);
+            UpdateKeyIfNotSet("Xbox", false);
         }
     }
 }
