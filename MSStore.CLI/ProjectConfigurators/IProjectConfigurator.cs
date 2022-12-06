@@ -15,6 +15,8 @@ namespace MSStore.CLI.ProjectConfigurators
 
         bool CanConfigure(string pathOrUrl);
 
+        int? ValidateCommand(string pathOrUrl, DirectoryInfo? output, bool? commandPackage, bool? commandPublish);
+
         Task<(int returnCode, DirectoryInfo? outputDirectory)> ConfigureAsync(string pathOrUrl, DirectoryInfo? output, string publisherDisplayName, DevCenterApplication app, IStorePackagedAPI storePackagedAPI, CancellationToken ct);
     }
 }

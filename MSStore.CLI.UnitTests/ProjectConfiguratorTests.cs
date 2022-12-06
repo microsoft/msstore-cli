@@ -233,7 +233,7 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
-        public async Task ProjectConfiguratorParserPWA()
+        public async Task ProjectConfiguratorParsesPWASuccessfullyIfPublish()
         {
             SetupSuccessfullPWA();
 
@@ -251,6 +251,39 @@ namespace MSStore.CLI.UnitTests
 
             result.Should().Contain("You've provided a URL, so we'll use PWABuilder.com to setup your PWA and upload");
             result.Should().Contain("Submission commit success!");
+        }
+
+        [TestMethod]
+        public async Task ProjectConfiguratorParsesPWASuccessfullyIfOutput()
+        {
+            SetupSuccessfullPWA();
+
+            var result = await ParseAndInvokeAsync(
+                new string[]
+                {
+                    "init",
+                    "https://microsoft.com",
+                    "-o",
+                    Path.GetTempPath()
+                });
+
+            result.Should().Contain("You've provided a URL, so we'll use PWABuilder.com to setup your PWA and upload");
+            result.Should().NotContain("Submission commit success!");
+        }
+
+        [TestMethod]
+        public async Task ProjectConfiguratorFailsToParsePWAIfNotPublishAndNotOutput()
+        {
+            SetupSuccessfullPWA();
+
+            var result = await ParseAndInvokeAsync(
+                new string[]
+                {
+                    "init",
+                    "https://microsoft.com"
+                }, -2);
+
+            result.Should().Contain("For PWAs the init command should output to a specific directory (using the '--output' option), or publish directly to the store using the '--publish' option.");
         }
 
         [TestMethod]

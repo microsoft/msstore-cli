@@ -33,6 +33,7 @@ namespace MSStore.CLI.UnitTests
                 {
                     "init",
                     "https://www.microsoft.com/",
+                    "--publish",
                     "--verbose"
                 }, -2);
 

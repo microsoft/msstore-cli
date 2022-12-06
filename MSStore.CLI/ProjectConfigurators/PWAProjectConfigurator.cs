@@ -92,6 +92,17 @@ namespace MSStore.CLI.ProjectConfigurators
             return uri;
         }
 
+        public int? ValidateCommand(string pathOrUrl, DirectoryInfo? output, bool? commandPackage, bool? commandPublish)
+        {
+            if (output == null && commandPublish != true)
+            {
+                AnsiConsole.MarkupLine($":collision: [bold red]For PWAs the init command should output to a specific directory (using the '--output' option), or publish directly to the store using the '--publish' option.[/]");
+                return -2;
+            }
+
+            return null;
+        }
+
         public async Task<(int returnCode, DirectoryInfo? outputDirectory)> ConfigureAsync(string pathOrUrl, DirectoryInfo? output, string publisherDisplayName, DevCenterApplication app, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             var uri = GetUri(pathOrUrl);

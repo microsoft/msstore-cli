@@ -158,6 +158,13 @@ namespace MSStore.CLI.Commands
 
                 props["ProjType"] = configurator.ConfiguratorProjectType;
 
+                var validationResult = configurator.ValidateCommand(PathOrUrl, Output, Package, Publish);
+
+                if (validationResult.HasValue)
+                {
+                    return await _telemetryClient.TrackCommandEventAsync<Handler>(validationResult.Value, props, ct);
+                }
+
                 if (string.IsNullOrEmpty(PublisherDisplayName))
                 {
                     if (_partnerCenterManager.Enabled)
