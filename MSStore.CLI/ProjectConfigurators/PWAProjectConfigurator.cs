@@ -117,7 +117,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 return (-1, null);
             }
 
-            AnsiConsole.WriteLine($"You've provided a URL, so we'll use PWABuilder.com to setup your PWA and upload it to the Microsoft Store.");
+            AnsiConsole.MarkupLine($"You've provided a URL, so we'll use [link]PWABuilder.com[/] to setup your PWA and upload it to the Microsoft Store.");
             AnsiConsole.WriteLine();
 
             string outputZipPath;

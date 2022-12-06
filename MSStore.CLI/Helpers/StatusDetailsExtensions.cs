@@ -62,7 +62,7 @@ namespace MSStore.CLI.Helpers
                 foreach (var certificationReport in statusDetails.CertificationReports)
                 {
                     var url = $"https://partner.microsoft.com/dashboard/products/{productId}/submissions/{submissionId}";
-                    table.AddRow($"[bold u]{certificationReport.Date}[/]", $"[bold u]{url}[/]");
+                    table.AddRow($"[bold u]{certificationReport.Date}[/]", $"[link]{url.EscapeMarkup()}[/]");
                 }
 
                 AnsiConsole.Write(table);
