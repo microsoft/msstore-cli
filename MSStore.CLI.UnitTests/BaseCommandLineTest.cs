@@ -438,10 +438,17 @@ namespace MSStore.CLI.UnitTests
 
             AnsiConsole.Console = AnsiConsole.Create(new AnsiConsoleSettings
             {
-                Ansi = AnsiSupport.Detect,
-                ColorSystem = ColorSystemSupport.Detect,
+                Ansi = AnsiSupport.Yes,
+                ColorSystem = ColorSystemSupport.TrueColor,
+                Interactive = InteractionSupport.No,
                 Out = new CustomAnsiConsoleOutput(outputCapture),
+                Enrichment = new ProfileEnrichment
+                {
+                    UseDefaultEnrichers = false
+                }
             });
+            AnsiConsole.Profile.Capabilities.Ansi = true;
+            AnsiConsole.Profile.Capabilities.Unicode = true;
 
             var parseResult = _parser.Parse(args);
 
@@ -486,10 +493,7 @@ namespace MSStore.CLI.UnitTests
                 : base("test")
             {
                 _baseCommandLineTest = baseCommandLineTest;
-                this.SetHandler(async (invocationContext) =>
-                {
-                    await _baseCommandLineTest.TestAsync(invocationContext);
-                });
+                this.SetHandler(_baseCommandLineTest.TestAsync);
             }
         }
 

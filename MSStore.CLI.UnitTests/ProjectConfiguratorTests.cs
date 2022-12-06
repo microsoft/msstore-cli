@@ -249,7 +249,7 @@ namespace MSStore.CLI.UnitTests
             TokenManager
                 .Verify(x => x.SelectAccountAsync(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Once);
 
-            result.Should().Contain("You've provided a URL, so we'll use PWABuilder.com to setup your PWA and upload");
+            result.Should().Contain("You've provided a URL, so we'll use");
             result.Should().Contain("Submission commit success!");
         }
 
@@ -267,7 +267,7 @@ namespace MSStore.CLI.UnitTests
                     Path.GetTempPath()
                 });
 
-            result.Should().Contain("You've provided a URL, so we'll use PWABuilder.com to setup your PWA and upload");
+            result.Should().Contain("You've provided a URL, so we'll use");
             result.Should().NotContain("Submission commit success!");
         }
 
@@ -305,7 +305,7 @@ namespace MSStore.CLI.UnitTests
             TokenManager
                 .Verify(x => x.SelectAccountAsync(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
 
-            result.Should().Contain("You've provided a URL, so we'll use PWABuilder.com to setup your PWA and upload");
+            result.Should().Contain("You've provided a URL, so we'll use");
             result.Should().Contain("Submission commit success!");
         }
     }
