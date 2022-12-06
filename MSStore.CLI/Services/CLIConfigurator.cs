@@ -356,11 +356,7 @@ namespace MSStore.CLI.Services
 
         private async Task OpenPartnerCenterUserManagementPageAsync(string specificPage, CancellationToken ct)
         {
-            AnsiConsole.MarkupLine("Press [b green]Enter[/] to open the browser at the right page...");
-
-            await _consoleReader.ReadNextAsync(false, ct);
-
-            _browserLauncher.OpenBrowser($"https://partner.microsoft.com/dashboard/account/v3/{specificPage}");
+            await _browserLauncher.OpenBrowserAsync($"https://partner.microsoft.com/dashboard/account/v3/{specificPage}", true, ct);
         }
 
         private async Task<Organization?> GetOrganizationAsync(Configurations config, bool forceSelection, CancellationToken ct)
@@ -399,11 +395,7 @@ namespace MSStore.CLI.Services
                     bool yesNo;
                     do
                     {
-                        AnsiConsole.MarkupLine("Press [b green]Enter[/] to open the browser at the Tenant Setup page...");
-
-                        await _consoleReader.ReadNextAsync(false, ct);
-
-                        _browserLauncher.OpenBrowser($"https://partner.microsoft.com/dashboard/account/TenantSetup");
+                        await _browserLauncher.OpenBrowserAsync($"https://partner.microsoft.com/dashboard/account/TenantSetup", true, ct);
 
                         yesNo = await _consoleReader.YesNoConfirmationAsync("Have you finished the steps above?", ct);
                     }
@@ -413,11 +405,7 @@ namespace MSStore.CLI.Services
                 }
                 else
                 {
-                    AnsiConsole.MarkupLine("Press [b green]Enter[/] to open the browser at the Account Registration page...");
-
-                    await _consoleReader.ReadNextAsync(false, ct);
-
-                    _browserLauncher.OpenBrowser($"https://partner.microsoft.com/dashboard/registration");
+                    await _browserLauncher.OpenBrowserAsync($"https://partner.microsoft.com/dashboard/registration", true, ct);
                 }
 
                 return null;

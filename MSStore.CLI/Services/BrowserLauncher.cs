@@ -3,21 +3,36 @@
 
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Spectre.Console;
 
 namespace MSStore.CLI.Services
 {
     internal class BrowserLauncher : IBrowserLauncher
     {
+        private readonly IConsoleReader _consoleReader;
         private readonly ILogger<BrowserLauncher> _logger;
 
-        public BrowserLauncher(ILogger<BrowserLauncher> logger)
+        public BrowserLauncher(IConsoleReader consoleReader, ILogger<BrowserLauncher> logger)
         {
+            _consoleReader = consoleReader;
             _logger = logger;
         }
 
-        public void OpenBrowser(string url)
+        public async Task OpenBrowserAsync(string url, bool askConfirmation, CancellationToken ct)
         {
+            if (askConfirmation)
+            {
+                AnsiConsole.MarkupLine($"Press [b green]Enter[/] to open the browser at this page: [link]{url.EscapeMarkup()}[/]");
+
+                if (!string.IsNullOrEmpty(await _consoleReader.ReadNextAsync(false, ct)))
+                {
+                    return;
+                }
+            }
+
             _logger.LogInformation("Trying to open browser with url: {Url}", url);
 
             try

@@ -130,7 +130,7 @@ namespace MSStore.CLI.Helpers
             return lastSubmissionStatus;
         }
 
-        public static async Task<int> HandleLastSubmissionStatusAsync(this IStorePackagedAPI storePackagedAPI, DevCenterSubmissionStatusResponse lastSubmissionStatus, string productId, string submissionId, IConsoleReader consoleReader, IBrowserLauncher browserLauncher, ILogger logger, CancellationToken ct = default)
+        public static async Task<int> HandleLastSubmissionStatusAsync(this IStorePackagedAPI storePackagedAPI, DevCenterSubmissionStatusResponse lastSubmissionStatus, string productId, string submissionId, IBrowserLauncher browserLauncher, ILogger logger, CancellationToken ct = default)
         {
             if ("CommitFailed".Equals(lastSubmissionStatus?.Status, StringComparison.Ordinal))
             {
@@ -140,22 +140,14 @@ namespace MSStore.CLI.Helpers
                 {
                     AnsiConsole.WriteLine("Submission has failed. For the first submission of a new application, you need to complete the Microsoft Age Rating at the Microsoft Partner Center.");
 
-                    AnsiConsole.WriteLine("Press 'Enter' to open the browser at right page...");
-
-                    await consoleReader.ReadNextAsync(false, ct);
-
-                    browserLauncher.OpenBrowser($"https://partner.microsoft.com/dashboard/products/{productId}/submissions/{submissionId}/ageratings");
+                    await browserLauncher.OpenBrowserAsync($"https://partner.microsoft.com/dashboard/products/{productId}/submissions/{submissionId}/ageratings", true, ct);
                 }
                 else if (lastSubmissionStatus.StatusDetails?.Errors?.Count == 1 &&
                     error?.Code == "InvalidState")
                 {
                     AnsiConsole.WriteLine("Submission has failed. Submission has active validation errors which cannot be exposed via API.");
 
-                    AnsiConsole.WriteLine("Press 'Enter' to open the browser at right page...");
-
-                    await consoleReader.ReadNextAsync(false, ct);
-
-                    browserLauncher.OpenBrowser($"https://partner.microsoft.com/dashboard/products/{productId}/submissions/{submissionId}");
+                    await browserLauncher.OpenBrowserAsync($"https://partner.microsoft.com/dashboard/products/{productId}/submissions/{submissionId}", true, ct);
                 }
                 else
                 {
@@ -203,7 +195,7 @@ namespace MSStore.CLI.Helpers
                             devCenterError.Target == "applicationSubmission")
                         {
                             var existingSubmission = await storePackagedAPI.GetSubmissionAsync(appId, pendingSubmissionId, ct);
-                            browserLauncher.OpenBrowser($"https://partner.microsoft.com/dashboard/products/{appId}/submissions/{existingSubmission.Id}");
+                            await browserLauncher.OpenBrowserAsync($"https://partner.microsoft.com/dashboard/products/{appId}/submissions/{existingSubmission.Id}", true, ct);
                             return false;
                         }
                     }
@@ -417,7 +409,7 @@ namespace MSStore.CLI.Helpers
                 return -1;
             }
 
-            return await storePackagedAPI.HandleLastSubmissionStatusAsync(lastSubmissionStatus, app.Id, submission.Id, consoleReader, _browserLauncher, logger, ct);
+            return await storePackagedAPI.HandleLastSubmissionStatusAsync(lastSubmissionStatus, app.Id, submission.Id, _browserLauncher, logger, ct);
         }
 
         private static async Task<string?> PrepareBundleAsync(DevCenterSubmission submission, DirectoryInfo output, IEnumerable<FileInfo> packageFiles, IZipFileManager zipFileManager, IFileDownloader fileDownloader, ILogger logger, CancellationToken ct)

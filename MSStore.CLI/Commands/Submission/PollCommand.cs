@@ -30,17 +30,15 @@ namespace MSStore.CLI.Commands.Submission
             private readonly ILogger _logger;
             private readonly IStoreAPIFactory _storeAPIFactory;
             private readonly TelemetryClient _telemetryClient;
-            private readonly IConsoleReader _consoleReader;
             private readonly IBrowserLauncher _browserLauncher;
 
             public string ProductId { get; set; } = null!;
 
-            public Handler(ILogger<Handler> logger, IStoreAPIFactory storeAPIFactory, TelemetryClient telemetryClient, IConsoleReader consoleReader, IBrowserLauncher browserLauncher)
+            public Handler(ILogger<Handler> logger, IStoreAPIFactory storeAPIFactory, TelemetryClient telemetryClient, IBrowserLauncher browserLauncher)
             {
                 _logger = logger ?? throw new ArgumentNullException(nameof(logger));
                 _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
                 _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
-                _consoleReader = consoleReader ?? throw new ArgumentNullException(nameof(consoleReader));
                 _browserLauncher = browserLauncher ?? throw new ArgumentNullException(nameof(browserLauncher));
             }
 
@@ -143,7 +141,7 @@ namespace MSStore.CLI.Commands.Submission
 
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(
                         ProductId,
-                        await storePackagedAPI.HandleLastSubmissionStatusAsync(lastSubmissionStatus, ProductId, submission.Id, _consoleReader, _browserLauncher, _logger, ct),
+                        await storePackagedAPI.HandleLastSubmissionStatusAsync(lastSubmissionStatus, ProductId, submission.Id, _browserLauncher, _logger, ct),
                         ct);
                 }
                 else if (publishingStatus is ResponseWrapper<SubmissionStatus> lastSubmissionStatusWrapper)

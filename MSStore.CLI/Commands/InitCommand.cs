@@ -199,7 +199,7 @@ namespace MSStore.CLI.Commands
 
                         if (account?.Status != "active")
                         {
-                            OpenMicrosoftStoreRegistrationPage();
+                            await OpenMicrosoftStoreRegistrationPageAsync(ct);
                             return await _telemetryClient.TrackCommandEventAsync<Handler>(-2, props, ct);
                         }
 
@@ -347,13 +347,13 @@ namespace MSStore.CLI.Commands
                 return success ? appList : null;
             }
 
-            private void OpenMicrosoftStoreRegistrationPage()
+            private async Task OpenMicrosoftStoreRegistrationPageAsync(CancellationToken ct)
             {
                 AnsiConsole.WriteLine("I see that you are not a Microsoft Store Developer just yet.");
                 AnsiConsole.WriteLine();
                 AnsiConsole.WriteLine("I'll redirect you to the Microsoft Store Sign-up page.");
 
-                _browserLauncher.OpenBrowser("https://partner.microsoft.com/dashboard/registration");
+                await _browserLauncher.OpenBrowserAsync("https://partner.microsoft.com/dashboard/registration", true, ct);
             }
         }
     }

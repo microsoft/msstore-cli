@@ -39,7 +39,7 @@ namespace MSStore.CLI.UnitTests
 
             result.Should().Contain("I'll redirect you to the Microsoft Store Sign-up page.");
 
-            BrowserLauncher.Verify(x => x.OpenBrowser("https://partner.microsoft.com/dashboard/registration"), Times.Once);
+            BrowserLauncher.Verify(x => x.OpenBrowserAsync("https://partner.microsoft.com/dashboard/registration", true, It.IsAny<CancellationToken>()), Times.Once);
         }
     }
 }
