@@ -186,7 +186,7 @@ namespace MSStore.CLI.UnitTests
 
             var fileDownloader = new Mock<IFileDownloader>();
             fileDownloader
-                .Setup(x => x.DownloadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IProgress<double>>(), It.IsAny<CancellationToken>()))
+                .Setup(x => x.DownloadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IProgress<double>>(), It.IsAny<ILogger?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
 
             var imageConverter = new Mock<IImageConverter>();

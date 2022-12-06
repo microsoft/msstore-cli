@@ -470,7 +470,7 @@ namespace MSStore.CLI.Helpers
                         // Add images to Bundle
                         if (submission.Listings != null)
                         {
-                            var tasks = new List<Task>();
+                            var tasks = new List<Task<bool>>();
                             foreach (var listing in submission.Listings)
                             {
                                 if (listing.Value?.BaseListing?.Images?.Any() == true)
@@ -489,13 +489,19 @@ namespace MSStore.CLI.Helpers
                                         foreach (var image in imagesToDownload)
                                         {
                                             var task = ctx.AddTask($"[green]Downloading Image '{image.FileName}'[/]");
-                                            tasks.Add(CreateImageAsync(listing.Key, image, listingUploadDir, task, fileDownloader, ct));
+                                            tasks.Add(CreateImageAsync(listing.Key, image, listingUploadDir, task, fileDownloader, logger, ct));
                                         }
                                     }
                                 }
                             }
 
                             await Task.WhenAll(tasks);
+
+                            if (tasks.Any(t => !t.Result))
+                            {
+                                AnsiConsole.MarkupLine("Error while downloading images. Please try again.");
+                                return null;
+                            }
                         }
 
                         var uploadZipFilePath = Path.Combine(output.FullName, "Upload.zip");
@@ -519,15 +525,25 @@ namespace MSStore.CLI.Helpers
                 });
         }
 
-        private static async Task CreateImageAsync(string listingKey, Image image, string uploadDir, IProgress<double> progress, IFileDownloader fileDownloader, CancellationToken ct)
+        private static async Task<bool> CreateImageAsync(string listingKey, Image image, string uploadDir, IProgress<double> progress, IFileDownloader fileDownloader, ILogger logger, CancellationToken ct)
         {
             var fileName = $"{image.ImageType}_{Path.GetFileName(image.FileName)}";
 
-            var imageDirectory = Path.Combine(uploadDir, fileName);
-            if (image.FileName != null && await fileDownloader.DownloadAsync(image.FileName, imageDirectory, progress, ct))
+            var destinationFileName = Path.Combine(uploadDir, fileName);
+            if (image.FileName == null)
+            {
+                return false;
+            }
+
+            var result = await fileDownloader.DownloadAsync(image.FileName, destinationFileName, progress, logger, ct);
+
+            if (result)
             {
                 image.FileName = Path.Combine(listingKey, fileName);
+                return true;
             }
+
+            return false;
         }
 
         private static async Task FulfillApplicationAsync(DevCenterApplication app, DevCenterSubmission submission, FirstSubmissionDataCallback firstSubmissionDataCallback, IConsoleReader consoleReader, CancellationToken ct)

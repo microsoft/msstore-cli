@@ -6,12 +6,13 @@ using System.IO;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace MSStore.CLI.Services
 {
     internal class FileDownloader : IFileDownloader
     {
-        public async Task<bool> DownloadAsync(string url, string destinationFileName, IProgress<double> progress, CancellationToken ct = default)
+        public async Task<bool> DownloadAsync(string url, string destinationFileName, IProgress<double> progress, ILogger? logger, CancellationToken ct = default)
         {
             progress.Report(0);
 
@@ -35,6 +36,7 @@ namespace MSStore.CLI.Services
                     var buffer = new byte[bufferSize];
                     long totalBytesRead = 0;
                     int bytesRead;
+                    progress.Report(0.1);
                     while ((bytesRead = await stream.ReadAsync(buffer, ct).ConfigureAwait(false)) != 0)
                     {
                         await file.WriteAsync(buffer.AsMemory(0, bytesRead), ct).ConfigureAwait(false);
@@ -50,8 +52,9 @@ namespace MSStore.CLI.Services
                     return true;
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                logger?.LogError(ex, "Error downloading file from {url}", url);
             }
 
             return false;

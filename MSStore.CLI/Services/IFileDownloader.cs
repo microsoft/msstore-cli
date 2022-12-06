@@ -4,11 +4,12 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace MSStore.CLI.Services
 {
     internal interface IFileDownloader
     {
-        Task<bool> DownloadAsync(string url, string destinationFileName, IProgress<double> progress, CancellationToken ct = default);
+        Task<bool> DownloadAsync(string url, string destinationFileName, IProgress<double> progress, ILogger? logger, CancellationToken ct = default);
     }
 }
