@@ -49,11 +49,11 @@ namespace MSStore.CLI.Services
                 }
                 else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
-                    Process.Start("xdg-open", url);
+                    Process.Start(new ProcessStartInfo("xdg-open", url) { RedirectStandardOutput = true, RedirectStandardError = true });
                 }
                 else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                 {
-                    Process.Start("open", url);
+                    Process.Start(new ProcessStartInfo("open", url) { RedirectStandardOutput = true, RedirectStandardError = true });
                 }
                 else
                 {
