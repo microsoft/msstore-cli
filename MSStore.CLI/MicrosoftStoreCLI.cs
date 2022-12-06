@@ -110,6 +110,7 @@ namespace MSStore.CLI
 
             if (config.SellerId == null)
             {
+                logger.LogCritical("SellerId is not set.");
                 return false;
             }
 

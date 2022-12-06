@@ -115,6 +115,8 @@ namespace MSStore.CLI
                         var cliConfigurator = host.Services.GetService<ICLIConfigurator>()!;
                         var logger = host.Services.GetService<ILogger<Program>>()!;
 
+                        logger.LogInformation("Command is {Command}", context.ParseResult.CommandResult.Command.Name);
+
                         if (context.ParseResult.CommandResult.Command is MicrosoftStoreCLI
                             || context.ParseResult.CommandResult.Command is ReconfigureCommand
                             || await MicrosoftStoreCLI.InitAsync(configurationManager, credentialManager, consoleReader, cliConfigurator, logger, ct))
