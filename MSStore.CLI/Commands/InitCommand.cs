@@ -294,7 +294,10 @@ namespace MSStore.CLI.Commands
                 var newAppOption = "Create a new app...";
 
                 var appNames = appList.Select(app => app.PrimaryName!).ToList();
+
+                /*
                 appNames.Add(newAppOption);
+                */
 
                 var selectedApp = await _consoleReader.SelectionPromptAsync(
                     "Which application should we use to configure your project?",
