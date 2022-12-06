@@ -231,7 +231,7 @@ namespace MSStore.CLI.ProjectConfigurators
                     }
                     catch (InvalidOperationException err)
                     {
-                        AnsiConsole.WriteLine($"Ops! This doesn't seem like the a valid PWA... For more info, go to https://www.pwabuilder.com/testing?site={uri}");
+                        AnsiConsole.MarkupLine($"Ops! This doesn't seem like the a valid PWA... For more info, go to [link]https://www.pwabuilder.com/reportcard?site={uri.ToString().EscapeMarkup()}[/]");
                         _logger.LogWarning(err, "Not a valid PWA ({PWAUrl})", uri);
                         AnsiConsole.MarkupLine($":collision: [bold red]Error while downloading PWA zip file.[/]");
                         return false;
