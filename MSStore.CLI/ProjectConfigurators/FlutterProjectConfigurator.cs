@@ -177,7 +177,11 @@ namespace MSStore.CLI.ProjectConfigurators
 
                 var logoPath = Path.Combine(resourcesDirInfo.FullName, Path.GetFileNameWithoutExtension(icon.Name) + ".png");
 
-                await _imageConverter.ConvertIcoToPngAsync(icon.FullName, logoPath, ct);
+                if (!await _imageConverter.ConvertIcoToPngAsync(icon.FullName, logoPath, ct))
+                {
+                    AnsiConsole.MarkupLine($"[red]Failed to convert icon to png.[/]");
+                    return null;
+                }
 
                 return logoPath;
             }

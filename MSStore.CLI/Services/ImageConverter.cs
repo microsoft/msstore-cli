@@ -5,12 +5,20 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using SkiaSharp;
 
 namespace MSStore.CLI.Services
 {
     internal class ImageConverter : IImageConverter
     {
+        private ILogger<ImageConverter> _logger;
+
+        public ImageConverter(ILogger<ImageConverter> logger)
+        {
+            _logger = logger;
+        }
+
         public async Task<bool> ConvertIcoToPngAsync(string sourceFilePath, string destinationFilePath, CancellationToken ct)
         {
             try
@@ -30,8 +38,9 @@ namespace MSStore.CLI.Services
 
                 return true;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogCritical(ex, "Failed to convert ICO to PNG");
                 return false;
             }
         }
