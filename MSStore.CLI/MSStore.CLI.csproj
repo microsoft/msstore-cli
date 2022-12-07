@@ -42,6 +42,11 @@
     <PackageReference Include="Meziantou.Framework.Win32.CredentialManager" Version="1.4.2" />
   </ItemGroup>
 
+  <ItemGroup Condition="'$(TargetFramework)' == 'net7.0'">
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="2.88.3" />
+    <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="2.88.3" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\MSStore.API\MSStore.API.csproj" />
   </ItemGroup>
