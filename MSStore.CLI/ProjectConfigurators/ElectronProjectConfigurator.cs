@@ -11,22 +11,33 @@ using Microsoft.Extensions.Logging;
 using MSStore.API;
 using MSStore.API.Packaged;
 using MSStore.API.Packaged.Models;
+using MSStore.CLI.Helpers;
 using MSStore.CLI.Services;
 using MSStore.CLI.Services.ElectronManager;
 using Spectre.Console;
 
 namespace MSStore.CLI.ProjectConfigurators
 {
-    internal class ElectronProjectConfigurator : IProjectConfigurator, IProjectPackager
+    internal class ElectronProjectConfigurator : IProjectConfigurator, IProjectPackager, IProjectPublisher
     {
         private readonly IExternalCommandExecutor _externalCommandExecutor;
         private readonly IElectronManifestManager _electronManifestManager;
+        private readonly IBrowserLauncher _browserLauncher;
+        private readonly IConsoleReader _consoleReader;
+        private readonly IZipFileManager _zipFileManager;
+        private readonly IFileDownloader _fileDownloader;
+        private readonly IAzureBlobManager _azureBlobManager;
         private readonly ILogger _logger;
 
-        public ElectronProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IElectronManifestManager electronManifestManager, ILogger<ElectronProjectConfigurator> logger)
+        public ElectronProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IElectronManifestManager electronManifestManager, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, ILogger<ElectronProjectConfigurator> logger)
         {
             _externalCommandExecutor = externalCommandExecutor ?? throw new ArgumentNullException(nameof(externalCommandExecutor));
             _electronManifestManager = electronManifestManager ?? throw new ArgumentNullException(nameof(electronManifestManager));
+            _browserLauncher = browserLauncher ?? throw new ArgumentNullException(nameof(browserLauncher));
+            _consoleReader = consoleReader ?? throw new ArgumentNullException(nameof(consoleReader));
+            _zipFileManager = zipFileManager ?? throw new ArgumentNullException(nameof(zipFileManager));
+            _fileDownloader = fileDownloader ?? throw new ArgumentNullException(nameof(fileDownloader));
+            _azureBlobManager = azureBlobManager ?? throw new ArgumentNullException(nameof(azureBlobManager));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
@@ -257,6 +268,50 @@ namespace MSStore.CLI.ProjectConfigurators
                     throw new MSStoreException("Failed to generate msix package.", ex);
                 }
             });
+        }
+
+        public async Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, DirectoryInfo? inputDirectory, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        {
+            var (projectRootPath, electronProjectFile) = GetInfo(pathOrUrl);
+
+            // Try to find AppId inside the package.json file
+            app = await storePackagedAPI.EnsureAppInitializedAsync(
+                app,
+                () => GetAppIdFromPackageJsonAsync(electronProjectFile, ct),
+                ct);
+
+            if (app?.Id == null)
+            {
+                return -1;
+            }
+
+            AnsiConsole.MarkupLine($"AppId: [green bold]{app.Id}[/]");
+
+            if (inputDirectory == null)
+            {
+                inputDirectory = new DirectoryInfo(Path.Combine(projectRootPath.FullName, "dist"));
+            }
+
+            var output = projectRootPath.CreateSubdirectory(Path.Join("dist"));
+
+            var packageFiles = inputDirectory.GetFiles("*.*", SearchOption.TopDirectoryOnly)
+                                     .Where(f => f.Extension == ".appx");
+
+            return await storePackagedAPI.PublishAsync(app, GetFirstSubmissionDataAsync, output, packageFiles, _browserLauncher, _consoleReader, _zipFileManager, _fileDownloader, _azureBlobManager, _logger, ct);
+        }
+
+        private Task<(string?, List<SubmissionImage>)> GetFirstSubmissionDataAsync(string listingLanguage, CancellationToken ct)
+        {
+            var description = "My Electron App";
+            var images = new List<SubmissionImage>();
+            return Task.FromResult<(string?, List<SubmissionImage>)>((description, images));
+        }
+
+        private async Task<string?> GetAppIdFromPackageJsonAsync(FileInfo electronProjectFile, CancellationToken ct)
+        {
+            var electronManifest = await _electronManifestManager.LoadAsync(electronProjectFile, ct);
+
+            return electronManifest.MSStoreCLIAppID;
         }
     }
 }
