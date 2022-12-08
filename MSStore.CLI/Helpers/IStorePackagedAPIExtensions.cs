@@ -228,11 +228,11 @@ namespace MSStore.CLI.Helpers
             });
         }
 
-        public static async Task<DevCenterApplication?> EnsureAppInitializedAsync(this IStorePackagedAPI storePackagedAPI, DevCenterApplication? application, Func<Task<string?>> appIdGetter, CancellationToken ct)
+        public static async Task<DevCenterApplication?> EnsureAppInitializedAsync(this IStorePackagedAPI storePackagedAPI, DevCenterApplication? application, FileInfo? directoryInfo, IProjectPublisher projectPublisher, CancellationToken ct)
         {
             if (application?.Id == null)
             {
-                var appId = await appIdGetter();
+                var appId = await projectPublisher.GetAppIdAsync(directoryInfo, ct);
                 if (appId == null)
                 {
                     throw new MSStoreException("Failed to find the AppId.");

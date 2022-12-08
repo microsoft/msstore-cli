@@ -306,15 +306,15 @@ namespace MSStore.CLI.ProjectConfigurators
                 return -1;
             }
 
-            string? appId = app?.Id;
+            _appId = app?.Id;
             try
             {
                 // Try to find AppId inside the pwaAppInfo.json file
                 var pwaAppInfo = await _pwaAppInfoManager.LoadAsync(pathOrUrl, ct);
 
-                appId ??= pwaAppInfo.AppId;
+                _appId ??= pwaAppInfo.AppId;
                 uri = pwaAppInfo.Uri ?? uri;
-                if (appId == null || uri == null)
+                if (_appId == null || uri == null)
                 {
                     AnsiConsole.MarkupLine($":collision: [bold red]AppId or Uri is not defined.[/]");
                     _logger.LogError("This folder has not been initialized with a PWA. Could not find the AppId or Uri in the pwaAppInfo.json file.");
@@ -328,7 +328,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 return -1;
             }
 
-            app = await storePackagedAPI.EnsureAppInitializedAsync(app, () => Task.FromResult<string?>(appId), ct);
+            app = await storePackagedAPI.EnsureAppInitializedAsync(app, null, this, ct);
 
             if (app?.Id == null)
             {
@@ -427,6 +427,12 @@ namespace MSStore.CLI.ProjectConfigurators
             }
 
             return (_webManifest.Description, images);
+        }
+
+        private string? _appId = null;
+        public Task<string?> GetAppIdAsync(FileInfo? fileInfo, CancellationToken ct)
+        {
+            return Task.FromResult(_appId);
         }
     }
 }

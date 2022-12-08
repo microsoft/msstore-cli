@@ -329,10 +329,7 @@ namespace MSStore.CLI.ProjectConfigurators
             var (projectRootPath, manifestFile) = GetInfo(pathOrUrl);
 
             // Try to find AppId inside the manifest file
-            app = await storePackagedAPI.EnsureAppInitializedAsync(
-                app,
-                () => Task.FromResult(GetAppIdFromManifest(manifestFile)),
-                ct);
+            app = await storePackagedAPI.EnsureAppInitializedAsync(app, manifestFile, this, ct);
 
             if (app?.Id == null)
             {
@@ -361,14 +358,19 @@ namespace MSStore.CLI.ProjectConfigurators
             return Task.FromResult<(string?, List<SubmissionImage>)>((description, images));
         }
 
-        private string? GetAppIdFromManifest(FileInfo manifestFile)
+        public Task<string?> GetAppIdAsync(FileInfo? fileInfo, CancellationToken ct)
         {
+            if (fileInfo == null)
+            {
+                return Task.FromResult<string?>(null);
+            }
+
             XmlDocument xmlDoc = new XmlDocument
             {
                 PreserveWhitespace = true
             };
 
-            xmlDoc.Load(manifestFile.FullName);
+            xmlDoc.Load(fileInfo.FullName);
 
             XmlNamespaceManager nsmgr = new XmlNamespaceManager(xmlDoc.NameTable);
             nsmgr.AddNamespace("ns", "http://schemas.microsoft.com/appx/manifest/foundation/windows10");
@@ -379,7 +381,7 @@ namespace MSStore.CLI.ProjectConfigurators
 
             var buildItemAppId = xmlDoc.SelectSingleNode("/ns:Package/build:Metadata/build:Item[@Name='MSStoreCLIAppId']", nsmgr);
 
-            return buildItemAppId?.Attributes?["Value"]?.Value;
+            return Task.FromResult(buildItemAppId?.Attributes?["Value"]?.Value);
         }
     }
 }

@@ -275,10 +275,7 @@ namespace MSStore.CLI.ProjectConfigurators
             var (projectRootPath, electronProjectFile) = GetInfo(pathOrUrl);
 
             // Try to find AppId inside the package.json file
-            app = await storePackagedAPI.EnsureAppInitializedAsync(
-                app,
-                () => GetAppIdFromPackageJsonAsync(electronProjectFile, ct),
-                ct);
+            app = await storePackagedAPI.EnsureAppInitializedAsync(app, electronProjectFile, this, ct);
 
             if (app?.Id == null)
             {
@@ -307,9 +304,14 @@ namespace MSStore.CLI.ProjectConfigurators
             return Task.FromResult<(string?, List<SubmissionImage>)>((description, images));
         }
 
-        private async Task<string?> GetAppIdFromPackageJsonAsync(FileInfo electronProjectFile, CancellationToken ct)
+        public async Task<string?> GetAppIdAsync(FileInfo? fileInfo, CancellationToken ct)
         {
-            var electronManifest = await _electronManifestManager.LoadAsync(electronProjectFile, ct);
+            if (fileInfo == null)
+            {
+                return null;
+            }
+
+            var electronManifest = await _electronManifestManager.LoadAsync(fileInfo, ct);
 
             return electronManifest.MSStoreCLIAppID;
         }

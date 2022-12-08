@@ -354,10 +354,7 @@ namespace MSStore.CLI.ProjectConfigurators
             var (projectRootPath, flutterProjectFile) = GetInfo(pathOrUrl);
 
             // Try to find AppId inside the pubspec.yaml file
-            app = await storePackagedAPI.EnsureAppInitializedAsync(
-                app,
-                () => GetAppIdFromPubSpecAsync(flutterProjectFile, ct),
-                ct);
+            app = await storePackagedAPI.EnsureAppInitializedAsync(app, flutterProjectFile, this, ct);
 
             if (app?.Id == null)
             {
@@ -386,10 +383,15 @@ namespace MSStore.CLI.ProjectConfigurators
             return Task.FromResult<(string?, List<SubmissionImage>)>((description, images));
         }
 
-        private async Task<string?> GetAppIdFromPubSpecAsync(FileInfo flutterProjectFile, CancellationToken ct)
+        public async Task<string?> GetAppIdAsync(FileInfo? fileInfo, CancellationToken ct)
         {
+            if (fileInfo == null)
+            {
+                return null;
+            }
+
             string? appId = null;
-            using var fileStream = flutterProjectFile.Open(FileMode.Open, FileAccess.ReadWrite);
+            using var fileStream = fileInfo.Open(FileMode.Open, FileAccess.ReadWrite);
 
             string[] yamlLines;
 
