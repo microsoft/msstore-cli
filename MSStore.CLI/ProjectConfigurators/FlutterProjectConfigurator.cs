@@ -216,9 +216,9 @@ namespace MSStore.CLI.ProjectConfigurators
                     ctx.SuccessStatus("'msix' package is not yet installed.");
                     return false;
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    // _logger...
+                    _logger.LogError(ex, "Failed to check if 'msix' package is installed.");
                     throw new MSStoreException("Failed to check if msix package is already installed..");
                 }
             });
@@ -242,9 +242,9 @@ namespace MSStore.CLI.ProjectConfigurators
 
                     ctx.SuccessStatus("'msix' package installed successfully!");
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    // _logger...
+                    _logger.LogError(ex, "Failed to install 'msix' package.");
                     throw new MSStoreException("Failed to install msix package.");
                 }
             });
@@ -267,9 +267,9 @@ namespace MSStore.CLI.ProjectConfigurators
 
                     return false;
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    // _logger...
+                    _logger.LogError(ex, "Failed to run 'flutter pub get'.");
                     throw new MSStoreException("Failed to run 'flutter pub get'.");
                 }
             });
@@ -343,7 +343,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 }
                 catch (Exception ex)
                 {
-                    // _logger...
+                    _logger.LogError(ex, "Failed to package 'msix'.");
                     throw new MSStoreException("Failed to generate msix package.", ex);
                 }
             });

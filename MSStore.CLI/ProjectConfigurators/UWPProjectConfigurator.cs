@@ -86,12 +86,22 @@ namespace MSStore.CLI.ProjectConfigurators
         {
             var (projectRootPath, manifestFile) = GetInfo(pathOrUrl);
 
+            UpdateManifest(manifestFile.FullName, app, publisherDisplayName);
+
+            AnsiConsole.WriteLine($"UWP project at '{projectRootPath.FullName}' is now configured to build to the Microsoft Store!");
+            AnsiConsole.WriteLine("For more information on building your UWP project to the Microsoft Store, see https://learn.microsoft.com/windows/msix/package/packaging-uwp-apps");
+
+            return Task.FromResult((0, output));
+        }
+
+        internal static void UpdateManifest(string appxManifestPath, DevCenterApplication app, string publisherDisplayName)
+        {
             XmlDocument xmlDoc = new XmlDocument
             {
                 PreserveWhitespace = true
             };
 
-            xmlDoc.Load(manifestFile.FullName);
+            xmlDoc.Load(appxManifestPath);
 
             XmlNamespaceManager nsmgr = new XmlNamespaceManager(xmlDoc.NameTable);
             nsmgr.AddNamespace("ns", "http://schemas.microsoft.com/appx/manifest/foundation/windows10");
@@ -201,12 +211,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 }
             }
 
-            xmlDoc.Save(manifestFile.FullName);
-
-            AnsiConsole.WriteLine($"UWP project at '{projectRootPath.FullName}' is now configured to build to the Microsoft Store!");
-            AnsiConsole.WriteLine("For more information on building your UWP project to the Microsoft Store, see https://learn.microsoft.com/windows/msix/package/packaging-uwp-apps");
-
-            return Task.FromResult((0, output));
+            xmlDoc.Save(appxManifestPath);
         }
 
         public async Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(string pathOrUrl, DevCenterApplication? app, DirectoryInfo? output, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
@@ -244,9 +249,9 @@ namespace MSStore.CLI.ProjectConfigurators
 
                     return null;
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    // _logger...
+                    _logger.LogError(ex, "Could not find MSBuild.");
                     throw new MSStoreException("Could not find MSBuild.");
                 }
             });
@@ -269,9 +274,9 @@ namespace MSStore.CLI.ProjectConfigurators
 
                     ctx.SuccessStatus("Packages restored successfully!");
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    // _logger...
+                    _logger.LogError(ex, "Failed to restore packages.");
                     throw new MSStoreException("Failed to restore packages.");
                 }
             });
@@ -309,9 +314,9 @@ namespace MSStore.CLI.ProjectConfigurators
 
                     return msixUploadFile;
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    // _logger...
+                    _logger.LogError(ex, "Failed to build MSIX.");
                     throw new MSStoreException("Failed to build MSIX.");
                 }
             });

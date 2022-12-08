@@ -21,6 +21,7 @@ using MSStore.CLI.Commands;
 using MSStore.CLI.ProjectConfigurators;
 using MSStore.CLI.Services;
 using MSStore.CLI.Services.CredentialManager;
+using MSStore.CLI.Services.ElectronManager;
 using MSStore.CLI.Services.Graph;
 using MSStore.CLI.Services.PartnerCenter;
 using MSStore.CLI.Services.PWABuilder;
@@ -194,6 +195,8 @@ namespace MSStore.CLI.UnitTests
                 .Setup(x => x.ConvertIcoToPngAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
 
+            var electronManifestManager = new Mock<IElectronManifestManager>();
+
             PWAAppInfoManager = new Mock<IPWAAppInfoManager>();
 
             ZipFileManager = new Mock<IZipFileManager>();
@@ -218,6 +221,7 @@ namespace MSStore.CLI.UnitTests
                         .AddScoped<IProjectConfigurator, FlutterProjectConfigurator>()
                         .AddScoped<IProjectConfigurator, UWPProjectConfigurator>()
                         .AddScoped<IProjectConfigurator, PWAProjectConfigurator>()
+                        .AddScoped<IProjectConfigurator, ElectronProjectConfigurator>()
                         .AddScoped<ICLIConfigurator, CLIConfigurator>()
                         .AddSingleton(FakeStoreAPIFactory.Object)
                         .AddScoped(sp => PWABuilderClient.Object)
@@ -229,6 +233,7 @@ namespace MSStore.CLI.UnitTests
                         .AddScoped(sp => fileDownloader.Object)
                         .AddScoped(sp => imageConverter.Object)
                         .AddScoped(sp => PWAAppInfoManager.Object)
+                        .AddScoped(sp => electronManifestManager.Object)
                         .AddSingleton(Cli);
                 })
                 .ConfigureStoreCLICommands()
