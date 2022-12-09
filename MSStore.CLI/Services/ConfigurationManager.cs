@@ -8,16 +8,46 @@ using System.Text.Json.Serialization.Metadata;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+#if !WINDOWS
+using System.Linq;
+using System.Runtime.InteropServices;
+using MSStore.CLI.Services.CredentialManager.Unix;
+#endif
 
 namespace MSStore.CLI.Services
 {
     internal class ConfigurationManager<T> : IConfigurationManager<T>
         where T : new()
     {
-        private static readonly string SettingsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Microsoft", "MSStore.CLI");
+        private static readonly string SettingsDirectory = Path.Combine(GetSystemLocalApplicationDataPath(), "Microsoft", "MSStore.CLI");
+
+        private static string GetSystemLocalApplicationDataPath()
+        {
+#if !WINDOWS
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                try
+                {
+                    // Temporary, until DotNet8 fixes this
+                    var dir = NativeMethods.GetDirectories(NativeMethods.NSSearchPathDirectory.ApplicationSupportDirectory, NativeMethods.NSSearchPathDomain.User)?.FirstOrDefault();
+                    if (dir != null)
+                    {
+                        return dir;
+                    }
+                }
+                catch
+                {
+                }
+            }
+#endif
+            return Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        }
+
         private readonly string _settingsPath;
         private readonly JsonTypeInfo<T> _jsonTypeInfo;
         private readonly ILogger? _logger;
+
+        public string ConfigPath => _settingsPath;
 
         public ConfigurationManager(JsonTypeInfo<T> jsonTypeInfo, string fileName, ILogger<ConfigurationManager<T>>? logger)
         {

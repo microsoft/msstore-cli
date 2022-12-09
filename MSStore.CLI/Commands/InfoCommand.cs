@@ -6,6 +6,7 @@ using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
+using Microsoft.Extensions.Logging;
 using MSStore.CLI.Helpers;
 using MSStore.CLI.Services;
 using Spectre.Console;
@@ -23,11 +24,13 @@ namespace MSStore.CLI.Commands
         {
             private readonly IConfigurationManager<Configurations> _configurationManager;
             private readonly TelemetryClient _telemetryClient;
+            private readonly ILogger _logger;
 
-            public Handler(IConfigurationManager<Configurations> configurationManager, TelemetryClient telemetryClient)
+            public Handler(IConfigurationManager<Configurations> configurationManager, TelemetryClient telemetryClient, ILogger<Handler> logger)
             {
                 _configurationManager = configurationManager ?? throw new ArgumentNullException(nameof(configurationManager));
                 _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
+                _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             }
 
             public int Invoke(InvocationContext context)
@@ -71,6 +74,11 @@ namespace MSStore.CLI.Commands
                 if (verbose && !string.IsNullOrEmpty(config.DevCenterScope))
                 {
                     table.AddRow($"[bold u]Dev Center Scope[/]", $"[bold u]{config.DevCenterScope}[/]");
+                }
+
+                if (verbose)
+                {
+                    _logger.LogInformation("Settings File Path: {@SettingsFilePath}", _configurationManager.ConfigPath);
                 }
 
                 AnsiConsole.Write(table);
