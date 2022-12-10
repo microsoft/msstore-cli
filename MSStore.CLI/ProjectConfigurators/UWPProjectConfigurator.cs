@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -13,76 +12,32 @@ using Microsoft.Extensions.Logging;
 using MSStore.API;
 using MSStore.API.Packaged;
 using MSStore.API.Packaged.Models;
-using MSStore.CLI.Helpers;
 using MSStore.CLI.Services;
 using Spectre.Console;
 
 namespace MSStore.CLI.ProjectConfigurators
 {
-    internal class UWPProjectConfigurator : IProjectConfigurator, IProjectPackager, IProjectPublisher
+    internal class UWPProjectConfigurator : FileProjectConfigurator
     {
         private readonly IExternalCommandExecutor _externalCommandExecutor;
-        private readonly IBrowserLauncher _browserLauncher;
-        private readonly IConsoleReader _consoleReader;
-        private readonly IZipFileManager _zipFileManager;
-        private readonly IFileDownloader _fileDownloader;
-        private readonly IAzureBlobManager _azureBlobManager;
-        private readonly ILogger _logger;
 
         public UWPProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, ILogger<UWPProjectConfigurator> logger)
+            : base(browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, logger)
         {
             _externalCommandExecutor = externalCommandExecutor ?? throw new ArgumentNullException(nameof(externalCommandExecutor));
-            _browserLauncher = browserLauncher ?? throw new ArgumentNullException(nameof(browserLauncher));
-            _consoleReader = consoleReader ?? throw new ArgumentNullException(nameof(consoleReader));
-            _zipFileManager = zipFileManager ?? throw new ArgumentNullException(nameof(zipFileManager));
-            _fileDownloader = fileDownloader ?? throw new ArgumentNullException(nameof(fileDownloader));
-            _azureBlobManager = azureBlobManager ?? throw new ArgumentNullException(nameof(azureBlobManager));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public string ConfiguratorProjectType { get; } = "UWP";
+        public override string ConfiguratorProjectType { get; } = "UWP";
 
-        public string[] SupportedProjectPattern { get; } = new[] { "Package.appxmanifest" };
+        public override string[] SupportedProjectPattern { get; } = new[] { "Package.appxmanifest" };
 
-        public bool CanConfigure(string pathOrUrl)
-        {
-            if (string.IsNullOrEmpty(pathOrUrl))
-            {
-                return false;
-            }
+        public override string[] PackageFilesExtensionInclude => new[] { ".msixupload" };
+        public override string[]? PackageFilesExtensionExclude { get; } = null;
+        public override SearchOption PackageFilesSearchOption { get; } = SearchOption.TopDirectoryOnly;
+        public override string OutputSubdirectory { get; } = Path.Join("obj", "MSStore.CLI");
+        public override string DefaultInputSubdirectory { get; } = "AppPackages";
 
-            try
-            {
-                DirectoryInfo directoryPath = new DirectoryInfo(pathOrUrl);
-                return SupportedProjectPattern.Any(y => directoryPath.GetFiles(y).Any());
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        private (DirectoryInfo projectRootPath, FileInfo flutterProjectFiles) GetInfo(string pathOrUrl)
-        {
-            DirectoryInfo projectRootPath = new DirectoryInfo(pathOrUrl);
-            var manifestFiles = projectRootPath.GetFiles(SupportedProjectPattern.First(), SearchOption.TopDirectoryOnly);
-
-            if (manifestFiles.Length == 0)
-            {
-                throw new InvalidOperationException("No 'Package.appxmanifest' file found in the project root directory.");
-            }
-
-            var manifestFile = manifestFiles.First();
-
-            return (projectRootPath, manifestFile);
-        }
-
-        public int? ValidateCommand(string pathOrUrl, DirectoryInfo? output, bool? commandPackage, bool? commandPublish)
-        {
-            return null;
-        }
-
-        public Task<(int returnCode, DirectoryInfo? outputDirectory)> ConfigureAsync(string pathOrUrl, DirectoryInfo? output, string publisherDisplayName, DevCenterApplication app, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public override Task<(int returnCode, DirectoryInfo? outputDirectory)> ConfigureAsync(string pathOrUrl, DirectoryInfo? output, string publisherDisplayName, DevCenterApplication app, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             var (projectRootPath, manifestFile) = GetInfo(pathOrUrl);
 
@@ -214,7 +169,7 @@ namespace MSStore.CLI.ProjectConfigurators
             xmlDoc.Save(appxManifestPath);
         }
 
-        public async Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(string pathOrUrl, DevCenterApplication? app, DirectoryInfo? output, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public override async Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(string pathOrUrl, DevCenterApplication? app, DirectoryInfo? output, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             var (projectRootPath, manifestFile) = GetInfo(pathOrUrl);
 
@@ -251,7 +206,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Could not find MSBuild.");
+                    Logger.LogError(ex, "Could not find MSBuild.");
                     throw new MSStoreException("Could not find MSBuild.");
                 }
             });
@@ -276,7 +231,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to restore packages.");
+                    Logger.LogError(ex, "Failed to restore packages.");
                     throw new MSStoreException("Failed to restore packages.");
                 }
             });
@@ -316,7 +271,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to build MSIX.");
+                    Logger.LogError(ex, "Failed to build MSIX.");
                     throw new MSStoreException("Failed to build MSIX.");
                 }
             });
@@ -324,41 +279,7 @@ namespace MSStore.CLI.ProjectConfigurators
             return (0, msixUploadFile != null ? new FileInfo(msixUploadFile).Directory : null);
         }
 
-        public async Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, DirectoryInfo? inputDirectory, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
-        {
-            var (projectRootPath, manifestFile) = GetInfo(pathOrUrl);
-
-            // Try to find AppId inside the manifest file
-            app = await storePackagedAPI.EnsureAppInitializedAsync(app, manifestFile, this, ct);
-
-            if (app?.Id == null)
-            {
-                return -1;
-            }
-
-            AnsiConsole.MarkupLine($"AppId: [green bold]{app.Id}[/]");
-
-            if (inputDirectory == null)
-            {
-                inputDirectory = new DirectoryInfo(Path.Combine(projectRootPath.FullName, "AppPackages"));
-            }
-
-            var output = projectRootPath.CreateSubdirectory(Path.Join("obj", "MSStore.CLI"));
-
-            var packageFiles = inputDirectory.GetFiles("*.*", SearchOption.TopDirectoryOnly)
-                                     .Where(f => f.Extension == ".msixupload");
-
-            return await storePackagedAPI.PublishAsync(app, GetFirstSubmissionDataAsync, output, packageFiles, _browserLauncher, _consoleReader, _zipFileManager, _fileDownloader, _azureBlobManager, _logger, ct);
-        }
-
-        private Task<(string?, List<SubmissionImage>)> GetFirstSubmissionDataAsync(string listingLanguage, CancellationToken ct)
-        {
-            var description = "My UWP App";
-            var images = new List<SubmissionImage>();
-            return Task.FromResult<(string?, List<SubmissionImage>)>((description, images));
-        }
-
-        public Task<string?> GetAppIdAsync(FileInfo? fileInfo, CancellationToken ct)
+        public override Task<string?> GetAppIdAsync(FileInfo? fileInfo, CancellationToken ct)
         {
             if (fileInfo == null)
             {

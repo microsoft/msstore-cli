@@ -11,79 +11,35 @@ using Microsoft.Extensions.Logging;
 using MSStore.API;
 using MSStore.API.Packaged;
 using MSStore.API.Packaged.Models;
-using MSStore.CLI.Helpers;
 using MSStore.CLI.Services;
 using MSStore.CLI.Services.ElectronManager;
 using Spectre.Console;
 
 namespace MSStore.CLI.ProjectConfigurators
 {
-    internal class ElectronProjectConfigurator : IProjectConfigurator, IProjectPackager, IProjectPublisher
+    internal class ElectronProjectConfigurator : FileProjectConfigurator
     {
         private readonly IExternalCommandExecutor _externalCommandExecutor;
         private readonly IElectronManifestManager _electronManifestManager;
-        private readonly IBrowserLauncher _browserLauncher;
-        private readonly IConsoleReader _consoleReader;
-        private readonly IZipFileManager _zipFileManager;
-        private readonly IFileDownloader _fileDownloader;
-        private readonly IAzureBlobManager _azureBlobManager;
-        private readonly ILogger _logger;
 
         public ElectronProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IElectronManifestManager electronManifestManager, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, ILogger<ElectronProjectConfigurator> logger)
+            : base(browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, logger)
         {
             _externalCommandExecutor = externalCommandExecutor ?? throw new ArgumentNullException(nameof(externalCommandExecutor));
             _electronManifestManager = electronManifestManager ?? throw new ArgumentNullException(nameof(electronManifestManager));
-            _browserLauncher = browserLauncher ?? throw new ArgumentNullException(nameof(browserLauncher));
-            _consoleReader = consoleReader ?? throw new ArgumentNullException(nameof(consoleReader));
-            _zipFileManager = zipFileManager ?? throw new ArgumentNullException(nameof(zipFileManager));
-            _fileDownloader = fileDownloader ?? throw new ArgumentNullException(nameof(fileDownloader));
-            _azureBlobManager = azureBlobManager ?? throw new ArgumentNullException(nameof(azureBlobManager));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public string ConfiguratorProjectType { get; } = "Electron";
+        public override string ConfiguratorProjectType { get; } = "Electron";
 
-        public string[] SupportedProjectPattern { get; } = new[] { "package.json" };
+        public override string[] SupportedProjectPattern { get; } = new[] { "package.json" };
 
-        public bool CanConfigure(string pathOrUrl)
-        {
-            if (string.IsNullOrEmpty(pathOrUrl))
-            {
-                return false;
-            }
+        public override string[] PackageFilesExtensionInclude => new[] { ".appx" };
+        public override string[]? PackageFilesExtensionExclude { get; } = null;
+        public override SearchOption PackageFilesSearchOption { get; } = SearchOption.TopDirectoryOnly;
+        public override string OutputSubdirectory { get; } = "dist";
+        public override string DefaultInputSubdirectory { get; } = "dist";
 
-            try
-            {
-                DirectoryInfo directoryPath = new DirectoryInfo(pathOrUrl);
-                return SupportedProjectPattern.Any(y => directoryPath.GetFiles(y).Any());
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        private (DirectoryInfo projectRootPath, FileInfo electronProjectFiles) GetInfo(string pathOrUrl)
-        {
-            DirectoryInfo projectRootPath = new DirectoryInfo(pathOrUrl);
-            FileInfo[] electronProjectFiles = projectRootPath.GetFiles(SupportedProjectPattern.First(), SearchOption.TopDirectoryOnly);
-
-            if (electronProjectFiles.Length == 0)
-            {
-                throw new MSStoreException("No package.json file found in the project root directory.");
-            }
-
-            var electronProjectFile = electronProjectFiles.First();
-
-            return (projectRootPath, electronProjectFile);
-        }
-
-        public int? ValidateCommand(string pathOrUrl, DirectoryInfo? output, bool? commandPackage, bool? commandPublish)
-        {
-            return null;
-        }
-
-        public async Task<(int returnCode, DirectoryInfo? outputDirectory)> ConfigureAsync(string pathOrUrl, DirectoryInfo? output, string publisherDisplayName, DevCenterApplication app, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public override async Task<(int returnCode, DirectoryInfo? outputDirectory)> ConfigureAsync(string pathOrUrl, DirectoryInfo? output, string publisherDisplayName, DevCenterApplication app, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             var (projectRootPath, electronProjectFile) = GetInfo(pathOrUrl);
 
@@ -134,7 +90,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error running 'npm install'.");
+                    Logger.LogError(ex, "Error running 'npm install'.");
                     throw new MSStoreException("Failed to run 'npm install'.");
                 }
             });
@@ -165,7 +121,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error running 'npm list electron-builder'.");
+                    Logger.LogError(ex, "Error running 'npm list electron-builder'.");
                     throw new MSStoreException("Failed to check if 'electron-builder' package is already installed..");
                 }
             });
@@ -193,13 +149,13 @@ namespace MSStore.CLI.ProjectConfigurators
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error running 'npm install --save-dev electron-builder'.");
+                    Logger.LogError(ex, "Error running 'npm install --save-dev electron-builder'.");
                     throw new MSStoreException("Failed to install 'electron-builder' package.");
                 }
             });
         }
 
-        public async Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(string pathOrUrl, DevCenterApplication? app, DirectoryInfo? output, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public override async Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(string pathOrUrl, DevCenterApplication? app, DirectoryInfo? output, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             var (projectRootPath, electronProjectFile) = GetInfo(pathOrUrl);
 
@@ -264,47 +220,13 @@ namespace MSStore.CLI.ProjectConfigurators
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to package 'msix'.");
+                    Logger.LogError(ex, "Failed to package 'msix'.");
                     throw new MSStoreException("Failed to generate msix package.", ex);
                 }
             });
         }
 
-        public async Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, DirectoryInfo? inputDirectory, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
-        {
-            var (projectRootPath, electronProjectFile) = GetInfo(pathOrUrl);
-
-            // Try to find AppId inside the package.json file
-            app = await storePackagedAPI.EnsureAppInitializedAsync(app, electronProjectFile, this, ct);
-
-            if (app?.Id == null)
-            {
-                return -1;
-            }
-
-            AnsiConsole.MarkupLine($"AppId: [green bold]{app.Id}[/]");
-
-            if (inputDirectory == null)
-            {
-                inputDirectory = new DirectoryInfo(Path.Combine(projectRootPath.FullName, "dist"));
-            }
-
-            var output = projectRootPath.CreateSubdirectory(Path.Join("dist"));
-
-            var packageFiles = inputDirectory.GetFiles("*.*", SearchOption.TopDirectoryOnly)
-                                     .Where(f => f.Extension == ".appx");
-
-            return await storePackagedAPI.PublishAsync(app, GetFirstSubmissionDataAsync, output, packageFiles, _browserLauncher, _consoleReader, _zipFileManager, _fileDownloader, _azureBlobManager, _logger, ct);
-        }
-
-        private Task<(string?, List<SubmissionImage>)> GetFirstSubmissionDataAsync(string listingLanguage, CancellationToken ct)
-        {
-            var description = "My Electron App";
-            var images = new List<SubmissionImage>();
-            return Task.FromResult<(string?, List<SubmissionImage>)>((description, images));
-        }
-
-        public async Task<string?> GetAppIdAsync(FileInfo? fileInfo, CancellationToken ct)
+        public override async Task<string?> GetAppIdAsync(FileInfo? fileInfo, CancellationToken ct)
         {
             if (fileInfo == null)
             {

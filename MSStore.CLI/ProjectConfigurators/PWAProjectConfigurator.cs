@@ -52,6 +52,12 @@ namespace MSStore.CLI.ProjectConfigurators
 
         public string ConfiguratorProjectType => "PWA";
 
+        public string[] PackageFilesExtensionInclude => new[] { ".appxbundle", ".msixbundle", ".msix", ".appx" };
+        public string[]? PackageFilesExtensionExclude { get; } = new[] { ".sideload.msix" };
+        public SearchOption PackageFilesSearchOption { get; } = SearchOption.AllDirectories;
+        public string OutputSubdirectory { get; } = string.Empty;
+        public string DefaultInputSubdirectory { get; } = string.Empty;
+
         public bool CanConfigure(string pathOrUrl)
         {
             var uri = GetUri(pathOrUrl);
@@ -346,12 +352,9 @@ namespace MSStore.CLI.ProjectConfigurators
                 return -1;
             }
 
-            var packageFiles = pwaBuilderExtractedBundle?.GetFiles("*.*", SearchOption.AllDirectories)
-                                     .Where(f => (f.Extension == ".appxbundle"
-                                               || f.Extension == ".msixbundle"
-                                               || f.Extension == ".msix"
-                                               || f.Extension == ".appx")
-                                               && !f.Name.EndsWith(".sideload.msix", StringComparison.OrdinalIgnoreCase));
+            var packageFiles = pwaBuilderExtractedBundle.GetFiles("*.*", PackageFilesSearchOption)
+                                     .Where(f => PackageFilesExtensionInclude.Contains(f.Extension, StringComparer.OrdinalIgnoreCase)
+                                             && PackageFilesExtensionExclude?.All(e => !f.Name.EndsWith(e, StringComparison.OrdinalIgnoreCase)) != false);
 
             if (packageFiles?.Any() != true)
             {
