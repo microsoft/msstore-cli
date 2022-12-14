@@ -39,7 +39,8 @@ namespace MSStore.CLI.Services.ElectronManager
                     AllowTrailingCommas = true,
                     IgnoreReadOnlyProperties = false,
                     IncludeFields = false,
-                    WriteIndented = writeIndented
+                    WriteIndented = writeIndented,
+                    Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
                 });
             }
         }

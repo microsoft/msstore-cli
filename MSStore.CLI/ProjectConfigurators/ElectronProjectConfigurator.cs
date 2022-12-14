@@ -2,9 +2,9 @@
 // Licensed under the MIT License.
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -52,10 +52,23 @@ namespace MSStore.CLI.ProjectConfigurators
 
             electronManifest.Build ??= new ElectronManifestBuild();
             electronManifest.Build.Windows ??= new ElectronManifestBuildWindows();
-            electronManifest.Build.Windows.Targets ??= new List<string>();
-            if (!electronManifest.Build.Windows.Targets.Contains("appx"))
+            if (electronManifest.Build.Windows.Targets is JsonArray targets)
             {
-                electronManifest.Build.Windows.Targets.Add("appx");
+                if (!targets.Contains("appx"))
+                {
+                    targets.Add("appx");
+                }
+            }
+            else if (electronManifest.Build.Windows.Targets is JsonValue jsonValue)
+            {
+                if (jsonValue.TryGetValue(out string? existingTarget))
+                {
+                    electronManifest.Build.Windows.Targets = new JsonArray { "appx", existingTarget };
+                }
+            }
+            else
+            {
+                electronManifest.Build.Windows.Targets = new JsonArray { "appx" };
             }
 
             electronManifest.Build.Appx ??= new ElectronManifestBuildAppX();
@@ -69,6 +82,11 @@ namespace MSStore.CLI.ProjectConfigurators
             await _electronManifestManager.SaveAsync(electronManifest, electronProjectFile, ct);
 
             return (0, output);
+        }
+
+        private static bool IsYarn(DirectoryInfo projectRootPath)
+        {
+            return projectRootPath.GetFiles("yarn.lock", SearchOption.TopDirectoryOnly).Any();
         }
 
         private async Task<bool> RunNpmInstall(DirectoryInfo projectRootPath, CancellationToken ct)
@@ -96,7 +114,44 @@ namespace MSStore.CLI.ProjectConfigurators
             });
         }
 
-        private async Task<bool> InstallElectronBuilderDependencyAsync(DirectoryInfo projectRootPath, CancellationToken ct)
+        private async Task<bool> RunYarnInstall(DirectoryInfo projectRootPath, CancellationToken ct)
+        {
+            return await AnsiConsole.Status().StartAsync("Running 'yarn install'...", async ctx =>
+            {
+                try
+                {
+                    var result = await _externalCommandExecutor.RunAsync("yarn", "install", projectRootPath.FullName, ct);
+                    if (result.ExitCode == 0)
+                    {
+                        ctx.SuccessStatus("'yarn install' ran successfully.");
+                        return true;
+                    }
+
+                    ctx.ErrorStatus("'yarn install' failed.");
+
+                    return false;
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Error running 'yarn install'.");
+                    throw new MSStoreException("Failed to run 'yarn install'.");
+                }
+            });
+        }
+
+        private Task<bool> InstallElectronBuilderDependencyAsync(DirectoryInfo projectRootPath, CancellationToken ct)
+        {
+            if (IsYarn(projectRootPath))
+            {
+                return InstallElectronBuilderYarnDependencyAsync(projectRootPath, ct);
+            }
+            else
+            {
+                return InstallElectronBuilderNpmDependencyAsync(projectRootPath, ct);
+            }
+        }
+
+        private async Task<bool> InstallElectronBuilderNpmDependencyAsync(DirectoryInfo projectRootPath, CancellationToken ct)
         {
             var npmInstall = await RunNpmInstall(projectRootPath, ct);
 
@@ -155,17 +210,90 @@ namespace MSStore.CLI.ProjectConfigurators
             });
         }
 
+        private async Task<bool> InstallElectronBuilderYarnDependencyAsync(DirectoryInfo projectRootPath, CancellationToken ct)
+        {
+            var yarnInstall = await RunYarnInstall(projectRootPath, ct);
+
+            if (!yarnInstall)
+            {
+                throw new MSStoreException("Failed to run 'yarn install'.");
+            }
+
+            var electronBuilderInstalled = await AnsiConsole.Status().StartAsync("Checking if package 'electron-builder' is already installed...", async ctx =>
+            {
+                try
+                {
+                    var result = await _externalCommandExecutor.RunAsync("yarn", "list --pattern electron-builder", projectRootPath.FullName, ct);
+                    if (result.ExitCode == 0 && result.StdOut.Contains("electron-builder@"))
+                    {
+                        ctx.SuccessStatus("'electron-builder' package is already installed, no need to install it again.");
+                        return true;
+                    }
+
+                    ctx.SuccessStatus("'electron-builder' package is not yet installed.");
+                    return false;
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Error running 'yarn list electron-builder'.");
+                    throw new MSStoreException("Failed to check if 'electron-builder' package is already installed..");
+                }
+            });
+
+            if (electronBuilderInstalled)
+            {
+                return true;
+            }
+
+            AnsiConsole.WriteLine();
+
+            return await AnsiConsole.Status().StartAsync("Installing 'electron-builder' package...", async ctx =>
+            {
+                try
+                {
+                    var result = await _externalCommandExecutor.RunAsync("yarn", "add --dev electron-builder", projectRootPath.FullName, ct);
+                    if (result.ExitCode != 0)
+                    {
+                        ctx.ErrorStatus("'yarn add --dev electron-builder' failed.");
+                        return false;
+                    }
+
+                    ctx.SuccessStatus("'electron-builder' package installed successfully!");
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Error running 'yarn add --dev electron-builder'.");
+                    throw new MSStoreException("Failed to install 'electron-builder' package.");
+                }
+            });
+        }
+
         public override async Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(string pathOrUrl, DevCenterApplication? app, DirectoryInfo? output, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             var (projectRootPath, electronProjectFile) = GetInfo(pathOrUrl);
 
+            bool isYarn = IsYarn(projectRootPath);
+
             if (app == null)
             {
-                var npmInstall = await RunNpmInstall(projectRootPath, ct);
-
-                if (!npmInstall)
+                if (isYarn)
                 {
-                    throw new MSStoreException("Failed to run 'npm install'.");
+                    var yarnInstall = await RunYarnInstall(projectRootPath, ct);
+
+                    if (!yarnInstall)
+                    {
+                        throw new MSStoreException("Failed to run 'yarn install'.");
+                    }
+                }
+                else
+                {
+                    var npmInstall = await RunNpmInstall(projectRootPath, ct);
+
+                    if (!npmInstall)
+                    {
+                        throw new MSStoreException("Failed to run 'npm install'.");
+                    }
                 }
             }
 
@@ -173,7 +301,7 @@ namespace MSStore.CLI.ProjectConfigurators
             {
                 try
                 {
-                    var args = "-w";
+                    var args = "-w=appx";
                     if (output != null)
                     {
                         /*
@@ -182,7 +310,19 @@ namespace MSStore.CLI.ProjectConfigurators
                         */
                     }
 
-                    var result = await _externalCommandExecutor.RunAsync("npx", $"electron-builder build {args}", projectRootPath.FullName, ct);
+                    string command, arguments;
+                    if (isYarn)
+                    {
+                        command = "yarn";
+                        arguments = $"run electron-builder build {args}";
+                    }
+                    else
+                    {
+                        command = "npx";
+                        arguments = $"electron-builder build {args}";
+                    }
+
+                    var result = await _externalCommandExecutor.RunAsync(command, arguments, projectRootPath.FullName, ct);
 
                     if (result.ExitCode != 0)
                     {
