@@ -65,7 +65,7 @@ namespace MSStore.CLI.ProjectConfigurators
             return uri != null || ContainsPWAAppInfoJson(pathOrUrl);
         }
 
-        private WebManifestJson? _webManifest = null;
+        private WebManifestJson? _webManifest;
 
         private static bool ContainsPWAAppInfoJson(string pathOrUrl)
         {
@@ -432,7 +432,7 @@ namespace MSStore.CLI.ProjectConfigurators
             return (_webManifest.Description, images);
         }
 
-        private string? _appId = null;
+        private string? _appId;
         public Task<string?> GetAppIdAsync(FileInfo? fileInfo, CancellationToken ct)
         {
             return Task.FromResult(_appId);

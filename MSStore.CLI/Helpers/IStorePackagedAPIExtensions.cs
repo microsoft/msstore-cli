@@ -295,7 +295,7 @@ namespace MSStore.CLI.Helpers
 
                 if (submission.FileUploadUrl == null)
                 {
-                    var message = "Retrieved a submission that was created in Partner Center. We can't upload the packages for submissions created in Partner Center. Please, delete it and try again.";
+                    const string message = "Retrieved a submission that was created in Partner Center. We can't upload the packages for submissions created in Partner Center. Please, delete it and try again.";
                     logger.LogError(message);
                     AnsiConsole.WriteLine(message);
                     return -1;

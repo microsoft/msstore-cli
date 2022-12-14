@@ -490,7 +490,7 @@ namespace MSStore.CLI.UnitTests
             }
         }
 
-        private class TestCommand : Command
+        private sealed class TestCommand : Command
         {
             private BaseCommandLineTest _baseCommandLineTest;
 
@@ -502,7 +502,7 @@ namespace MSStore.CLI.UnitTests
             }
         }
 
-        internal class OutputCapture : TextWriter, IStandardStreamWriter, IDisposable
+        internal sealed class OutputCapture : TextWriter, IStandardStreamWriter, IDisposable
         {
             private TextWriter stdOutWriter;
             public TextWriter Captured { get; private set; }
@@ -528,7 +528,7 @@ namespace MSStore.CLI.UnitTests
             }
         }
 
-        internal class TestConsole : IConsole
+        internal sealed class TestConsole : IConsole
         {
             public TestConsole(OutputCapture outputCapture)
             {
@@ -536,11 +536,11 @@ namespace MSStore.CLI.UnitTests
                 Error = outputCapture;
             }
 
-            public IStandardStreamWriter Error { get; protected set; }
-            public IStandardStreamWriter Out { get; protected set; }
-            public bool IsOutputRedirected { get; protected set; }
-            public bool IsErrorRedirected { get; protected set; }
-            public bool IsInputRedirected { get; protected set; }
+            public IStandardStreamWriter Error { get; set; }
+            public IStandardStreamWriter Out { get; set; }
+            public bool IsOutputRedirected { get; set; }
+            public bool IsErrorRedirected { get; set; }
+            public bool IsInputRedirected { get; set; }
         }
 
         internal sealed class CustomAnsiConsoleOutput : IAnsiConsoleOutput

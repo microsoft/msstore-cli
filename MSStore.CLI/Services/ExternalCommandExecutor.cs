@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -19,7 +20,7 @@ namespace MSStore.CLI.Services
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     cmd.StartInfo.FileName = "cmd.exe";
-                    if (command.StartsWith("\"") || command.StartsWith("("))
+                    if (command.StartsWith("\"", StringComparison.OrdinalIgnoreCase) || command.StartsWith("(", StringComparison.OrdinalIgnoreCase))
                     {
                         cmd.StartInfo.Arguments = $"/C {command} {arguments}";
                     }

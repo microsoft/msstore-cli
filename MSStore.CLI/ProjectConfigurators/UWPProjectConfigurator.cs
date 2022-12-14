@@ -32,7 +32,7 @@ namespace MSStore.CLI.ProjectConfigurators
         public override string[] SupportedProjectPattern { get; } = new[] { "Package.appxmanifest" };
 
         public override string[] PackageFilesExtensionInclude => new[] { ".msixupload" };
-        public override string[]? PackageFilesExtensionExclude { get; } = null;
+        public override string[]? PackageFilesExtensionExclude { get; }
         public override SearchOption PackageFilesSearchOption { get; } = SearchOption.TopDirectoryOnly;
         public override string OutputSubdirectory { get; } = Path.Join("obj", "MSStore.CLI");
         public override string DefaultInputSubdirectory { get; } = "AppPackages";

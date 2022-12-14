@@ -34,7 +34,7 @@ namespace MSStore.CLI.ProjectConfigurators
         public override string[] SupportedProjectPattern { get; } = new[] { "package.json" };
 
         public override string[] PackageFilesExtensionInclude => new[] { ".appx" };
-        public override string[]? PackageFilesExtensionExclude { get; } = null;
+        public override string[]? PackageFilesExtensionExclude { get; }
         public override SearchOption PackageFilesSearchOption { get; } = SearchOption.TopDirectoryOnly;
         public override string OutputSubdirectory { get; } = "dist";
         public override string DefaultInputSubdirectory { get; } = "dist";
@@ -196,7 +196,7 @@ namespace MSStore.CLI.ProjectConfigurators
                     var msixLine = cleanedStdOut.Split(new string[] { "\n", Environment.NewLine }, StringSplitOptions.None).LastOrDefault(line => line.Contains("target=AppX"));
                     int index;
                     var search = "file=";
-                    if (msixLine == null || (index = msixLine.IndexOf(search)) == -1)
+                    if (msixLine == null || (index = msixLine.IndexOf(search, StringComparison.OrdinalIgnoreCase)) == -1)
                     {
                         throw new MSStoreException("Failed to find the path to the packaged msix file.");
                     }

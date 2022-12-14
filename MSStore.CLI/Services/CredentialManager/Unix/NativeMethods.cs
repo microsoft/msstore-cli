@@ -248,7 +248,7 @@ namespace MSStore.CLI.Services.CredentialManager.Unix
 
             public override string ToString()
             {
-                return string.Format("CFRange [Location: {0} Length: {1}]", loc, len);
+                return $"CFRange [Location: {loc} Length: {len}]";
             }
         }
 

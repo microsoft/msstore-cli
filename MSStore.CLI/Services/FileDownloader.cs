@@ -54,7 +54,7 @@ namespace MSStore.CLI.Services
             }
             catch (Exception ex)
             {
-                logger?.LogError(ex, "Error downloading file from {url}", url);
+                logger?.LogError(ex, "Error downloading file from {Url}", url);
             }
 
             return false;

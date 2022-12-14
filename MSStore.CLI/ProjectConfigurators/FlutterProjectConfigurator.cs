@@ -32,7 +32,7 @@ namespace MSStore.CLI.ProjectConfigurators
         public override string[] SupportedProjectPattern { get; } = new[] { "pubspec.yaml" };
 
         public override string[] PackageFilesExtensionInclude => new[] { ".msix" };
-        public override string[]? PackageFilesExtensionExclude { get; } = null;
+        public override string[]? PackageFilesExtensionExclude { get; }
         public override SearchOption PackageFilesSearchOption { get; } = SearchOption.TopDirectoryOnly;
         public override string OutputSubdirectory { get; } = Path.Join("build", "windows", "MSStore.CLI");
         public override string DefaultInputSubdirectory { get; } = Path.Combine("build", "windows", "runner", "Release");
@@ -274,7 +274,7 @@ namespace MSStore.CLI.ProjectConfigurators
 
                     var msixLine = cleanedStdOut.Split(new string[] { "\n", Environment.NewLine }, StringSplitOptions.None).LastOrDefault(line => line.Contains("msix created:"));
                     int index;
-                    if (msixLine == null || (index = msixLine.IndexOf(": ")) == -1)
+                    if (msixLine == null || (index = msixLine.IndexOf(": ", StringComparison.OrdinalIgnoreCase)) == -1)
                     {
                         throw new MSStoreException("Failed to find the path to the packaged msix file.");
                     }
