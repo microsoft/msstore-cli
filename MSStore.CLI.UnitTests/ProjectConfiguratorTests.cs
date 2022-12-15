@@ -22,11 +22,13 @@ namespace MSStore.CLI.UnitTests
         {
             var path = CopyFilesRecursively("FlutterProject");
 
+            var dirInfo = new DirectoryInfo(path);
+
             ExternalCommandExecutor
                 .Setup(x => x.RunAsync(
                     It.Is<string>(s => s == "flutter"),
                     It.Is<string>(s => s == "pub get"),
-                    It.Is<string>(s => s == new DirectoryInfo(path).FullName),
+                    It.Is<string>(s => s == dirInfo.FullName),
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult
                 {
@@ -39,7 +41,7 @@ namespace MSStore.CLI.UnitTests
                 .Setup(x => x.RunAsync(
                     It.Is<string>(s => s == "flutter"),
                     It.Is<string>(s => s == "pub add --dev msix --dry-run"),
-                    It.Is<string>(s => s == new DirectoryInfo(path).FullName),
+                    It.Is<string>(s => s == dirInfo.FullName),
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult
                 {
@@ -73,11 +75,13 @@ namespace MSStore.CLI.UnitTests
         {
             var path = CopyFilesRecursively("FlutterProject");
 
+            var dirInfo = new DirectoryInfo(path);
+
             ExternalCommandExecutor
                 .Setup(x => x.RunAsync(
                     It.Is<string>(s => s == "flutter"),
                     It.Is<string>(s => s == "pub get"),
-                    It.Is<string>(s => s == new DirectoryInfo(path).FullName),
+                    It.Is<string>(s => s == dirInfo.FullName),
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult
                 {
@@ -90,7 +94,7 @@ namespace MSStore.CLI.UnitTests
                 .Setup(x => x.RunAsync(
                     It.Is<string>(s => s == "flutter"),
                     It.Is<string>(s => s == "pub add --dev msix --dry-run"),
-                    It.Is<string>(s => s == new DirectoryInfo(path).FullName),
+                    It.Is<string>(s => s == dirInfo.FullName),
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult
                 {
@@ -103,7 +107,7 @@ namespace MSStore.CLI.UnitTests
                 .Setup(x => x.RunAsync(
                     It.Is<string>(s => s == "flutter"),
                     It.Is<string>(s => s == "pub add --dev msix"),
-                    It.Is<string>(s => s == new DirectoryInfo(path).FullName),
+                    It.Is<string>(s => s == dirInfo.FullName),
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult
                 {
@@ -130,6 +134,244 @@ namespace MSStore.CLI.UnitTests
             var pubspecYamlFileContents = await File.ReadAllTextAsync(Path.Combine(path, "pubspec.yaml"));
 
             pubspecYamlFileContents.Should().Contain("msix");
+        }
+
+        [TestMethod]
+        public async Task ProjectConfiguratorParsesElectronNpmProject()
+        {
+            var path = CopyFilesRecursively(Path.Combine("ElectronProject", "Npm"));
+
+            var dirInfo = new DirectoryInfo(path);
+
+            ExternalCommandExecutor
+                .Setup(x => x.RunAsync(
+                    It.Is<string>(s => s == "npm"),
+                    It.Is<string>(s => s == "install"),
+                    It.Is<string>(s => s == dirInfo.FullName),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Services.ExternalCommandExecutionResult
+                {
+                    ExitCode = 0,
+                    StdOut = string.Empty,
+                    StdErr = string.Empty
+                });
+
+            ExternalCommandExecutor
+                .Setup(x => x.RunAsync(
+                    It.Is<string>(s => s == "npm"),
+                    It.Is<string>(s => s == "list electron-builder"),
+                    It.Is<string>(s => s == dirInfo.FullName),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Services.ExternalCommandExecutionResult
+                {
+                    ExitCode = 0,
+                    StdOut = "`-- (empty)",
+                    StdErr = string.Empty
+                });
+
+            ExternalCommandExecutor
+                .Setup(x => x.RunAsync(
+                    It.Is<string>(s => s == "npm"),
+                    It.Is<string>(s => s == "install --save-dev electron-builder"),
+                    It.Is<string>(s => s == dirInfo.FullName),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Services.ExternalCommandExecutionResult
+                {
+                    ExitCode = 0,
+                    StdOut = string.Empty,
+                    StdErr = string.Empty
+                });
+
+            var result = await ParseAndInvokeAsync(
+                new string[]
+                {
+                    "init",
+                    path,
+                    "--verbose"
+                });
+
+            result = result.Replace(Environment.NewLine, string.Empty);
+
+            ExternalCommandExecutor.VerifyAll();
+
+            result.Should().Contain("This seems to be a Electron project.");
+            result.Should().Contain("is now configured to build to the Microsoft Store!");
+
+            var packageJsonFileContents = await File.ReadAllTextAsync(Path.Combine(path, "package.json"));
+
+            packageJsonFileContents.Should().Contain("appx");
+        }
+
+        [TestMethod]
+        public async Task ProjectConfiguratorParsesAlreadyConfiguredElectronNpmProject()
+        {
+            var path = CopyFilesRecursively(Path.Combine("ElectronProject", "Npm"));
+
+            var dirInfo = new DirectoryInfo(path);
+
+            ExternalCommandExecutor
+                .Setup(x => x.RunAsync(
+                    It.Is<string>(s => s == "npm"),
+                    It.Is<string>(s => s == "install"),
+                    It.Is<string>(s => s == dirInfo.FullName),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Services.ExternalCommandExecutionResult
+                {
+                    ExitCode = 0,
+                    StdOut = string.Empty,
+                    StdErr = string.Empty
+                });
+
+            ExternalCommandExecutor
+                .Setup(x => x.RunAsync(
+                    It.Is<string>(s => s == "npm"),
+                    It.Is<string>(s => s == "list electron-builder"),
+                    It.Is<string>(s => s == dirInfo.FullName),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Services.ExternalCommandExecutionResult
+                {
+                    ExitCode = 0,
+                    StdOut = "`-- electron-builder@23.6.0",
+                    StdErr = string.Empty
+                });
+
+            var result = await ParseAndInvokeAsync(
+                new string[]
+                {
+                    "init",
+                    path,
+                    "--verbose"
+                });
+
+            result = result.Replace(Environment.NewLine, string.Empty);
+
+            ExternalCommandExecutor.VerifyAll();
+
+            result.Should().Contain("This seems to be a Electron project.");
+            result.Should().Contain("is now configured to build to the Microsoft Store!");
+
+            var packageJsonFileContents = await File.ReadAllTextAsync(Path.Combine(path, "package.json"));
+
+            packageJsonFileContents.Should().Contain("appx");
+        }
+
+        [TestMethod]
+        public async Task ProjectConfiguratorParsesElectronYarnProject()
+        {
+            var path = CopyFilesRecursively(Path.Combine("ElectronProject", "Yarn"));
+
+            var dirInfo = new DirectoryInfo(path);
+
+            ExternalCommandExecutor
+                .Setup(x => x.RunAsync(
+                    It.Is<string>(s => s == "yarn"),
+                    It.Is<string>(s => s == "install"),
+                    It.Is<string>(s => s == dirInfo.FullName),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Services.ExternalCommandExecutionResult
+                {
+                    ExitCode = 0,
+                    StdOut = string.Empty,
+                    StdErr = string.Empty
+                });
+
+            ExternalCommandExecutor
+                .Setup(x => x.RunAsync(
+                    It.Is<string>(s => s == "yarn"),
+                    It.Is<string>(s => s == "list --pattern electron-builder"),
+                    It.Is<string>(s => s == dirInfo.FullName),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Services.ExternalCommandExecutionResult
+                {
+                    ExitCode = 0,
+                    StdOut = "Done in 0s.",
+                    StdErr = string.Empty
+                });
+
+            ExternalCommandExecutor
+                .Setup(x => x.RunAsync(
+                    It.Is<string>(s => s == "yarn"),
+                    It.Is<string>(s => s == "add --dev electron-builder"),
+                    It.Is<string>(s => s == dirInfo.FullName),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Services.ExternalCommandExecutionResult
+                {
+                    ExitCode = 0,
+                    StdOut = string.Empty,
+                    StdErr = string.Empty
+                });
+
+            var result = await ParseAndInvokeAsync(
+                new string[]
+                {
+                    "init",
+                    path,
+                    "--verbose"
+                });
+
+            result = result.Replace(Environment.NewLine, string.Empty);
+
+            ExternalCommandExecutor.VerifyAll();
+
+            result.Should().Contain("This seems to be a Electron project.");
+            result.Should().Contain("is now configured to build to the Microsoft Store!");
+
+            var packageJsonFileContents = await File.ReadAllTextAsync(Path.Combine(path, "package.json"));
+
+            packageJsonFileContents.Should().Contain("appx");
+        }
+
+        [TestMethod]
+        public async Task ProjectConfiguratorParsesAlreadyConfiguredElectronYarnProject()
+        {
+            var path = CopyFilesRecursively(Path.Combine("ElectronProject", "Yarn"));
+
+            var dirInfo = new DirectoryInfo(path);
+
+            ExternalCommandExecutor
+                .Setup(x => x.RunAsync(
+                    It.Is<string>(s => s == "yarn"),
+                    It.Is<string>(s => s == "install"),
+                    It.Is<string>(s => s == dirInfo.FullName),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Services.ExternalCommandExecutionResult
+                {
+                    ExitCode = 0,
+                    StdOut = string.Empty,
+                    StdErr = string.Empty
+                });
+
+            ExternalCommandExecutor
+                .Setup(x => x.RunAsync(
+                    It.Is<string>(s => s == "yarn"),
+                    It.Is<string>(s => s == "list --pattern electron-builder"),
+                    It.Is<string>(s => s == dirInfo.FullName),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Services.ExternalCommandExecutionResult
+                {
+                    ExitCode = 0,
+                    StdOut = "└─ electron-builder@23.6.0",
+                    StdErr = string.Empty
+                });
+
+            var result = await ParseAndInvokeAsync(
+                new string[]
+                {
+                    "init",
+                    path,
+                    "--verbose"
+                });
+
+            result = result.Replace(Environment.NewLine, string.Empty);
+
+            ExternalCommandExecutor.VerifyAll();
+
+            result.Should().Contain("This seems to be a Electron project.");
+            result.Should().Contain("is now configured to build to the Microsoft Store!");
+
+            var packageJsonFileContents = await File.ReadAllTextAsync(Path.Combine(path, "package.json"));
+
+            packageJsonFileContents.Should().Contain("appx");
         }
 
         [TestMethod]

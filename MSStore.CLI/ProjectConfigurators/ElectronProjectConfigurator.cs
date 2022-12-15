@@ -81,6 +81,9 @@ namespace MSStore.CLI.ProjectConfigurators
 
             await _electronManifestManager.SaveAsync(electronManifest, electronProjectFile, ct);
 
+            AnsiConsole.WriteLine($"Electron project '{electronProjectFile.FullName}' is now configured to build to the Microsoft Store!");
+            AnsiConsole.WriteLine("For more information on building your Electron project to the Microsoft Store, see https://www.electron.build/configuration/appx#how-to-publish-your-electron-app-to-the-windows-app-store");
+
             return (0, output);
         }
 

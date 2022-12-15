@@ -195,7 +195,7 @@ namespace MSStore.CLI.UnitTests
                 .Setup(x => x.ConvertIcoToPngAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
 
-            var electronManifestManager = new Mock<IElectronManifestManager>();
+            var electronManifestManager = new Mock<ElectronManifestManager> { CallBase = true };
 
             PWAAppInfoManager = new Mock<IPWAAppInfoManager>();
 
@@ -233,7 +233,7 @@ namespace MSStore.CLI.UnitTests
                         .AddScoped(sp => fileDownloader.Object)
                         .AddScoped(sp => imageConverter.Object)
                         .AddScoped(sp => PWAAppInfoManager.Object)
-                        .AddScoped(sp => electronManifestManager.Object)
+                        .AddScoped<IElectronManifestManager>(sp => electronManifestManager.Object)
                         .AddSingleton(Cli);
                 })
                 .ConfigureStoreCLICommands()
