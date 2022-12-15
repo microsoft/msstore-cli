@@ -44,7 +44,7 @@ namespace MSStore.CLI.ProjectConfigurators
             UpdateManifest(manifestFile.FullName, app, publisherDisplayName);
 
             AnsiConsole.WriteLine($"UWP project at '{projectRootPath.FullName}' is now configured to build to the Microsoft Store!");
-            AnsiConsole.WriteLine("For more information on building your UWP project to the Microsoft Store, see https://learn.microsoft.com/windows/msix/package/packaging-uwp-apps");
+            AnsiConsole.MarkupLine("For more information on building your UWP project to the Microsoft Store, see [link]https://learn.microsoft.com/windows/msix/package/packaging-uwp-apps[/]");
 
             return Task.FromResult((0, output));
         }

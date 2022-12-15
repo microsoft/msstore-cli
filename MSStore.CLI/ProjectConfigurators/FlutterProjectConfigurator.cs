@@ -107,7 +107,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 streamWriter.WriteLine($"  msstore_appId: {app.Id}");
 
                 AnsiConsole.WriteLine($"Flutter project '{flutterProjectFile.FullName}' is now configured to build to the Microsoft Store!");
-                AnsiConsole.WriteLine("For more information on building your Flutter project to the Microsoft Store, see https://pub.dev/packages/msix#microsoft-store-icon-publishing-to-the-microsoft-store");
+                AnsiConsole.MarkupLine("For more information on building your Flutter project to the Microsoft Store, see [link]https://pub.dev/packages/msix#microsoft-store-icon-publishing-to-the-microsoft-store[/]");
             }
 
             return (0, output);

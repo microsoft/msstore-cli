@@ -88,7 +88,7 @@ namespace MSStore.CLI
                 {
                     HelpBuilder helpBuilder = new(LocalizationResources.Instance, CommandExtensions.GetBufferWidth());
                     helpBuilder.Write(context.ParseResult.RootCommandResult.Command, Console.Out);
-                    AnsiConsole.WriteLine("Use of the Microsoft Store CLI is subject to the terms of the Microsoft Privacy Statement: https://aka.ms/privacy");
+                    AnsiConsole.MarkupLine("Use of the Microsoft Store CLI is subject to the terms of the Microsoft Privacy Statement: [link]https://aka.ms/privacy[/]");
                 }
 
                 return 0;
