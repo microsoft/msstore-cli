@@ -54,7 +54,7 @@ namespace MSStore.CLI.ProjectConfigurators
             electronManifest.Build.Windows ??= new ElectronManifestBuildWindows();
             if (electronManifest.Build.Windows.Targets is JsonArray targets)
             {
-                if (!targets.Contains("appx"))
+                if (targets.All(t => t?.ToString() != "appx"))
                 {
                     targets.Add("appx");
                 }
