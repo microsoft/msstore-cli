@@ -53,8 +53,7 @@ namespace MSStore.CLI.Commands
                 table.AddRow($"[bold u]Tenant Id[/]", $"[bold u]{config.TenantId}[/]");
                 table.AddRow($"[bold u]Client Id[/]", $"[bold u]{config.ClientId}[/]");
 
-                bool verbose = context.ParseResult.RootCommandResult.Command is MicrosoftStoreCLI storeCLI &&
-                    context.ParseResult.GetValueForOption(storeCLI.VerboseOption);
+                bool verbose = context.ParseResult.IsVerbose();
 
                 if (verbose && !string.IsNullOrEmpty(config.StoreApiServiceUrl))
                 {

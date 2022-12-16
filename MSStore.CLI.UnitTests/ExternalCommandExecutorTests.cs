@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Runtime.InteropServices;
+using Microsoft.Extensions.Logging.Abstractions;
 using MSStore.CLI.Services;
 
 namespace MSStore.CLI.UnitTests
@@ -14,7 +15,7 @@ namespace MSStore.CLI.UnitTests
         [TestInitialize]
         public void TestInitialize()
         {
-            _externalCommandExecutor = new ExternalCommandExecutor();
+            _externalCommandExecutor = new ExternalCommandExecutor(NullLogger<ExternalCommandExecutor>.Instance);
         }
 
         [TestMethod]

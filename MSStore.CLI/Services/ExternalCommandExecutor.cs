@@ -7,11 +7,20 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Spectre.Console;
 
 namespace MSStore.CLI.Services
 {
     internal class ExternalCommandExecutor : IExternalCommandExecutor
     {
+        private ILogger _logger;
+
+        public ExternalCommandExecutor(ILogger<ExternalCommandExecutor> logger)
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        }
+
         public async Task<ExternalCommandExecutionResult> RunAsync(string command, string arguments, string workingDirectory, CancellationToken ct)
         {
             using (Process cmd = new Process())
@@ -50,6 +59,11 @@ namespace MSStore.CLI.Services
                     {
                         Debug.WriteLine(e.Data);
                         stdOut.AppendLine(e.Data);
+
+                        if (_logger.IsEnabled(LogLevel.Information))
+                        {
+                            AnsiConsole.WriteLine(e.Data);
+                        }
                     }
                 };
                 cmd.ErrorDataReceived += (sender, e) =>
@@ -58,6 +72,11 @@ namespace MSStore.CLI.Services
                     {
                         Debug.WriteLine(e.Data);
                         stdErr.AppendLine(e.Data);
+
+                        if (_logger.IsEnabled(LogLevel.Information))
+                        {
+                            AnsiConsole.WriteLine(e.Data);
+                        }
                     }
                 };
                 cmd.Start();

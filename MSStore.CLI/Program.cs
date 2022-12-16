@@ -20,6 +20,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MSStore.CLI.Commands;
+using MSStore.CLI.Helpers;
 using MSStore.CLI.ProjectConfigurators;
 using MSStore.CLI.Services;
 using MSStore.CLI.Services.CredentialManager;
@@ -139,7 +140,7 @@ namespace MSStore.CLI
                 .CancelOnProcessTermination()
                 .Build();
 
-            if (parser.Parse(args).GetValueForOption(storeCLI.VerboseOption))
+            if (parser.Parse(args).IsVerbose())
             {
                 minimumLogLevel = LogLevel.Information;
             }
