@@ -25,8 +25,9 @@ namespace MSStore.CLI.Commands
 {
     internal class InitCommand : Command
     {
-        internal static readonly Argument PathOrUrl;
+        internal static readonly Argument<string> PathOrUrl;
         internal static readonly Option<DirectoryInfo?> Output;
+        internal static readonly Option<IEnumerable<BuildArch>> Arch;
 
         static InitCommand()
         {
@@ -62,6 +63,13 @@ namespace MSStore.CLI.Commands
             Output = new Option<DirectoryInfo?>(
                 aliases: new string[] { "--output", "-o" },
                 description: "The output directory where the packaged app will be stored. If not provided, the default directory for each different type of app will be used.");
+
+            Arch = new Option<IEnumerable<BuildArch>>(
+                aliases: new string[] { "--arch", "-a" },
+                description: "The architecture(s) to build for. If not provided, the default architecture for the current OS, and project type, will be used.")
+            {
+                AllowMultipleArgumentsPerToken = true,
+            };
         }
 
         public InitCommand()
@@ -88,6 +96,8 @@ namespace MSStore.CLI.Commands
             AddOption(publish);
 
             AddOption(Output);
+
+            AddOption(Arch);
         }
 
         public new class Handler : ICommandHandler
@@ -110,6 +120,8 @@ namespace MSStore.CLI.Commands
             public bool? Publish { get; set; }
 
             public DirectoryInfo? Output { get; set; } = null!;
+
+            public IEnumerable<BuildArch>? Arch { get; set; } = null!;
 
             public Handler(
                 ILogger<Handler> logger,
@@ -259,7 +271,18 @@ namespace MSStore.CLI.Commands
                         return await _telemetryClient.TrackCommandEventAsync<Handler>(-4, props, ct);
                     }
 
-                    (result, outputDirectory) = await projectPackager.PackageAsync(PathOrUrl, app, Output, storePackagedAPI, ct);
+                    var buildArchs = Arch?.Distinct();
+                    if (buildArchs?.Any() != true)
+                    {
+                        buildArchs = projectPackager.DefaultBuildArchs;
+                    }
+
+                    if (buildArchs != null)
+                    {
+                        props["Archs"] = string.Join(",", buildArchs);
+                    }
+
+                    (result, outputDirectory) = await projectPackager.PackageAsync(PathOrUrl, app, buildArchs, Output, storePackagedAPI, ct);
                 }
 
                 if (result != 0)

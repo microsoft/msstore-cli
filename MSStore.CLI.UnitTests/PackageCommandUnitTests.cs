@@ -42,7 +42,7 @@ namespace MSStore.CLI.UnitTests
                     It.Is<string>(s =>
                         s.Contains("\"MSBuild.exe\"")),
                     It.Is<string>(s =>
-                        s.Contains("/p:Configuration=Release;AppxBundle=Always;Platform=x64;AppxBundlePlatforms=\"x64|ARM64\"")
+                        s.Contains("/p:Configuration=Release;AppxBundle=Always;Platform=X64;AppxBundlePlatforms=\"X64|ARM64\"")
                         && s.EndsWith("UapAppxPackageBuildMode=StoreUpload)")),
                     It.Is<string>(s => s == new DirectoryInfo(path).FullName),
                     It.IsAny<CancellationToken>()))
@@ -82,7 +82,7 @@ namespace MSStore.CLI.UnitTests
                     It.Is<string>(s =>
                         s.Contains("\"MSBuild.exe\"")),
                     It.Is<string>(s =>
-                        s.Contains("/p:Configuration=Release;AppxBundle=Always;Platform=x64;AppxBundlePlatforms=\"x64|ARM64\"")
+                        s.Contains("/p:Configuration=Release;AppxBundle=Always;Platform=X64;AppxBundlePlatforms=\"X64|ARM64\"")
                         && s.Contains($"AppxPackageDir=\"{customPath}\"")
                         && s.EndsWith("UapAppxPackageBuildMode=StoreUpload)")),
                     It.Is<string>(s => s == new DirectoryInfo(path).FullName),

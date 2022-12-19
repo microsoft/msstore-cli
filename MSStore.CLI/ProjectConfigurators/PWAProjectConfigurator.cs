@@ -57,6 +57,7 @@ namespace MSStore.CLI.ProjectConfigurators
         public SearchOption PackageFilesSearchOption { get; } = SearchOption.AllDirectories;
         public string OutputSubdirectory { get; } = string.Empty;
         public string DefaultInputSubdirectory { get; } = string.Empty;
+        public IEnumerable<BuildArch>? DefaultBuildArchs { get; }
 
         public bool CanConfigure(string pathOrUrl)
         {
@@ -283,7 +284,7 @@ namespace MSStore.CLI.ProjectConfigurators
             return (0, output);
         }
 
-        public Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(string pathOrUrl, DevCenterApplication? app, DirectoryInfo? inputDirectory, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(string pathOrUrl, DevCenterApplication? app, IEnumerable<BuildArch>? buildArchs, DirectoryInfo? inputDirectory, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             if (GetUri(pathOrUrl) != null && inputDirectory != null)
             {

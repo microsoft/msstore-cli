@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -36,6 +37,7 @@ namespace MSStore.CLI.ProjectConfigurators
         public override SearchOption PackageFilesSearchOption { get; } = SearchOption.TopDirectoryOnly;
         public override string OutputSubdirectory { get; } = Path.Join("obj", "MSStore.CLI");
         public override string DefaultInputSubdirectory { get; } = "AppPackages";
+        public override IEnumerable<BuildArch>? DefaultBuildArchs => new[] { BuildArch.X64, BuildArch.Arm64 };
 
         public override Task<(int returnCode, DirectoryInfo? outputDirectory)> ConfigureAsync(string pathOrUrl, DirectoryInfo? output, string publisherDisplayName, DevCenterApplication app, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
@@ -169,7 +171,7 @@ namespace MSStore.CLI.ProjectConfigurators
             xmlDoc.Save(appxManifestPath);
         }
 
-        public override async Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(string pathOrUrl, DevCenterApplication? app, DirectoryInfo? output, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public override async Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(string pathOrUrl, DevCenterApplication? app, IEnumerable<BuildArch>? buildArchs, DirectoryInfo? output, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             var (projectRootPath, manifestFile) = GetInfo(pathOrUrl);
 
@@ -245,7 +247,20 @@ namespace MSStore.CLI.ProjectConfigurators
             {
                 try
                 {
-                    var msBuildParams = $"/p:Configuration=Release;AppxBundle=Always;Platform=x64;AppxBundlePlatforms=\"x64|ARM64\";AppxPackageDir=\"{output.FullName}\";UapAppxPackageBuildMode=StoreUpload";
+                    string platform;
+                    string appxBundlePlatforms;
+                    if (buildArchs?.Any() == true)
+                    {
+                        platform = buildArchs.First().ToString().ToUpperInvariant();
+                        appxBundlePlatforms = string.Join("|", buildArchs.Select(a => a.ToString().ToUpperInvariant()));
+                    }
+                    else
+                    {
+                        platform = "X64";
+                        appxBundlePlatforms = "X64|ARM64";
+                    }
+
+                    var msBuildParams = $"/p:Configuration=Release;AppxBundle=Always;Platform={platform};AppxBundlePlatforms=\"{appxBundlePlatforms}\";AppxPackageDir=\"{output.FullName}\";UapAppxPackageBuildMode=StoreUpload";
                     var result = await _externalCommandExecutor.RunAsync($"(\"{msbuildPath}\"", $"{msBuildParams})", projectRootPath.FullName, ct);
                     if (result.ExitCode != 0)
                     {

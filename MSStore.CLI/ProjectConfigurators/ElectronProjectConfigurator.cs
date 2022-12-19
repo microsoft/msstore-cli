@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json.Nodes;
@@ -38,6 +39,7 @@ namespace MSStore.CLI.ProjectConfigurators
         public override SearchOption PackageFilesSearchOption { get; } = SearchOption.TopDirectoryOnly;
         public override string OutputSubdirectory { get; } = "dist";
         public override string DefaultInputSubdirectory { get; } = "dist";
+        public override IEnumerable<BuildArch>? DefaultBuildArchs => new[] { BuildArch.X64, BuildArch.Arm64 };
 
         public override async Task<(int returnCode, DirectoryInfo? outputDirectory)> ConfigureAsync(string pathOrUrl, DirectoryInfo? output, string publisherDisplayName, DevCenterApplication app, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
@@ -272,7 +274,7 @@ namespace MSStore.CLI.ProjectConfigurators
             });
         }
 
-        public override async Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(string pathOrUrl, DevCenterApplication? app, DirectoryInfo? output, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public override async Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(string pathOrUrl, DevCenterApplication? app, IEnumerable<BuildArch>? buildArchs, DirectoryInfo? output, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             var (projectRootPath, electronProjectFile) = GetInfo(pathOrUrl);
 
@@ -311,6 +313,24 @@ namespace MSStore.CLI.ProjectConfigurators
                         // Not Supported yet
                         // args += $" --output-path \"{output.FullName}\"";
                         */
+                    }
+
+                    if (buildArchs?.Any() == true)
+                    {
+                        if (buildArchs.Contains(BuildArch.X64))
+                        {
+                            args += " --x64";
+                        }
+
+                        if (buildArchs.Contains(BuildArch.X86))
+                        {
+                            args += " --ia32";
+                        }
+
+                        if (buildArchs.Contains(BuildArch.Arm64))
+                        {
+                            args += " --arm64";
+                        }
                     }
 
                     string command, arguments;

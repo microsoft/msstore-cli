@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -36,6 +37,7 @@ namespace MSStore.CLI.ProjectConfigurators
         public override SearchOption PackageFilesSearchOption { get; } = SearchOption.TopDirectoryOnly;
         public override string OutputSubdirectory { get; } = Path.Join("build", "windows", "MSStore.CLI");
         public override string DefaultInputSubdirectory { get; } = Path.Combine("build", "windows", "runner", "Release");
+        public override IEnumerable<BuildArch>? DefaultBuildArchs => new[] { BuildArch.X64 };
 
         public override async Task<(int returnCode, DirectoryInfo? outputDirectory)> ConfigureAsync(string pathOrUrl, DirectoryInfo? output, string publisherDisplayName, DevCenterApplication app, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
@@ -230,7 +232,7 @@ namespace MSStore.CLI.ProjectConfigurators
             });
         }
 
-        public override async Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(string pathOrUrl, DevCenterApplication? app, DirectoryInfo? output, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public override async Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(string pathOrUrl, DevCenterApplication? app, IEnumerable<BuildArch>? buildArchs, DirectoryInfo? output, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             var (projectRootPath, flutterProjectFile) = GetInfo(pathOrUrl);
 
@@ -252,6 +254,25 @@ namespace MSStore.CLI.ProjectConfigurators
                     if (output != null)
                     {
                         args += $" --output-path \"{output.FullName}\"";
+                    }
+
+                    if (buildArchs?.Any() == true)
+                    {
+                        if (!buildArchs.Contains(BuildArch.X64))
+                        {
+                            Logger.LogError("Flutter builds to the Microsoft Store only support x64.");
+                            return (-3, null);
+                        }
+
+                        if (buildArchs.Contains(BuildArch.X86))
+                        {
+                            Logger.LogWarning("Flutter does not support building for Windows x86. Skipping x86 build. (More info: https://github.com/flutter/flutter/issues/37777)");
+                        }
+
+                        if (buildArchs.Contains(BuildArch.Arm64))
+                        {
+                            Logger.LogWarning("Flutter does not yet support building for Windows ARM64. Skipping ARM64 build. (More info: https://github.com/flutter/flutter/issues/53120)");
+                        }
                     }
 
                     var result = await _externalCommandExecutor.RunAsync("flutter", $"pub run msix:build {args}", projectRootPath.FullName, ct);

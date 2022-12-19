@@ -7,6 +7,7 @@ using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using MSStore.CLI.Helpers;
@@ -23,6 +24,7 @@ namespace MSStore.CLI.Commands
         {
             AddArgument(InitCommand.PathOrUrl);
             AddOption(InitCommand.Output);
+            AddOption(InitCommand.Arch);
         }
 
         public new class Handler : ICommandHandler
@@ -34,6 +36,8 @@ namespace MSStore.CLI.Commands
             public string PathOrUrl { get; set; } = null!;
 
             public DirectoryInfo? Output { get; set; } = null!;
+
+            public IEnumerable<BuildArch>? Arch { get; set; } = null!;
 
             public Handler(
                 IProjectConfiguratorFactory projectConfiguratorFactory,
@@ -78,7 +82,18 @@ namespace MSStore.CLI.Commands
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(-4, props, ct);
                 }
 
-                var (returnCode, outputDirectory) = await projectPackager.PackageAsync(PathOrUrl, null, Output, storePackagedAPI, ct);
+                var buildArchs = Arch?.Distinct();
+                if (buildArchs?.Any() != true)
+                {
+                    buildArchs = projectPackager.DefaultBuildArchs;
+                }
+
+                if (buildArchs != null)
+                {
+                    props["Archs"] = string.Join(",", buildArchs);
+                }
+
+                var (returnCode, outputDirectory) = await projectPackager.PackageAsync(PathOrUrl, null, buildArchs, Output, storePackagedAPI, ct);
 
                 if (returnCode == 0 && outputDirectory != null)
                 {

@@ -52,6 +52,8 @@ namespace MSStore.CLI.ProjectConfigurators
 
         public abstract string DefaultInputSubdirectory { get; }
 
+        public abstract IEnumerable<BuildArch>? DefaultBuildArchs { get; }
+
         public bool CanConfigure(string pathOrUrl)
         {
             if (string.IsNullOrEmpty(pathOrUrl))
@@ -92,7 +94,7 @@ namespace MSStore.CLI.ProjectConfigurators
             return null;
         }
 
-        public abstract Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(string pathOrUrl, DevCenterApplication? app, DirectoryInfo? output, IStorePackagedAPI storePackagedAPI, CancellationToken ct);
+        public abstract Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(string pathOrUrl, DevCenterApplication? app, IEnumerable<BuildArch>? buildArchs, DirectoryInfo? output, IStorePackagedAPI storePackagedAPI, CancellationToken ct);
 
         public abstract Task<string?> GetAppIdAsync(FileInfo? fileInfo, CancellationToken ct);
 
