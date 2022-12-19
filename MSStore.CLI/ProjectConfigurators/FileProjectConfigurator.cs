@@ -48,6 +48,8 @@ namespace MSStore.CLI.ProjectConfigurators
 
         public abstract SearchOption PackageFilesSearchOption { get; }
 
+        public abstract PublishFileSearchFilterStrategy PublishFileSearchFilterStrategy { get; }
+
         public abstract string OutputSubdirectory { get; }
 
         public abstract string DefaultInputSubdirectory { get; }
@@ -129,6 +131,11 @@ namespace MSStore.CLI.ProjectConfigurators
             var packageFiles = inputDirectory.GetFiles("*.*", PackageFilesSearchOption)
                                   .Where(f => PackageFilesExtensionInclude.Contains(f.Extension, StringComparer.OrdinalIgnoreCase)
                                            && PackageFilesExtensionExclude?.All(e => !f.Name.EndsWith(e, StringComparison.OrdinalIgnoreCase)) != false);
+
+            if (PublishFileSearchFilterStrategy == PublishFileSearchFilterStrategy.Newest)
+            {
+                packageFiles = packageFiles.OrderByDescending(f => f.LastWriteTimeUtc).Take(1);
+            }
 
             return await storePackagedAPI.PublishAsync(app, GetFirstSubmissionDataAsync, output, packageFiles, _browserLauncher, _consoleReader, _zipFileManager, _fileDownloader, _azureBlobManager, _logger, ct);
         }

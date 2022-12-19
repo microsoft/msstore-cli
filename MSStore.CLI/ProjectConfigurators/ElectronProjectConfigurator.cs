@@ -37,6 +37,7 @@ namespace MSStore.CLI.ProjectConfigurators
         public override string[] PackageFilesExtensionInclude => new[] { ".appx" };
         public override string[]? PackageFilesExtensionExclude { get; }
         public override SearchOption PackageFilesSearchOption { get; } = SearchOption.TopDirectoryOnly;
+        public override PublishFileSearchFilterStrategy PublishFileSearchFilterStrategy { get; } = PublishFileSearchFilterStrategy.All;
         public override string OutputSubdirectory { get; } = "dist";
         public override string DefaultInputSubdirectory { get; } = "dist";
         public override IEnumerable<BuildArch>? DefaultBuildArchs => new[] { BuildArch.X64, BuildArch.Arm64 };

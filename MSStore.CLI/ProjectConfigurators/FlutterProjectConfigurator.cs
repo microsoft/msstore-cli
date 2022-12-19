@@ -35,6 +35,7 @@ namespace MSStore.CLI.ProjectConfigurators
         public override string[] PackageFilesExtensionInclude => new[] { ".msix" };
         public override string[]? PackageFilesExtensionExclude { get; }
         public override SearchOption PackageFilesSearchOption { get; } = SearchOption.TopDirectoryOnly;
+        public override PublishFileSearchFilterStrategy PublishFileSearchFilterStrategy { get; } = PublishFileSearchFilterStrategy.Newest;
         public override string OutputSubdirectory { get; } = Path.Join("build", "windows", "MSStore.CLI");
         public override string DefaultInputSubdirectory { get; } = Path.Combine("build", "windows", "runner", "Release");
         public override IEnumerable<BuildArch>? DefaultBuildArchs => new[] { BuildArch.X64 };
