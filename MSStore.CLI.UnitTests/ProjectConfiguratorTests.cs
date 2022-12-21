@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-using MSStore.API.Packaged.Models;
 using MSStore.CLI.Services.PWABuilder;
 
 namespace MSStore.CLI.UnitTests
@@ -445,15 +444,7 @@ namespace MSStore.CLI.UnitTests
                     },
                 });
 
-            AddDefaultFakeSubmission();
-            InitDefaultSubmissionStatusResponseQueue();
-
-            FakeStorePackagedAPI
-                .Setup(x => x.CommitSubmissionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new DevCenterCommitResponse
-                {
-                    Status = "CommitStarted",
-                });
+            AddDefaultFakeSuccessfulSubmission();
 
             PWAAppInfoManager
                 .Setup(x => x.LoadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))

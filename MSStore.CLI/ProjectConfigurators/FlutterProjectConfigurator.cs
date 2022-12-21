@@ -46,6 +46,20 @@ namespace MSStore.CLI.ProjectConfigurators
 
             await InstallMsixDependencyAsync(projectRootPath, ct);
 
+            var result = await UpdateManifestAsync(projectRootPath, flutterProjectFile, app, publisherDisplayName, _imageConverter, ct);
+            if (result != 0)
+            {
+                return (result, null);
+            }
+
+            AnsiConsole.WriteLine($"Flutter project '{flutterProjectFile.FullName}' is now configured to build to the Microsoft Store!");
+            AnsiConsole.MarkupLine("For more information on building your Flutter project to the Microsoft Store, see [link]https://pub.dev/packages/msix#microsoft-store-icon-publishing-to-the-microsoft-store[/]");
+
+            return (0, output);
+        }
+
+        internal static async Task<int> UpdateManifestAsync(DirectoryInfo projectRootPath, FileInfo flutterProjectFile, DevCenterApplication app, string publisherDisplayName, IImageConverter? imageConverter, CancellationToken ct)
+        {
             using var fileStream = flutterProjectFile.Open(FileMode.Open, FileAccess.ReadWrite);
 
             bool msixConfigExists = false;
@@ -80,11 +94,15 @@ namespace MSStore.CLI.ProjectConfigurators
             // If msix_config section already exists, it won't work.
             if (!msixConfigExists)
             {
-                var imagePath = await GenerateImageFromIcoAsync(projectRootPath, ct);
-
-                if (imagePath == null)
+                string? imagePath = null;
+                if (imageConverter != null)
                 {
-                    return (-2, null);
+                    imagePath = await GenerateImageFromIcoAsync(projectRootPath, imageConverter, ct);
+
+                    if (imagePath == null)
+                    {
+                        return -2;
+                    }
                 }
 
                 fileStream.Seek(0, SeekOrigin.End);
@@ -108,15 +126,12 @@ namespace MSStore.CLI.ProjectConfigurators
                 }
 
                 streamWriter.WriteLine($"  msstore_appId: {app.Id}");
-
-                AnsiConsole.WriteLine($"Flutter project '{flutterProjectFile.FullName}' is now configured to build to the Microsoft Store!");
-                AnsiConsole.MarkupLine("For more information on building your Flutter project to the Microsoft Store, see [link]https://pub.dev/packages/msix#microsoft-store-icon-publishing-to-the-microsoft-store[/]");
             }
 
-            return (0, output);
+            return 0;
         }
 
-        private async Task<string?> GenerateImageFromIcoAsync(DirectoryInfo projectRootPath, CancellationToken ct)
+        private static async Task<string?> GenerateImageFromIcoAsync(DirectoryInfo projectRootPath, IImageConverter imageConverter, CancellationToken ct)
         {
             try
             {
@@ -135,7 +150,7 @@ namespace MSStore.CLI.ProjectConfigurators
 
                 var logoPath = Path.Combine(resourcesDirInfo.FullName, Path.GetFileNameWithoutExtension(icon.Name) + ".png");
 
-                if (!await _imageConverter.ConvertIcoToPngAsync(icon.FullName, logoPath, ct))
+                if (!await imageConverter.ConvertIcoToPngAsync(icon.FullName, logoPath, ct))
                 {
                     AnsiConsole.MarkupLine($"[red]Failed to convert icon to png.[/]");
                     return null;

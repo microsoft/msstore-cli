@@ -44,6 +44,7 @@ namespace MSStore.CLI.UnitTests
         internal Mock<IGraphClient> GraphClient { get; private set; } = null!;
         internal Mock<ITokenManager> TokenManager { get; private set; } = null!;
         internal Mock<IPWAAppInfoManager> PWAAppInfoManager { get; private set; } = null!;
+        internal Mock<ElectronManifestManager> ElectronManifestManager { get; private set; } = null!;
         internal Mock<IZipFileManager> ZipFileManager { get; private set; } = null!;
         internal List<string> UserNames { get; } = new List<string>();
         internal List<string> Secrets { get; } = new List<string>();
@@ -195,7 +196,7 @@ namespace MSStore.CLI.UnitTests
                 .Setup(x => x.ConvertIcoToPngAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
 
-            var electronManifestManager = new Mock<ElectronManifestManager> { CallBase = true };
+            ElectronManifestManager = new Mock<ElectronManifestManager> { CallBase = true };
 
             PWAAppInfoManager = new Mock<IPWAAppInfoManager>();
 
@@ -233,7 +234,7 @@ namespace MSStore.CLI.UnitTests
                         .AddScoped(sp => fileDownloader.Object)
                         .AddScoped(sp => imageConverter.Object)
                         .AddScoped(sp => PWAAppInfoManager.Object)
-                        .AddScoped<IElectronManifestManager>(sp => electronManifestManager.Object)
+                        .AddScoped<IElectronManifestManager>(sp => ElectronManifestManager.Object)
                         .AddSingleton(Cli);
                 })
                 .ConfigureStoreCLICommands()
@@ -427,6 +428,19 @@ namespace MSStore.CLI.UnitTests
                 .ReturnsAsync(new DevCenterSubmissionStatusResponse
                 {
                     Status = "Published"
+                });
+        }
+
+        protected void AddDefaultFakeSuccessfulSubmission()
+        {
+            AddDefaultFakeSubmission();
+            InitDefaultSubmissionStatusResponseQueue();
+
+            FakeStorePackagedAPI
+                .Setup(x => x.CommitSubmissionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new DevCenterCommitResponse
+                {
+                    Status = "CommitStarted",
                 });
         }
 

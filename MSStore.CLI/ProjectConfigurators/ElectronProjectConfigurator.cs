@@ -51,7 +51,17 @@ namespace MSStore.CLI.ProjectConfigurators
                 return (-1, null);
             }
 
-            var electronManifest = await _electronManifestManager.LoadAsync(electronProjectFile, ct);
+            await UpdateManifestAsync(electronProjectFile, app, publisherDisplayName, _electronManifestManager, ct);
+
+            AnsiConsole.WriteLine($"Electron project '{electronProjectFile.FullName}' is now configured to build to the Microsoft Store!");
+            AnsiConsole.MarkupLine("For more information on building your Electron project to the Microsoft Store, see [link]https://www.electron.build/configuration/appx#how-to-publish-your-electron-app-to-the-windows-app-store[/]");
+
+            return (0, output);
+        }
+
+        internal static async Task UpdateManifestAsync(FileInfo electronProjectFile, DevCenterApplication app, string publisherDisplayName, IElectronManifestManager electronManifestManager, CancellationToken ct)
+        {
+            var electronManifest = await electronManifestManager.LoadAsync(electronProjectFile, ct);
 
             electronManifest.Build ??= new ElectronManifestBuild();
             electronManifest.Build.Windows ??= new ElectronManifestBuildWindows();
@@ -82,12 +92,7 @@ namespace MSStore.CLI.ProjectConfigurators
             electronManifest.Build.Appx.ApplicationId = "App";
             electronManifest.MSStoreCLIAppID = app.Id;
 
-            await _electronManifestManager.SaveAsync(electronManifest, electronProjectFile, ct);
-
-            AnsiConsole.WriteLine($"Electron project '{electronProjectFile.FullName}' is now configured to build to the Microsoft Store!");
-            AnsiConsole.MarkupLine("For more information on building your Electron project to the Microsoft Store, see [link]https://www.electron.build/configuration/appx#how-to-publish-your-electron-app-to-the-windows-app-store[/]");
-
-            return (0, output);
+            await electronManifestManager.SaveAsync(electronManifest, electronProjectFile, ct);
         }
 
         private static bool IsYarn(DirectoryInfo projectRootPath)
