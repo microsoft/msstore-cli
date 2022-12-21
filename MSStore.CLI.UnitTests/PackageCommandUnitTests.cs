@@ -269,5 +269,99 @@ namespace MSStore.CLI.UnitTests
                     StdErr = string.Empty
                 });
         }
+
+        [TestMethod]
+        public async Task PackageCommandForElectronNpmAppsShouldCallElectronNpm()
+        {
+            var path = CopyFilesRecursively(Path.Combine("ElectronProject", "Npm"));
+            SetupNpmInstall(path);
+
+            ExternalCommandExecutor
+                .Setup(x => x.RunAsync(
+                    It.Is<string>(s => s == "npx"),
+                    It.Is<string>(s => s == "electron-builder build -w=appx --x64 --arm64"),
+                    It.Is<string>(s => s == new DirectoryInfo(path).FullName),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Services.ExternalCommandExecutionResult
+                {
+                    ExitCode = 0,
+                    StdOut = "target=AppX file=app.appx",
+                    StdErr = string.Empty
+                });
+
+            var result = await ParseAndInvokeAsync(
+                new string[]
+                {
+                    "package",
+                    path,
+                    "--verbose"
+                });
+
+            result.Should().Contain("The packaged app is here:");
+            result.Should().Contain(path);
+        }
+
+        [TestMethod]
+        public async Task PackageCommandForElectronYarnAppsShouldCallElectronYarn()
+        {
+            var path = CopyFilesRecursively(Path.Combine("ElectronProject", "Yarn"));
+            SetupYarnInstall(path);
+
+            ExternalCommandExecutor
+                .Setup(x => x.RunAsync(
+                    It.Is<string>(s => s == "yarn"),
+                    It.Is<string>(s => s == "run electron-builder build -w=appx --x64 --arm64"),
+                    It.Is<string>(s => s == new DirectoryInfo(path).FullName),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Services.ExternalCommandExecutionResult
+                {
+                    ExitCode = 0,
+                    StdOut = "target=AppX file=app.appx",
+                    StdErr = string.Empty
+                });
+
+            var result = await ParseAndInvokeAsync(
+                new string[]
+                {
+                    "package",
+                    path,
+                    "--verbose"
+                });
+
+            result.Should().Contain("The packaged app is here:");
+            result.Should().Contain(path);
+        }
+
+        private void SetupNpmInstall(string path)
+        {
+            ExternalCommandExecutor
+                .Setup(x => x.RunAsync(
+                    It.Is<string>(s => s == "npm"),
+                    It.Is<string>(s => s == "install"),
+                    It.Is<string>(s => s == new DirectoryInfo(path).FullName),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Services.ExternalCommandExecutionResult
+                {
+                    ExitCode = 0,
+                    StdOut = string.Empty,
+                    StdErr = string.Empty
+                });
+        }
+
+        private void SetupYarnInstall(string path)
+        {
+            ExternalCommandExecutor
+                .Setup(x => x.RunAsync(
+                    It.Is<string>(s => s == "yarn"),
+                    It.Is<string>(s => s == "install"),
+                    It.Is<string>(s => s == new DirectoryInfo(path).FullName),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Services.ExternalCommandExecutionResult
+                {
+                    ExitCode = 0,
+                    StdOut = string.Empty,
+                    StdErr = string.Empty
+                });
+        }
     }
 }
