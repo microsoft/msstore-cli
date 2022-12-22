@@ -62,19 +62,18 @@ namespace MSStore.CLI.ProjectConfigurators
         {
             using var fileStream = flutterProjectFile.Open(FileMode.Open, FileAccess.ReadWrite);
 
-            bool msixConfigExists = false;
-
-            string[] yamlLines;
+            int msixConfigLine = -1;
 
             using var streamReader = new StreamReader(fileStream);
             using var streamWriter = new StreamWriter(fileStream);
 
             var yaml = await streamReader.ReadToEndAsync(ct);
 
-            yamlLines = yaml.Split(Environment.NewLine);
+            var yamlLines = yaml.Split(Environment.NewLine).ToList();
 
-            foreach (var line in yamlLines)
+            for (var i = 0; i < yamlLines.Count; i++)
             {
+                var line = yamlLines[i];
                 if (!string.IsNullOrWhiteSpace(line))
                 {
                     var indexOfMsixConfig = line.IndexOf("msix_config", StringComparison.OrdinalIgnoreCase);
@@ -83,50 +82,73 @@ namespace MSStore.CLI.ProjectConfigurators
                         var commentStartIndex = line.IndexOf('#');
                         if (commentStartIndex == -1 || commentStartIndex > indexOfMsixConfig)
                         {
-                            msixConfigExists = true;
+                            msixConfigLine = i;
                             break;
                         }
                     }
                 }
             }
 
-            // TODO: This only works for first initialization.
-            // If msix_config section already exists, it won't work.
-            if (!msixConfigExists)
+            string? imagePath = null;
+            if (imageConverter != null)
             {
-                string? imagePath = null;
-                if (imageConverter != null)
-                {
-                    imagePath = await GenerateImageFromIcoAsync(projectRootPath, imageConverter, ct);
+                imagePath = await GenerateImageFromIcoAsync(projectRootPath, imageConverter, ct);
 
-                    if (imagePath == null)
+                if (imagePath == null)
+                {
+                    return -2;
+                }
+            }
+
+            void TryAddOrUpdate(string key, string? value)
+            {
+                for (var i = msixConfigLine + 1; i < yamlLines.Count; i++)
+                {
+                    if (!string.IsNullOrWhiteSpace(yamlLines[i]))
                     {
-                        return -2;
+                        if (yamlLines[i].Contains(key, StringComparison.OrdinalIgnoreCase))
+                        {
+                            var index = yamlLines[i].IndexOf($"{key}:", StringComparison.OrdinalIgnoreCase);
+                            if (index > 0)
+                            {
+                                yamlLines[i] = $"{yamlLines[i][..index]}{key}: {value}";
+                                return;
+                            }
+                        }
                     }
                 }
 
-                fileStream.Seek(0, SeekOrigin.End);
-
-                if (!string.IsNullOrWhiteSpace(yamlLines.Last()))
-                {
-                    streamWriter.WriteLine();
-                }
-
-                streamWriter.WriteLine();
-
-                streamWriter.WriteLine($"msix_config:");
-                streamWriter.WriteLine($"  display_name: {app.PrimaryName}");
-                streamWriter.WriteLine($"  publisher_display_name: {publisherDisplayName}");
-                streamWriter.WriteLine($"  publisher: {app.PublisherName}");
-                streamWriter.WriteLine($"  identity_name: {app.PackageIdentityName}");
-                streamWriter.WriteLine($"  msix_version: 0.0.1.0");
-                if (!string.IsNullOrEmpty(imagePath))
-                {
-                    streamWriter.WriteLine($"  logo_path: {Path.GetRelativePath(projectRootPath.FullName, imagePath)}");
-                }
-
-                streamWriter.WriteLine($"  msstore_appId: {app.Id}");
+                // Could not update, so lets add at the beggining of the msix_config section
+                yamlLines.Insert(msixConfigLine + 1, $"  {key}: {value}");
             }
+
+            if (!string.IsNullOrWhiteSpace(yamlLines.Last()))
+            {
+                yamlLines.Add(string.Empty);
+            }
+
+            if (msixConfigLine == -1)
+            {
+                yamlLines.Add("msix_config:");
+                msixConfigLine = yamlLines.Count - 1;
+            }
+
+            TryAddOrUpdate("msstore_appId", app.Id);
+            if (!string.IsNullOrEmpty(imagePath))
+            {
+                TryAddOrUpdate("logo_path", Path.GetRelativePath(projectRootPath.FullName, imagePath));
+            }
+
+            TryAddOrUpdate("msix_version", "0.0.1.0");
+            TryAddOrUpdate("identity_name", app.PackageIdentityName);
+            TryAddOrUpdate("publisher", app.PublisherName);
+            TryAddOrUpdate("publisher_display_name", publisherDisplayName);
+            TryAddOrUpdate("display_name", app.PrimaryName);
+
+            fileStream.Seek(0, SeekOrigin.Begin);
+            fileStream.SetLength(0);
+
+            streamWriter.Write(string.Join(Environment.NewLine, yamlLines));
 
             return 0;
         }
