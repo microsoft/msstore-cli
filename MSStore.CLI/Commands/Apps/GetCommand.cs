@@ -49,6 +49,12 @@ namespace MSStore.CLI.Commands.Apps
             {
                 var ct = context.GetCancellationToken();
 
+                if (ProductTypeHelper.Solve(ProductId) == ProductType.Unpackaged)
+                {
+                    AnsiConsole.WriteLine("This command is not supported for unpackaged applications.");
+                    return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
+                }
+
                 object? application = null;
                 var success = await AnsiConsole.Status().StartAsync("Retrieving Application", async ctx =>
                 {
@@ -59,12 +65,6 @@ namespace MSStore.CLI.Commands.Apps
                             var storePackagedAPI = await _storeAPIFactory.CreatePackagedAsync(ct: ct);
 
                             application = await storePackagedAPI.GetApplicationAsync(ProductId, ct);
-                        }
-                        else
-                        {
-                            var storeAPI = await _storeAPIFactory.CreateAsync(ct: ct);
-
-                            AnsiConsole.MarkupLine("[yellow b]Not supported yet![/]");
                         }
                     }
                     catch (MSStoreHttpException err)

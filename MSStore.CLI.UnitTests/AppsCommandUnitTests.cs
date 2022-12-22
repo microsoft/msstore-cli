@@ -44,6 +44,20 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
+        public async Task AppsGetCommandIsNotSupportedForUnpackagedApps()
+        {
+            var result = await ParseAndInvokeAsync(
+                new[]
+                {
+                    "apps",
+                    "get",
+                    Guid.Empty.ToString()
+                }, -1);
+
+            result.Should().Contain("This command is not supported for unpackaged applications.");
+        }
+
+        [TestMethod]
         public async Task AppsGetCommandShouldReturnErrorIfNonExistingApp()
         {
             var result = await ParseAndInvokeAsync(
