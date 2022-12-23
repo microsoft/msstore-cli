@@ -315,10 +315,8 @@ namespace MSStore.CLI.ProjectConfigurators
                     var args = "-w=appx";
                     if (output != null)
                     {
-                        /*
-                        // Not Supported yet
-                        // args += $" --output-path \"{output.FullName}\"";
-                        */
+                        AnsiConsole.MarkupLine("[yellow]The output option is not supported for Electron apps. The provided output directory will be ignored.[/]");
+                        Logger.LogWarning("If you want to customize the output folder, change the .build.directories.output options in your package.json file. (https://github.com/electron-userland/electron-builder/blob/973a0048b46b8367864241a903453f927c158304/packages/app-builder-lib/scheme.json#L3522-L3550)");
                     }
 
                     if (buildArchs?.Any() == true)
