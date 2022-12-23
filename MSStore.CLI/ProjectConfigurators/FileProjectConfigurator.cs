@@ -137,6 +137,8 @@ namespace MSStore.CLI.ProjectConfigurators
                 packageFiles = packageFiles.OrderByDescending(f => f.LastWriteTimeUtc).Take(1);
             }
 
+            Logger.LogInformation("Trying to publish these {FileCount} files: {FileNames}", packageFiles.Count(), string.Join(", ", packageFiles.Select(f => $"'{f.FullName}'")));
+
             return await storePackagedAPI.PublishAsync(app, GetFirstSubmissionDataAsync, output, packageFiles, _browserLauncher, _consoleReader, _zipFileManager, _fileDownloader, _azureBlobManager, _logger, ct);
         }
     }
