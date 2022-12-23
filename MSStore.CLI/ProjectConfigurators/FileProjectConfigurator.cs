@@ -107,7 +107,7 @@ namespace MSStore.CLI.ProjectConfigurators
             return Task.FromResult<(string?, List<SubmissionImage>)>((description, images));
         }
 
-        public async Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, DirectoryInfo? inputDirectory, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public virtual async Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, DirectoryInfo? inputDirectory, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             var (projectRootPath, manifestFile) = GetInfo(pathOrUrl);
 

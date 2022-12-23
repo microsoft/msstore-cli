@@ -22,6 +22,7 @@ namespace MSStore.CLI.ProjectConfigurators
     {
         private readonly IExternalCommandExecutor _externalCommandExecutor;
         private readonly IElectronManifestManager _electronManifestManager;
+        private ElectronManifest? _electronManifest;
 
         public ElectronProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IElectronManifestManager electronManifestManager, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, ILogger<ElectronProjectConfigurator> logger)
             : base(browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, logger)
@@ -39,7 +40,14 @@ namespace MSStore.CLI.ProjectConfigurators
         public override SearchOption PackageFilesSearchOption { get; } = SearchOption.TopDirectoryOnly;
         public override PublishFileSearchFilterStrategy PublishFileSearchFilterStrategy { get; } = PublishFileSearchFilterStrategy.All;
         public override string OutputSubdirectory { get; } = "dist";
-        public override string DefaultInputSubdirectory { get; } = "dist";
+        public override string DefaultInputSubdirectory
+        {
+            get
+            {
+                return _electronManifest?.Build?.Directories?.Output ?? "dist";
+            }
+        }
+
         public override IEnumerable<BuildArch>? DefaultBuildArchs => new[] { BuildArch.X64, BuildArch.Arm64 };
 
         public override async Task<(int returnCode, DirectoryInfo? outputDirectory)> ConfigureAsync(string pathOrUrl, DirectoryInfo? output, string publisherDisplayName, DevCenterApplication app, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
@@ -400,9 +408,20 @@ namespace MSStore.CLI.ProjectConfigurators
                 return null;
             }
 
-            var electronManifest = await _electronManifestManager.LoadAsync(fileInfo, ct);
+            _electronManifest ??= await _electronManifestManager.LoadAsync(fileInfo, ct);
 
-            return electronManifest.MSStoreCLIAppID;
+            return _electronManifest.MSStoreCLIAppID;
+        }
+
+        public override async Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, DirectoryInfo? inputDirectory, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        {
+            if (_electronManifest == null)
+            {
+                var (_, manifestFile) = GetInfo(pathOrUrl);
+                _electronManifest = await _electronManifestManager.LoadAsync(manifestFile, ct);
+            }
+
+            return await base.PublishAsync(pathOrUrl, app, inputDirectory, storePackagedAPI, ct);
         }
     }
 }

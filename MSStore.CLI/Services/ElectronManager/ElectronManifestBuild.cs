@@ -17,6 +17,8 @@ namespace MSStore.CLI.Services.ElectronManager
         public ElectronManifestBuildWindows? Windows { get; set; }
         [JsonPropertyName("appx")]
         public ElectronManifestBuildAppX? Appx { get; set; }
+        [JsonPropertyName("directories")]
+        public ElectronManifestBuildDirectories? Directories { get; set; }
         [JsonExtensionData]
         public Dictionary<string, JsonElement>? ExtensionData { get; set; }
     }
