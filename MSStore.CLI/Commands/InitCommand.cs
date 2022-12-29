@@ -152,7 +152,7 @@ namespace MSStore.CLI.Commands
             {
                 var ct = context.GetCancellationToken();
 
-                var configurator = _projectConfiguratorFactory.FindProjectConfigurator(PathOrUrl);
+                var configurator = await _projectConfiguratorFactory.FindProjectConfiguratorAsync(PathOrUrl, ct);
 
                 var props = new Dictionary<string, string>
                 {

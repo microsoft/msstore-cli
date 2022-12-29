@@ -13,7 +13,7 @@ namespace MSStore.CLI.ProjectConfigurators
     {
         string ConfiguratorProjectType { get; }
 
-        bool CanConfigure(string pathOrUrl);
+        Task<bool> CanConfigureAsync(string pathOrUrl, CancellationToken ct);
 
         int? ValidateCommand(string pathOrUrl, DirectoryInfo? output, bool? commandPackage, bool? commandPublish);
 

@@ -15,48 +15,48 @@ namespace MSStore.CLI.UnitTests
         [DataRow("https://store.microsoft.com", typeof(PWAProjectConfigurator))]
         public async Task ProjectConfiguratorFactoryFindsURLProperly(string pathOrUrl, Type expectedProjectConfiguratorType)
         {
-            await RunTestAsync((context) =>
+            await RunTestAsync(async (context) =>
             {
+                var ct = context.GetCancellationToken();
+
                 var host = context.GetHost();
                 var projectConfiguratorFactory = host.Services.GetService<IProjectConfiguratorFactory>()!;
 
-                var projectConfigurator = projectConfiguratorFactory.FindProjectConfigurator(pathOrUrl);
+                var projectConfigurator = await projectConfiguratorFactory.FindProjectConfiguratorAsync(pathOrUrl, ct);
 
                 projectConfigurator.Should().BeOfType(expectedProjectConfiguratorType);
-
-                return Task.CompletedTask;
             });
         }
 
         [TestMethod]
         public async Task ProjectConfiguratorFactoryFindsFlutterProject()
         {
-            await RunTestAsync((context) =>
+            await RunTestAsync(async (context) =>
             {
+                var ct = context.GetCancellationToken();
+
                 var host = context.GetHost();
                 var projectConfiguratorFactory = host.Services.GetService<IProjectConfiguratorFactory>()!;
 
-                var projectConfigurator = projectConfiguratorFactory.FindProjectConfigurator("./TestData/FlutterProject/");
+                var projectConfigurator = await projectConfiguratorFactory.FindProjectConfiguratorAsync("./TestData/FlutterProject/", ct);
 
                 projectConfigurator.Should().BeOfType<FlutterProjectConfigurator>();
-
-                return Task.CompletedTask;
             });
         }
 
         [TestMethod]
         public async Task ProjectConfiguratorFactoryFindsUWPProject()
         {
-            await RunTestAsync((context) =>
+            await RunTestAsync(async (context) =>
             {
+                var ct = context.GetCancellationToken();
+
                 var host = context.GetHost();
                 var projectConfiguratorFactory = host.Services.GetService<IProjectConfiguratorFactory>()!;
 
-                var projectConfigurator = projectConfiguratorFactory.FindProjectConfigurator("./TestData/UWPProject/");
+                var projectConfigurator = await projectConfiguratorFactory.FindProjectConfiguratorAsync("./TestData/UWPProject/", ct);
 
                 projectConfigurator.Should().BeOfType<UWPProjectConfigurator>();
-
-                return Task.CompletedTask;
             });
         }
     }

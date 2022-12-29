@@ -59,11 +59,11 @@ namespace MSStore.CLI.ProjectConfigurators
         public string DefaultInputSubdirectory { get; } = string.Empty;
         public IEnumerable<BuildArch>? DefaultBuildArchs { get; }
 
-        public bool CanConfigure(string pathOrUrl)
+        public Task<bool> CanConfigureAsync(string pathOrUrl, CancellationToken ct)
         {
             var uri = GetUri(pathOrUrl);
 
-            return uri != null || ContainsPWAAppInfoJson(pathOrUrl);
+            return Task.FromResult(uri != null || ContainsPWAAppInfoJson(pathOrUrl));
         }
 
         private WebManifestJson? _webManifest;

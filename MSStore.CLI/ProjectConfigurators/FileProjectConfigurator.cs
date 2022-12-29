@@ -56,21 +56,21 @@ namespace MSStore.CLI.ProjectConfigurators
 
         public abstract IEnumerable<BuildArch>? DefaultBuildArchs { get; }
 
-        public bool CanConfigure(string pathOrUrl)
+        public Task<bool> CanConfigureAsync(string pathOrUrl, CancellationToken ct)
         {
             if (string.IsNullOrEmpty(pathOrUrl))
             {
-                return false;
+                return Task.FromResult(false);
             }
 
             try
             {
                 DirectoryInfo directoryPath = new DirectoryInfo(pathOrUrl);
-                return SupportedProjectPattern.Any(y => directoryPath.GetFiles(y).Any());
+                return Task.FromResult(SupportedProjectPattern.Any(y => directoryPath.GetFiles(y).Any()));
             }
             catch
             {
-                return false;
+                return Task.FromResult(false);
             }
         }
 

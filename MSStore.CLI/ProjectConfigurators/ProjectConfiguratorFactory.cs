@@ -2,7 +2,8 @@
 // Licensed under the MIT License.
 
 using System;
-using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace MSStore.CLI.ProjectConfigurators
@@ -16,8 +17,18 @@ namespace MSStore.CLI.ProjectConfigurators
             _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         }
 
-        public IProjectConfigurator? FindProjectConfigurator(string pathOrUrl) =>
-            _serviceProvider.GetServices<IProjectConfigurator>().FirstOrDefault(
-                x => x.CanConfigure(pathOrUrl));
+        public async Task<IProjectConfigurator?> FindProjectConfiguratorAsync(string pathOrUrl, CancellationToken ct)
+        {
+            var projectConfigurators = _serviceProvider.GetServices<IProjectConfigurator>();
+            foreach (var projectConfigurator in projectConfigurators)
+            {
+                if (await projectConfigurator.CanConfigureAsync(pathOrUrl, ct))
+                {
+                    return projectConfigurator;
+                }
+            }
+
+            return null;
+        }
     }
 }
