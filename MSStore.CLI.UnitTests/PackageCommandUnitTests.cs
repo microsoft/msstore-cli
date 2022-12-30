@@ -359,6 +359,11 @@ namespace MSStore.CLI.UnitTests
         [DataRow("Yarn")]
         public async Task PackageCommandForReactNativeNpmAppsShouldCallMSBuild(string manifestType)
         {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Assert.Inconclusive("This test is only valid on Windows platforms");
+            }
+
             var path = CopyFilesRecursively(Path.Combine("ReactNativeProject", manifestType));
 
             var dirInfo = new DirectoryInfo(path);
