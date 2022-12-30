@@ -97,6 +97,17 @@ namespace MSStore.CLI.UnitTests
 
             AddDefaultFakeSuccessfulSubmission();
 
+            var dirInfo = new DirectoryInfo(path);
+
+            if (manifestType == "Npm")
+            {
+                SetupNpmListReactNative(dirInfo, false);
+            }
+            else
+            {
+                SetupYarnListReactNative(dirInfo, false);
+            }
+
             var result = await ParseAndInvokeAsync(
                 new string[]
                 {
@@ -107,6 +118,45 @@ namespace MSStore.CLI.UnitTests
 
             result.Should().Contain("Submission commit success! Here is some data:");
             result.Should().Contain("test.appx");
+        }
+
+        [TestMethod]
+        [DataRow("Npm")]
+        [DataRow("Yarn")]
+        public async Task PublishCommandForReactNativeAppsShouldUploadAppxUpload(string manifestType)
+        {
+            var path = CopyFilesRecursively(Path.Combine("ReactNativeProject", manifestType));
+
+            var appxManifest = ReactNativeProjectConfigurator.GetAppXManifest(new DirectoryInfo(path));
+
+            UWPProjectConfigurator.UpdateManifest(appxManifest.FullName, FakeApps[0], "publisher");
+
+            var appPackagesFolder = Directory.CreateDirectory(Path.Combine(appxManifest.Directory!.FullName, "AppPackages"));
+            await File.WriteAllTextAsync(Path.Combine(appPackagesFolder.FullName, "test.appxupload"), string.Empty);
+
+            AddDefaultFakeSuccessfulSubmission();
+
+            var dirInfo = new DirectoryInfo(path);
+
+            if (manifestType == "Npm")
+            {
+                SetupNpmListReactNative(dirInfo, true);
+            }
+            else
+            {
+                SetupYarnListReactNative(dirInfo, true);
+            }
+
+            var result = await ParseAndInvokeAsync(
+                new string[]
+                {
+                    "publish",
+                    path,
+                    "--verbose"
+                });
+
+            result.Should().Contain("Submission commit success! Here is some data:");
+            result.Should().Contain("test.appxupload");
         }
     }
 }

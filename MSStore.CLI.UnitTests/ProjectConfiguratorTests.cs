@@ -16,6 +16,13 @@ namespace MSStore.CLI.UnitTests
             AddFakeApps();
         }
 
+        private static string CleanResult(string result)
+        {
+            return result
+                .Replace(Environment.NewLine, " ")
+                .Replace("  ", " ");
+        }
+
         [TestMethod]
         public async Task ProjectConfiguratorParsesFlutterProject()
         {
@@ -57,7 +64,7 @@ namespace MSStore.CLI.UnitTests
                     "--verbose"
                 });
 
-            result = result.Replace(Environment.NewLine, string.Empty);
+            result = CleanResult(result);
 
             ExternalCommandExecutor.VerifyAll();
 
@@ -123,7 +130,7 @@ namespace MSStore.CLI.UnitTests
                     "--verbose"
                 });
 
-            result = result.Replace(Environment.NewLine, string.Empty);
+            result = CleanResult(result);
 
             ExternalCommandExecutor.VerifyAll();
 
@@ -142,18 +149,9 @@ namespace MSStore.CLI.UnitTests
 
             var dirInfo = new DirectoryInfo(path);
 
-            ExternalCommandExecutor
-                .Setup(x => x.RunAsync(
-                    It.Is<string>(s => s == "npm"),
-                    It.Is<string>(s => s == "install"),
-                    It.Is<string>(s => s == dirInfo.FullName),
-                    It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new Services.ExternalCommandExecutionResult
-                {
-                    ExitCode = 0,
-                    StdOut = string.Empty,
-                    StdErr = string.Empty
-                });
+            SetupNpmListReactNative(dirInfo, false);
+
+            SetupNpmInstall(dirInfo);
 
             ExternalCommandExecutor
                 .Setup(x => x.RunAsync(
@@ -189,7 +187,7 @@ namespace MSStore.CLI.UnitTests
                     "--verbose"
                 });
 
-            result = result.Replace(Environment.NewLine, string.Empty);
+            result = CleanResult(result);
 
             ExternalCommandExecutor.VerifyAll();
 
@@ -208,18 +206,9 @@ namespace MSStore.CLI.UnitTests
 
             var dirInfo = new DirectoryInfo(path);
 
-            ExternalCommandExecutor
-                .Setup(x => x.RunAsync(
-                    It.Is<string>(s => s == "npm"),
-                    It.Is<string>(s => s == "install"),
-                    It.Is<string>(s => s == dirInfo.FullName),
-                    It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new Services.ExternalCommandExecutionResult
-                {
-                    ExitCode = 0,
-                    StdOut = string.Empty,
-                    StdErr = string.Empty
-                });
+            SetupNpmListReactNative(dirInfo, false);
+
+            SetupNpmInstall(dirInfo);
 
             ExternalCommandExecutor
                 .Setup(x => x.RunAsync(
@@ -242,7 +231,7 @@ namespace MSStore.CLI.UnitTests
                     "--verbose"
                 });
 
-            result = result.Replace(Environment.NewLine, string.Empty);
+            result = CleanResult(result);
 
             ExternalCommandExecutor.VerifyAll();
 
@@ -261,18 +250,9 @@ namespace MSStore.CLI.UnitTests
 
             var dirInfo = new DirectoryInfo(path);
 
-            ExternalCommandExecutor
-                .Setup(x => x.RunAsync(
-                    It.Is<string>(s => s == "yarn"),
-                    It.Is<string>(s => s == "install"),
-                    It.Is<string>(s => s == dirInfo.FullName),
-                    It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new Services.ExternalCommandExecutionResult
-                {
-                    ExitCode = 0,
-                    StdOut = string.Empty,
-                    StdErr = string.Empty
-                });
+            SetupYarnListReactNative(dirInfo, false);
+
+            SetupYarnInstall(dirInfo);
 
             ExternalCommandExecutor
                 .Setup(x => x.RunAsync(
@@ -308,7 +288,7 @@ namespace MSStore.CLI.UnitTests
                     "--verbose"
                 });
 
-            result = result.Replace(Environment.NewLine, string.Empty);
+            result = CleanResult(result);
 
             ExternalCommandExecutor.VerifyAll();
 
@@ -327,18 +307,9 @@ namespace MSStore.CLI.UnitTests
 
             var dirInfo = new DirectoryInfo(path);
 
-            ExternalCommandExecutor
-                .Setup(x => x.RunAsync(
-                    It.Is<string>(s => s == "yarn"),
-                    It.Is<string>(s => s == "install"),
-                    It.Is<string>(s => s == dirInfo.FullName),
-                    It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new Services.ExternalCommandExecutionResult
-                {
-                    ExitCode = 0,
-                    StdOut = string.Empty,
-                    StdErr = string.Empty
-                });
+            SetupYarnListReactNative(dirInfo, false);
+
+            SetupYarnInstall(dirInfo);
 
             ExternalCommandExecutor
                 .Setup(x => x.RunAsync(
@@ -361,7 +332,7 @@ namespace MSStore.CLI.UnitTests
                     "--verbose"
                 });
 
-            result = result.Replace(Environment.NewLine, string.Empty);
+            result = CleanResult(result);
 
             ExternalCommandExecutor.VerifyAll();
 
@@ -371,6 +342,133 @@ namespace MSStore.CLI.UnitTests
             var packageJsonFileContents = await File.ReadAllTextAsync(Path.Combine(path, "package.json"));
 
             packageJsonFileContents.Should().Contain("appx");
+        }
+
+        [TestMethod]
+        public async Task ProjectConfiguratorParsesReactNativeNpmProject()
+        {
+            var path = CopyFilesRecursively(Path.Combine("ReactNativeProject", "Npm"));
+
+            var dirInfo = new DirectoryInfo(path);
+
+            SetupNpmListReactNative(dirInfo, true);
+
+            SetupNpmInstall(dirInfo);
+
+            var result = await ParseAndInvokeAsync(
+                new string[]
+                {
+                    "init",
+                    path,
+                    "--verbose"
+                });
+
+            result = CleanResult(result);
+
+            ExternalCommandExecutor.VerifyAll();
+
+            result.Should().Contain("This seems to be a React Native project.");
+            result.Should().Contain("is now configured to build to the Microsoft Store!");
+
+            await ValidateReactNativeAppxManifestWasUpdatedAsync(path);
+        }
+
+        [TestMethod]
+        public async Task ProjectConfiguratorParsesAlreadyConfiguredReactNativeNpmProject()
+        {
+            var path = CopyFilesRecursively(Path.Combine("ReactNativeProject", "Npm"));
+
+            var dirInfo = new DirectoryInfo(path);
+
+            SetupNpmListReactNative(dirInfo, true);
+
+            SetupNpmInstall(dirInfo);
+
+            var result = await ParseAndInvokeAsync(
+                new string[]
+                {
+                    "init",
+                    path,
+                    "--verbose"
+                });
+
+            result = CleanResult(result);
+
+            ExternalCommandExecutor.VerifyAll();
+
+            result.Should().Contain("This seems to be a React Native project.");
+            result.Should().Contain("is now configured to build to the Microsoft Store!");
+
+            await ValidateReactNativeAppxManifestWasUpdatedAsync(path);
+        }
+
+        [TestMethod]
+        public async Task ProjectConfiguratorParsesReactNativeYarnProject()
+        {
+            var path = CopyFilesRecursively(Path.Combine("ReactNativeProject", "Yarn"));
+
+            var dirInfo = new DirectoryInfo(path);
+
+            SetupYarnListReactNative(dirInfo, true);
+
+            SetupYarnInstall(dirInfo);
+
+            var result = await ParseAndInvokeAsync(
+                new string[]
+                {
+                    "init",
+                    path,
+                    "--verbose"
+                });
+
+            result = CleanResult(result);
+
+            ExternalCommandExecutor.VerifyAll();
+
+            result.Should().Contain("This seems to be a React Native project.");
+            result.Should().Contain("is now configured to build to the Microsoft Store!");
+
+            await ValidateReactNativeAppxManifestWasUpdatedAsync(path);
+        }
+
+        [TestMethod]
+        public async Task ProjectConfiguratorParsesAlreadyConfiguredReactNativeYarnProject()
+        {
+            var path = CopyFilesRecursively(Path.Combine("ReactNativeProject", "Yarn"));
+
+            var dirInfo = new DirectoryInfo(path);
+
+            SetupYarnListReactNative(dirInfo, true);
+
+            SetupYarnInstall(dirInfo);
+
+            var result = await ParseAndInvokeAsync(
+                new string[]
+                {
+                    "init",
+                    path,
+                    "--verbose"
+                });
+
+            result = CleanResult(result);
+
+            ExternalCommandExecutor.VerifyAll();
+
+            result.Should().Contain("This seems to be a React Native project.");
+            result.Should().Contain("is now configured to build to the Microsoft Store!");
+
+            await ValidateReactNativeAppxManifestWasUpdatedAsync(path);
+        }
+
+        private async Task ValidateReactNativeAppxManifestWasUpdatedAsync(string path)
+        {
+            var dir = new DirectoryInfo(Path.Combine(path, "windows"));
+            dir.GetDirectories().Should().HaveCount(1);
+            var projectDir = dir.GetDirectories()[0];
+            var appxManifestFileContents = await File.ReadAllTextAsync(Path.Combine(projectDir.FullName, "Package.appxmanifest"));
+
+            appxManifestFileContents.Should().Contain(FakeApps[0].Id);
+            appxManifestFileContents.Should().Contain(FakeApps[0].PrimaryName);
         }
 
         [TestMethod]
@@ -386,7 +484,7 @@ namespace MSStore.CLI.UnitTests
                     "--verbose"
                 });
 
-            result = result.Replace(Environment.NewLine, string.Empty);
+            result = CleanResult(result);
 
             result.Should().Contain("This seems to be a UWP project.");
 

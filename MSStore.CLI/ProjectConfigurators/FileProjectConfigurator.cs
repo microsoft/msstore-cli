@@ -56,7 +56,7 @@ namespace MSStore.CLI.ProjectConfigurators
 
         public abstract IEnumerable<BuildArch>? DefaultBuildArchs { get; }
 
-        public Task<bool> CanConfigureAsync(string pathOrUrl, CancellationToken ct)
+        public virtual Task<bool> CanConfigureAsync(string pathOrUrl, CancellationToken ct)
         {
             if (string.IsNullOrEmpty(pathOrUrl))
             {
@@ -74,7 +74,7 @@ namespace MSStore.CLI.ProjectConfigurators
             }
         }
 
-        protected (DirectoryInfo projectRootPath, FileInfo flutterProjectFiles) GetInfo(string pathOrUrl)
+        protected (DirectoryInfo projectRootPath, FileInfo projectFiles) GetInfo(string pathOrUrl)
         {
             DirectoryInfo projectRootPath = new DirectoryInfo(pathOrUrl);
             FileInfo[] manifestFiles = projectRootPath.GetFiles(SupportedProjectPattern.First(), SearchOption.TopDirectoryOnly);
@@ -123,7 +123,14 @@ namespace MSStore.CLI.ProjectConfigurators
 
             if (inputDirectory == null)
             {
-                inputDirectory = new DirectoryInfo(Path.Combine(projectRootPath.FullName, DefaultInputSubdirectory));
+                inputDirectory = GetInputDirectory(projectRootPath);
+            }
+
+            if (!inputDirectory.Exists)
+            {
+                AnsiConsole.MarkupLine($"[red bold]Input directory does not exist: {inputDirectory.FullName}[/]");
+                AnsiConsole.MarkupLine($"[red]Make sure you build/package the project before trying to publish it.[/]");
+                return -2;
             }
 
             var output = projectRootPath.CreateSubdirectory(OutputSubdirectory);
@@ -140,6 +147,11 @@ namespace MSStore.CLI.ProjectConfigurators
             Logger.LogInformation("Trying to publish these {FileCount} files: {FileNames}", packageFiles.Count(), string.Join(", ", packageFiles.Select(f => $"'{f.FullName}'")));
 
             return await storePackagedAPI.PublishAsync(app, GetFirstSubmissionDataAsync, output, packageFiles, _browserLauncher, _consoleReader, _zipFileManager, _fileDownloader, _azureBlobManager, _logger, ct);
+        }
+
+        protected virtual DirectoryInfo GetInputDirectory(DirectoryInfo projectRootPath)
+        {
+            return new DirectoryInfo(Path.Combine(projectRootPath.FullName, DefaultInputSubdirectory));
         }
     }
 }

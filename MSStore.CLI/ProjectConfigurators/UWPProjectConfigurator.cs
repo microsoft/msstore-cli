@@ -32,7 +32,7 @@ namespace MSStore.CLI.ProjectConfigurators
 
         public override string[] SupportedProjectPattern { get; } = new[] { "Package.appxmanifest" };
 
-        public override string[] PackageFilesExtensionInclude => new[] { ".msixupload" };
+        public override string[] PackageFilesExtensionInclude => new[] { ".msixupload", ".appxupload" };
         public override string[]? PackageFilesExtensionExclude { get; }
         public override SearchOption PackageFilesSearchOption { get; } = SearchOption.TopDirectoryOnly;
         public override PublishFileSearchFilterStrategy PublishFileSearchFilterStrategy { get; } = PublishFileSearchFilterStrategy.Newest;
@@ -174,8 +174,13 @@ namespace MSStore.CLI.ProjectConfigurators
 
         public override async Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(string pathOrUrl, DevCenterApplication? app, IEnumerable<BuildArch>? buildArchs, DirectoryInfo? output, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
-            var (projectRootPath, manifestFile) = GetInfo(pathOrUrl);
+            (DirectoryInfo projectRootPath, _) = GetInfo(pathOrUrl);
 
+            return await PackageAsync(projectRootPath, buildArchs, null, PackageFilesExtensionInclude, output, _externalCommandExecutor, Logger, ct);
+        }
+
+        internal static async Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(DirectoryInfo projectRootPath, IEnumerable<BuildArch>? buildArchs, FileInfo? solutionPath, string[] packageFilesExtensionInclude, DirectoryInfo? output, IExternalCommandExecutor externalCommandExecutor, ILogger logger, CancellationToken ct)
+        {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 AnsiConsole.MarkupLine("[red]Packaging UWP apps is only supported on Windows[/]");
@@ -192,11 +197,13 @@ namespace MSStore.CLI.ProjectConfigurators
                 return (-1, null);
             }
 
+            var workingDirectory = solutionPath?.Directory?.FullName ?? projectRootPath.FullName;
+
             var msbuildPath = await AnsiConsole.Status().StartAsync("Finding MSBuild...", async ctx =>
             {
                 try
                 {
-                    var result = await _externalCommandExecutor.RunAsync($"\"{vswhere}\"", "-latest -requires Microsoft.Component.MSBuild -find MSBuild\\**\\Bin\\MSBuild.exe", projectRootPath.FullName, ct);
+                    var result = await externalCommandExecutor.RunAsync($"\"{vswhere}\"", "-latest -requires Microsoft.Component.MSBuild -find MSBuild\\**\\Bin\\MSBuild.exe", workingDirectory, ct);
                     if (result.ExitCode == 0 && result.StdOut.Contains("MSBuild.exe", StringComparison.OrdinalIgnoreCase))
                     {
                         ctx.SuccessStatus("Found MSBuild.");
@@ -209,7 +216,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogError(ex, "Could not find MSBuild.");
+                    logger.LogError(ex, "Could not find MSBuild.");
                     throw new MSStoreException("Could not find MSBuild.");
                 }
             });
@@ -224,7 +231,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 try
                 {
                     var msBuildParams = $"/t:restore";
-                    var result = await _externalCommandExecutor.RunAsync($"\"{msbuildPath}\"", msBuildParams, projectRootPath.FullName, ct);
+                    var result = await externalCommandExecutor.RunAsync($"\"{msbuildPath}\"", msBuildParams, workingDirectory, ct);
                     if (result.ExitCode != 0)
                     {
                         throw new MSStoreException(result.StdErr);
@@ -234,17 +241,14 @@ namespace MSStore.CLI.ProjectConfigurators
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogError(ex, "Failed to restore packages.");
+                    logger.LogError(ex, "Failed to restore packages.");
                     throw new MSStoreException("Failed to restore packages.");
                 }
             });
 
-            if (output == null)
-            {
-                output = new DirectoryInfo(Path.Join(projectRootPath.FullName, "AppPackages"));
-            }
+            output ??= new DirectoryInfo(Path.Join(projectRootPath.FullName, "AppPackages"));
 
-            var msixUploadFile = await AnsiConsole.Status().StartAsync("Building MSIX...", async ctx =>
+            var bundleUploadFile = await AnsiConsole.Status().StartAsync("Building MSIX...", async ctx =>
             {
                 try
                 {
@@ -262,37 +266,49 @@ namespace MSStore.CLI.ProjectConfigurators
                     }
 
                     var msBuildParams = $"/p:Configuration=Release;AppxBundle=Always;Platform={platform};AppxBundlePlatforms=\"{appxBundlePlatforms}\";AppxPackageDir=\"{output.FullName}\";UapAppxPackageBuildMode=StoreUpload";
-                    var result = await _externalCommandExecutor.RunAsync($"(\"{msbuildPath}\"", $"{msBuildParams})", projectRootPath.FullName, ct);
+
+                    var result = await externalCommandExecutor.RunAsync($"(\"{msbuildPath}\"", $"{msBuildParams})", workingDirectory, ct);
                     if (result.ExitCode != 0)
                     {
                         throw new MSStoreException(result.StdErr);
                     }
 
-                    var msixUploadFile = result
+                    var bundleUploadFile = result
                         .StdOut
                         .Split(Environment.NewLine)
-                        .FirstOrDefault(l => l.Contains(".msixupload"))
+                        .FirstOrDefault(l =>
+                        {
+                            foreach (string extension in packageFilesExtensionInclude)
+                            {
+                                if (l.Contains(extension))
+                                {
+                                    return true;
+                                }
+                            }
+
+                            return false;
+                        })
                         ?.Split("->")
                         ?.Last()
                         ?.Trim();
 
-                    if (msixUploadFile == null)
+                    if (bundleUploadFile == null)
                     {
-                        throw new MSStoreException("Could not find '.msixupload' file!");
+                        throw new MSStoreException($"Could not find any file with extensions {string.Join(", ", $"'{packageFilesExtensionInclude}'")}!");
                     }
 
                     ctx.SuccessStatus("MSIX built successfully!");
 
-                    return msixUploadFile;
+                    return bundleUploadFile;
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogError(ex, "Failed to build MSIX.");
-                    throw new MSStoreException("Failed to build MSIX.");
+                    logger.LogError(ex, "Failed to build MSIX.");
+                    throw new MSStoreException("Failed to build MSIX.", ex);
                 }
             });
 
-            return (0, msixUploadFile != null ? new FileInfo(msixUploadFile).Directory : null);
+            return (0, bundleUploadFile != null ? new FileInfo(bundleUploadFile).Directory : null);
         }
 
         public override Task<string?> GetAppIdAsync(FileInfo? fileInfo, CancellationToken ct)
@@ -302,6 +318,11 @@ namespace MSStore.CLI.ProjectConfigurators
                 return Task.FromResult<string?>(null);
             }
 
+            return Task.FromResult(GetAppId(fileInfo));
+        }
+
+        internal static string? GetAppId(FileInfo fileInfo)
+        {
             XmlDocument xmlDoc = new XmlDocument
             {
                 PreserveWhitespace = true
@@ -317,8 +338,7 @@ namespace MSStore.CLI.ProjectConfigurators
             nsmgr.AddNamespace("build", buildNamespace);
 
             var buildItemAppId = xmlDoc.SelectSingleNode("/ns:Package/build:Metadata/build:Item[@Name='MSStoreCLIAppId']", nsmgr);
-
-            return Task.FromResult(buildItemAppId?.Attributes?["Value"]?.Value);
+            return buildItemAppId?.Attributes?["Value"]?.Value;
         }
     }
 }

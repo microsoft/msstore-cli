@@ -35,7 +35,10 @@ namespace MSStore.CLI.UnitTests
             }
 
             var path = CopyFilesRecursively("UWPProject");
-            DefaultMSBuildExecution(path);
+
+            var dirInfo = new DirectoryInfo(path);
+
+            DefaultMSBuildExecution(dirInfo);
 
             ExternalCommandExecutor
                 .Setup(x => x.RunAsync(
@@ -44,12 +47,12 @@ namespace MSStore.CLI.UnitTests
                     It.Is<string>(s =>
                         s.Contains("/p:Configuration=Release;AppxBundle=Always;Platform=X64;AppxBundlePlatforms=\"X64|ARM64\"")
                         && s.EndsWith("UapAppxPackageBuildMode=StoreUpload)")),
-                    It.Is<string>(s => s == new DirectoryInfo(path).FullName),
+                    It.Is<string>(s => s == dirInfo.FullName),
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult
                 {
                     ExitCode = 0,
-                    StdOut = $"{Environment.NewLine}...{Environment.NewLine}abc -> TestFile.msixupload{Environment.NewLine}",
+                    StdOut = $"{Environment.NewLine}...{Environment.NewLine}abc -> {Path.Combine(path, "TestFile.msixupload")}{Environment.NewLine}",
                     StdErr = string.Empty
                 });
 
@@ -73,7 +76,10 @@ namespace MSStore.CLI.UnitTests
             }
 
             var path = CopyFilesRecursively("UWPProject");
-            DefaultMSBuildExecution(path);
+
+            var dirInfo = new DirectoryInfo(path);
+
+            DefaultMSBuildExecution(dirInfo);
 
             var customPath = Path.Combine(Path.GetTempPath(), "CustomPath");
 
@@ -85,7 +91,7 @@ namespace MSStore.CLI.UnitTests
                         s.Contains("/p:Configuration=Release;AppxBundle=Always;Platform=X64;AppxBundlePlatforms=\"X64|ARM64\"")
                         && s.Contains($"AppxPackageDir=\"{customPath}\"")
                         && s.EndsWith("UapAppxPackageBuildMode=StoreUpload)")),
-                    It.Is<string>(s => s == new DirectoryInfo(path).FullName),
+                    It.Is<string>(s => s == dirInfo.FullName),
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult
                 {
@@ -110,7 +116,7 @@ namespace MSStore.CLI.UnitTests
             ExternalCommandExecutor.VerifyAll();
         }
 
-        private void DefaultMSBuildExecution(string path)
+        private void DefaultMSBuildExecution(DirectoryInfo dirInfo)
         {
             ExternalCommandExecutor
                             .Setup(x => x.RunAsync(
@@ -118,7 +124,7 @@ namespace MSStore.CLI.UnitTests
                                     s.Contains("vswhere.exe")),
                                 It.Is<string>(s =>
                                     s.Contains("-latest -requires Microsoft.Component.MSBuild -find MSBuild\\**\\Bin\\MSBuild.exe")),
-                                It.Is<string>(s => s == new DirectoryInfo(path).FullName),
+                                It.Is<string>(s => s == dirInfo.FullName),
                                 It.IsAny<CancellationToken>()))
                             .ReturnsAsync(new Services.ExternalCommandExecutionResult
                             {
@@ -131,7 +137,7 @@ namespace MSStore.CLI.UnitTests
                 .Setup(x => x.RunAsync(
                     It.Is<string>(s => s.Contains("\"MSBuild.exe\"")),
                     It.Is<string>(s => s.Contains("/t:restore")),
-                    It.Is<string>(s => s == new DirectoryInfo(path).FullName),
+                    It.Is<string>(s => s == dirInfo.FullName),
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult
                 {
@@ -166,13 +172,16 @@ namespace MSStore.CLI.UnitTests
         public async Task PackageCommandForFlutterAppsShouldCallFlutter()
         {
             var path = CopyFilesRecursively("FlutterProject");
-            SetupPubGet(path);
+
+            var dirInfo = new DirectoryInfo(path);
+
+            SetupPubGet(dirInfo);
 
             ExternalCommandExecutor
                 .Setup(x => x.RunAsync(
                     It.Is<string>(s => s == "flutter"),
                     It.Is<string>(s => s == "pub run msix:build --store"),
-                    It.Is<string>(s => s == new DirectoryInfo(path).FullName),
+                    It.Is<string>(s => s == dirInfo.FullName),
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult
                 {
@@ -185,7 +194,7 @@ namespace MSStore.CLI.UnitTests
                 .Setup(x => x.RunAsync(
                     It.Is<string>(s => s == "flutter"),
                     It.Is<string>(s => s == "pub run msix:pack --store"),
-                    It.Is<string>(s => s == new DirectoryInfo(path).FullName),
+                    It.Is<string>(s => s == dirInfo.FullName),
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult
                 {
@@ -210,7 +219,10 @@ namespace MSStore.CLI.UnitTests
         public async Task PackageCommandForFlutterAppsShouldCallFlutterWithOutputParameter()
         {
             var path = CopyFilesRecursively("FlutterProject");
-            SetupPubGet(path);
+
+            var dirInfo = new DirectoryInfo(path);
+
+            SetupPubGet(dirInfo);
 
             var customPath = Path.Combine(Path.GetTempPath(), "CustomPath");
 
@@ -218,7 +230,7 @@ namespace MSStore.CLI.UnitTests
                 .Setup(x => x.RunAsync(
                     It.Is<string>(s => s == "flutter"),
                     It.Is<string>(s => s == $"pub run msix:build --store --output-path \"{customPath}\""),
-                    It.Is<string>(s => s == new DirectoryInfo(path).FullName),
+                    It.Is<string>(s => s == dirInfo.FullName),
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult
                 {
@@ -231,7 +243,7 @@ namespace MSStore.CLI.UnitTests
                 .Setup(x => x.RunAsync(
                     It.Is<string>(s => s == "flutter"),
                     It.Is<string>(s => s == $"pub run msix:pack --store --output-path \"{customPath}\""),
-                    It.Is<string>(s => s == new DirectoryInfo(path).FullName),
+                    It.Is<string>(s => s == dirInfo.FullName),
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult
                 {
@@ -254,13 +266,13 @@ namespace MSStore.CLI.UnitTests
             result.Should().Contain(customPath);
         }
 
-        private void SetupPubGet(string path)
+        private void SetupPubGet(DirectoryInfo dirInfo)
         {
             ExternalCommandExecutor
                 .Setup(x => x.RunAsync(
                     It.Is<string>(s => s == "flutter"),
                     It.Is<string>(s => s == "pub get"),
-                    It.Is<string>(s => s == new DirectoryInfo(path).FullName),
+                    It.Is<string>(s => s == dirInfo.FullName),
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult
                 {
@@ -274,13 +286,18 @@ namespace MSStore.CLI.UnitTests
         public async Task PackageCommandForElectronNpmAppsShouldCallElectronNpm()
         {
             var path = CopyFilesRecursively(Path.Combine("ElectronProject", "Npm"));
-            SetupNpmInstall(path);
+
+            var dirInfo = new DirectoryInfo(path);
+
+            SetupNpmListReactNative(dirInfo, false);
+
+            SetupNpmInstall(dirInfo);
 
             ExternalCommandExecutor
                 .Setup(x => x.RunAsync(
                     It.Is<string>(s => s == "npx"),
                     It.Is<string>(s => s == "electron-builder build -w=appx --x64 --arm64"),
-                    It.Is<string>(s => s == new DirectoryInfo(path).FullName),
+                    It.Is<string>(s => s == dirInfo.FullName),
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult
                 {
@@ -305,13 +322,18 @@ namespace MSStore.CLI.UnitTests
         public async Task PackageCommandForElectronYarnAppsShouldCallElectronYarn()
         {
             var path = CopyFilesRecursively(Path.Combine("ElectronProject", "Yarn"));
-            SetupYarnInstall(path);
+
+            var dirInfo = new DirectoryInfo(path);
+
+            SetupYarnListReactNative(dirInfo, false);
+
+            SetupYarnInstall(dirInfo);
 
             ExternalCommandExecutor
                 .Setup(x => x.RunAsync(
                     It.Is<string>(s => s == "yarn"),
                     It.Is<string>(s => s == "run electron-builder build -w=appx --x64 --arm64"),
-                    It.Is<string>(s => s == new DirectoryInfo(path).FullName),
+                    It.Is<string>(s => s == dirInfo.FullName),
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult
                 {
@@ -332,36 +354,56 @@ namespace MSStore.CLI.UnitTests
             result.Should().Contain(path);
         }
 
-        private void SetupNpmInstall(string path)
+        [TestMethod]
+        [DataRow("Npm")]
+        [DataRow("Yarn")]
+        public async Task PackageCommandForReactNativeNpmAppsShouldCallMSBuild(string manifestType)
         {
-            ExternalCommandExecutor
-                .Setup(x => x.RunAsync(
-                    It.Is<string>(s => s == "npm"),
-                    It.Is<string>(s => s == "install"),
-                    It.Is<string>(s => s == new DirectoryInfo(path).FullName),
-                    It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new Services.ExternalCommandExecutionResult
-                {
-                    ExitCode = 0,
-                    StdOut = string.Empty,
-                    StdErr = string.Empty
-                });
-        }
+            var path = CopyFilesRecursively(Path.Combine("ReactNativeProject", manifestType));
 
-        private void SetupYarnInstall(string path)
-        {
+            var dirInfo = new DirectoryInfo(path);
+
+            if (manifestType == "Npm")
+            {
+                SetupNpmListReactNative(dirInfo, true);
+                SetupNpmInstall(dirInfo);
+            }
+            else
+            {
+                SetupYarnListReactNative(dirInfo, true);
+                SetupYarnInstall(dirInfo);
+            }
+
+            var windowsDir = new DirectoryInfo(Path.Combine(path, "windows"));
+
+            DefaultMSBuildExecution(windowsDir);
+
             ExternalCommandExecutor
                 .Setup(x => x.RunAsync(
-                    It.Is<string>(s => s == "yarn"),
-                    It.Is<string>(s => s == "install"),
-                    It.Is<string>(s => s == new DirectoryInfo(path).FullName),
+                    It.Is<string>(s =>
+                        s.Contains("\"MSBuild.exe\"")),
+                    It.Is<string>(s =>
+                        s.Contains("/p:Configuration=Release;AppxBundle=Always;Platform=X64;AppxBundlePlatforms=\"X64|ARM64\"")
+                        && s.EndsWith("UapAppxPackageBuildMode=StoreUpload)")),
+                    It.Is<string>(s => s == windowsDir.FullName),
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult
                 {
                     ExitCode = 0,
-                    StdOut = string.Empty,
+                    StdOut = $"{Environment.NewLine}...{Environment.NewLine}abc -> {Path.Combine(path, "TestFile.msixupload")}{Environment.NewLine}",
                     StdErr = string.Empty
                 });
+
+            var result = await ParseAndInvokeAsync(
+                new string[]
+                {
+                    "package",
+                    path,
+                    "--verbose"
+                });
+
+            result.Should().Contain("The packaged app is here:");
+            result.Should().Contain(path);
         }
     }
 }

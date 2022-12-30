@@ -223,6 +223,7 @@ namespace MSStore.CLI.UnitTests
                         .AddScoped<IProjectConfigurator, UWPProjectConfigurator>()
                         .AddScoped<IProjectConfigurator, PWAProjectConfigurator>()
                         .AddScoped<IProjectConfigurator, ElectronProjectConfigurator>()
+                        .AddScoped<IProjectConfigurator, ReactNativeProjectConfigurator>()
                         .AddScoped<ICLIConfigurator, CLIConfigurator>()
                         .AddSingleton(FakeStoreAPIFactory.Object)
                         .AddScoped(sp => PWABuilderClient.Object)
@@ -441,6 +442,70 @@ namespace MSStore.CLI.UnitTests
                 .ReturnsAsync(new DevCenterCommitResponse
                 {
                     Status = "CommitStarted",
+                });
+        }
+
+        protected void SetupNpmInstall(DirectoryInfo dirInfo)
+        {
+            ExternalCommandExecutor
+                .Setup(x => x.RunAsync(
+                    It.Is<string>(s => s == "npm"),
+                    It.Is<string>(s => s == "install"),
+                    It.Is<string>(s => s == dirInfo.FullName),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new ExternalCommandExecutionResult
+                {
+                    ExitCode = 0,
+                    StdOut = string.Empty,
+                    StdErr = string.Empty
+                });
+        }
+
+        protected void SetupYarnInstall(DirectoryInfo dirInfo)
+        {
+            ExternalCommandExecutor
+                .Setup(x => x.RunAsync(
+                    It.Is<string>(s => s == "yarn"),
+                    It.Is<string>(s => s == "install"),
+                    It.Is<string>(s => s == dirInfo.FullName),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new ExternalCommandExecutionResult
+                {
+                    ExitCode = 0,
+                    StdOut = string.Empty,
+                    StdErr = string.Empty
+                });
+        }
+
+        protected void SetupNpmListReactNative(DirectoryInfo dirInfo, bool installed)
+        {
+            ExternalCommandExecutor
+                .Setup(x => x.RunAsync(
+                    It.Is<string>(s => s == "npm"),
+                    It.Is<string>(s => s == "list react-native"),
+                    It.Is<string>(s => s == dirInfo.FullName),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new ExternalCommandExecutionResult
+                {
+                    ExitCode = 0,
+                    StdOut = installed ? "`-- react-native@" : "`-- (empty)",
+                    StdErr = string.Empty
+                });
+        }
+
+        protected void SetupYarnListReactNative(DirectoryInfo dirInfo, bool installed)
+        {
+            ExternalCommandExecutor
+                .Setup(x => x.RunAsync(
+                    It.Is<string>(s => s == "yarn"),
+                    It.Is<string>(s => s == "list --pattern react-native"),
+                    It.Is<string>(s => s == dirInfo.FullName),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new ExternalCommandExecutionResult
+                {
+                    ExitCode = 0,
+                    StdOut = installed ? "─ react-native@0.70.0" : "Done in 0s.",
+                    StdErr = string.Empty
                 });
         }
 

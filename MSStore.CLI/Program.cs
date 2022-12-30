@@ -80,6 +80,7 @@ namespace MSStore.CLI
                         .AddScoped<IProjectConfigurator, UWPProjectConfigurator>()
                         .AddScoped<IProjectConfigurator, PWAProjectConfigurator>()
                         .AddScoped<IProjectConfigurator, ElectronProjectConfigurator>()
+                        .AddScoped<IProjectConfigurator, ReactNativeProjectConfigurator>()
                         .AddScoped<ICLIConfigurator, CLIConfigurator>()
                         .AddSingleton<IStoreAPIFactory, StoreAPIFactory>()
                         .AddScoped<IPWABuilderClient, PWABuilderClient>()

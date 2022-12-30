@@ -1,0 +1,10 @@
+{
+  "name": "react_native_win_app_with_npm",
+  "version": "0.0.1",
+  "private": true,
+  "dependencies": {
+    "react": "18.1.0",
+    "react-native": "0.70.0",
+    "react-native-windows": "0.70.10"
+  }
+}
