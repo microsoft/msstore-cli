@@ -88,7 +88,12 @@ namespace MSStore.CLI.Commands.Submission
 
                 if (status is DevCenterSubmission devCenterSubmission && devCenterSubmission.Id != null)
                 {
-                    devCenterSubmission?.StatusDetails?.PrintAllTables(ProductId, devCenterSubmission.Id, _logger);
+                    if (devCenterSubmission.Status != null)
+                    {
+                        AnsiConsole.MarkupLine($"Submission Status = [green]{devCenterSubmission.Status}[/]");
+                    }
+
+                    devCenterSubmission.StatusDetails?.PrintAllTables(ProductId, devCenterSubmission.Id, _logger);
                 }
                 else
                 {
