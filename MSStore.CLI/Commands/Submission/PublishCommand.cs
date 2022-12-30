@@ -7,6 +7,7 @@ using System.CommandLine.Invocation;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Logging;
+using MSStore.API;
 using MSStore.CLI.Helpers;
 using MSStore.CLI.Services;
 using Spectre.Console;
@@ -73,9 +74,21 @@ namespace MSStore.CLI.Commands.Submission
 
                             var submissionCommit = await storePackagedAPI.CommitSubmissionAsync(application.Id, submission.Id, ct);
 
-                            ctx.SuccessStatus($"Submission Commited with status [green u]{submissionCommit.Status}[/]");
+                            if (submissionCommit == null)
+                            {
+                                throw new MSStoreException("Submission commit failed");
+                            }
 
-                            return 0;
+                            if (submissionCommit.Status != null)
+                            {
+                                ctx.SuccessStatus($"Submission Commited with status [green u]{submissionCommit.Status}[/]");
+                                return 0;
+                            }
+
+                            ctx.ErrorStatus($"Could not commit submission for application with ID '{ProductId}'");
+                            AnsiConsole.MarkupLine($"[red]{submissionCommit.ToErrorMessage()}[/]");
+
+                            return -1;
                         }
                         else
                         {

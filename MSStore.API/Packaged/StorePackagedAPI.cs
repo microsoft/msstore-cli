@@ -236,20 +236,22 @@ namespace MSStore.API.Packaged
                 ct);
         }
 
-        public async Task<DevCenterCommitResponse> CommitSubmissionAsync(string productId, string submissionId, CancellationToken ct = default)
+        public async Task<DevCenterCommitResponse?> CommitSubmissionAsync(string productId, string submissionId, CancellationToken ct = default)
         {
             AssertClientInitialized();
 
-            return await _devCenterClient.InvokeAsync<DevCenterCommitResponse>(
-                HttpMethod.Post,
-                string.Format(
-                    CultureInfo.InvariantCulture,
-                    DevCenterCommitSubmissionTemplate,
-                    DevCenterVersion,
-                    productId,
-                    submissionId),
-                null,
-                ct);
+            var ret = await _devCenterClient.InvokeAsync<string>(
+                    HttpMethod.Post,
+                    string.Format(
+                        CultureInfo.InvariantCulture,
+                        DevCenterCommitSubmissionTemplate,
+                        DevCenterVersion,
+                        productId,
+                        submissionId),
+                    null,
+                    ct);
+
+            return JsonSerializer.Deserialize(ret, typeof(DevCenterCommitResponse), SourceGenerationContext.GetCustom()) as DevCenterCommitResponse;
         }
 
         public async Task<DevCenterSubmissionStatusResponse> GetSubmissionStatusAsync(string productId, string submissionId, CancellationToken ct = default)

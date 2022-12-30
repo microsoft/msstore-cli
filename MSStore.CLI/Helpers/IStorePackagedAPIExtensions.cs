@@ -399,6 +399,20 @@ namespace MSStore.CLI.Helpers
 
             var submissionCommit = await storePackagedAPI.CommitSubmissionAsync(app.Id, submission.Id, ct);
 
+            if (submissionCommit == null)
+            {
+                AnsiConsole.MarkupLine(":collision: [bold red]Could not commit submission.[/]");
+                return -1;
+            }
+
+            if (submissionCommit.Status == null)
+            {
+                AnsiConsole.MarkupLine(":collision: [bold red]Could not retrieve submission status.[/]");
+                AnsiConsole.MarkupLine($"[red]{submissionCommit.ToErrorMessage()}[/]");
+
+                return -2;
+            }
+
             AnsiConsole.WriteLine("Waiting for the submission commit processing to complete. This may take a couple of minutes.");
             AnsiConsole.MarkupLine($"Submission Committed - Status=[green u]{submissionCommit.Status}[/]");
 
