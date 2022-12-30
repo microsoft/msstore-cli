@@ -158,7 +158,7 @@ namespace MSStore.CLI.ProjectConfigurators
             var application = xmlDoc.SelectSingleNode("/ns:Package/ns:Applications", nsmgr)?.ChildNodes?[0];
             if (application != null)
             {
-                var visualElements = application.SelectSingleNode("uap:VisualElements", nsmgr);
+                var visualElements = application.SelectSingleNode("//uap:VisualElements", nsmgr);
                 if (visualElements != null)
                 {
                     var displayName = visualElements.Attributes?["DisplayName"];
