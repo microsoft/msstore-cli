@@ -52,6 +52,15 @@ namespace MSStore.CLI.ProjectConfigurators
             return Task.FromResult((0, output));
         }
 
+        public override Task<List<string>> GetImagesAsync(string pathOrUrl, CancellationToken ct)
+        {
+            var (_, manifestFile) = GetInfo(pathOrUrl);
+
+            var allImagesInManifest = GetAllImagesFromManifest(manifestFile, Logger);
+
+            return Task.FromResult(allImagesInManifest);
+        }
+
         internal static void UpdateManifest(string appxManifestPath, DevCenterApplication app, string publisherDisplayName)
         {
             XmlDocument xmlDoc = new XmlDocument
@@ -339,6 +348,173 @@ namespace MSStore.CLI.ProjectConfigurators
 
             var buildItemAppId = xmlDoc.SelectSingleNode("/ns:Package/build:Metadata/build:Item[@Name='MSStoreCLIAppId']", nsmgr);
             return buildItemAppId?.Attributes?["Value"]?.Value;
+        }
+
+        internal static List<string> GetAllImagesFromManifest(FileInfo appxManifest, ILogger logger)
+        {
+            XmlDocument xmlDoc = new XmlDocument();
+
+            xmlDoc.Load(appxManifest.FullName);
+
+            XmlNamespaceManager nsmgr = new XmlNamespaceManager(xmlDoc.NameTable);
+            nsmgr.AddNamespace("ns", "http://schemas.microsoft.com/appx/manifest/foundation/windows10");
+            nsmgr.AddNamespace("ns2", "http://schemas.microsoft.com/appx/2013/manifest");
+            nsmgr.AddNamespace("ns3", "http://schemas.microsoft.com/appx/2014/manifest");
+            nsmgr.AddNamespace("mp", "http://schemas.microsoft.com/appx/2014/phone/manifest");
+            nsmgr.AddNamespace("uap", "http://schemas.microsoft.com/appx/manifest/uap/windows10");
+            var buildNamespace = "http://schemas.microsoft.com/developer/appx/2015/build";
+            nsmgr.AddNamespace("build", buildNamespace);
+
+            var images = new List<string>();
+            var application = xmlDoc.SelectSingleNode("/ns:Package/ns:Applications", nsmgr)?.ChildNodes?[0];
+            if (application != null)
+            {
+                // Store Logo
+                var logoElement = application.SelectNodes("//ns:Properties/ns:Logo", nsmgr)?.OfType<XmlElement>();
+                if (logoElement?.Any() == true)
+                {
+                    var value = logoElement.Single().InnerText;
+                    if (value != null)
+                    {
+                        images.AddRange(GetAllImagesFiles(value, appxManifest, logger));
+                    }
+                }
+
+                foreach (XmlElement applicationElement in application.ChildNodes)
+                {
+                    // App logo
+                    var appLogoAttr = applicationElement.SelectNodes("//ns:VisualElements/@Logo", nsmgr)?.OfType<XmlAttribute>();
+                    if (appLogoAttr?.Any() == true)
+                    {
+                        images.AddRange(GetAllImagesFiles(appLogoAttr.Single().Value, appxManifest, logger));
+                    }
+
+                    // App small logo
+                    var appSmallLogoAttr = applicationElement.SelectNodes("//ns:VisualElements/@SmallLogo", nsmgr)?.OfType<XmlAttribute>();
+                    if (appSmallLogoAttr?.Any() == true)
+                    {
+                        images.AddRange(GetAllImagesFiles(appSmallLogoAttr.Single().Value, appxManifest, logger));
+                    }
+
+                    // Default tile wide logo
+                    var wideLogoAttr = applicationElement.SelectNodes("//ns:VisualElements/ns:DefaultTile/@WideLogo", nsmgr)?.OfType<XmlAttribute>();
+                    if (wideLogoAttr?.Any() == true)
+                    {
+                        images.AddRange(GetAllImagesFiles(wideLogoAttr.Single().Value, appxManifest, logger));
+                    }
+
+                    // Square30x30Logo
+                    var square30x30LogoAttr = applicationElement.SelectNodes("//ns2:VisualElements/@Square30x30Logo", nsmgr)?.OfType<XmlAttribute>();
+                    if (square30x30LogoAttr?.Any() == true)
+                    {
+                        images.AddRange(GetAllImagesFiles(square30x30LogoAttr.Single().Value, appxManifest, logger));
+                    }
+
+                    // Square44x44Logo
+                    var square44x44LogoAttr = applicationElement.SelectNodes("//*[local-name()='VisualElements']/@Square44x44Logo", nsmgr)?.OfType<XmlAttribute>();
+                    if (square44x44LogoAttr?.Any() == true)
+                    {
+                        images.AddRange(GetAllImagesFiles(square44x44LogoAttr.Single().Value, appxManifest, logger));
+                    }
+
+                    // Square70x70Logo
+                    var square70x70LogoAttr = applicationElement.SelectNodes("//ns2:VisualElements/ns2:DefaultTile/@Square70x70Logo", nsmgr)?.OfType<XmlAttribute>();
+                    if (square70x70LogoAttr?.Any() == true)
+                    {
+                        images.AddRange(GetAllImagesFiles(square70x70LogoAttr.Single().Value, appxManifest, logger));
+                    }
+
+                    // Square71x71Logo
+                    var square71x71LogoAttr = applicationElement.SelectNodes("//ns3:VisualElements/ns3:DefaultTile/@Square71x71Logo", nsmgr)?.OfType<XmlAttribute>();
+                    if (square71x71LogoAttr?.Any() == true)
+                    {
+                        images.AddRange(GetAllImagesFiles(square71x71LogoAttr.Single().Value, appxManifest, logger));
+                    }
+
+                    // Square150x150Logo
+                    var square150x150LogoAttr = applicationElement.SelectNodes("//*[local-name()='VisualElements']/@Square150x150Logo", nsmgr)?.OfType<XmlAttribute>();
+                    if (square150x150LogoAttr?.Any() == true)
+                    {
+                        images.AddRange(GetAllImagesFiles(square150x150LogoAttr.Single().Value, appxManifest, logger));
+                    }
+
+                    // Wide310x150Logo
+                    var wide310x150LogoAttr = applicationElement.SelectNodes("//*[local-name()='VisualElements']/*[local-name()='DefaultTile']/@Wide310x150Logo", nsmgr)?.OfType<XmlAttribute>();
+                    if (wide310x150LogoAttr?.Any() == true)
+                    {
+                        images.AddRange(GetAllImagesFiles(wide310x150LogoAttr.Single().Value, appxManifest, logger));
+                    }
+
+                    // Square310x310Logo
+                    var square310x310LogoAttr = applicationElement.SelectNodes("//*[local-name()='VisualElements']/*[local-name()='DefaultTile']/@Square310x310Logo", nsmgr)?.OfType<XmlAttribute>();
+                    if (square310x310LogoAttr?.Any() == true)
+                    {
+                        images.AddRange(GetAllImagesFiles(square310x310LogoAttr.Single().Value, appxManifest, logger));
+                    }
+
+                    // Splash screen image
+                    var splashScreenImageAttr = applicationElement.SelectNodes("//*[local-name()='VisualElements']/*[local-name()='SplashScreen']/@Image", nsmgr)?.OfType<XmlAttribute>();
+                    if (splashScreenImageAttr?.Any() == true)
+                    {
+                        images.AddRange(GetAllImagesFiles(splashScreenImageAttr.Single().Value, appxManifest, logger));
+                    }
+
+                    // lock screen badge
+                    var lockScreenLogoAttr = applicationElement.SelectNodes("//*[local-name()='VisualElements']/*[local-name()='LockScreen']/@BadgeLogo", nsmgr)?.OfType<XmlAttribute>();
+                    if (lockScreenLogoAttr?.Any() == true)
+                    {
+                        images.AddRange(GetAllImagesFiles(lockScreenLogoAttr.Single().Value, appxManifest, logger));
+                    }
+                }
+            }
+
+            return images.Distinct().ToList();
+        }
+
+        private static List<string> GetAllImagesFiles(string imageNodeText, FileInfo appxManifest, ILogger logger)
+        {
+            List<string> imagePaths = new List<string>();
+            try
+            {
+                string installLocation = appxManifest.Directory?.FullName ?? string.Empty;
+                List<string> directories = new List<string>(Directory.EnumerateDirectories(installLocation))
+                {
+                    installLocation + "\\"
+                };
+
+                foreach (string directory in directories)
+                {
+                    string imagePath = Path.Combine(directory, imageNodeText);
+                    string imageLocation = Path.GetDirectoryName(imagePath) ?? string.Empty;
+                    string imageFileWithoutExtension = Path.GetFileNameWithoutExtension(imagePath);
+                    string imageFileExtension = Path.GetExtension(imagePath);
+
+                    logger.LogInformation("Checking directory {Directory} for subfolder {ImageNodeText} forming full path {ImageLocation}", directory, imageNodeText, imageLocation);
+
+                    if (Directory.Exists(imageLocation))
+                    {
+                        logger.LogInformation("Found path to image files, trying directory {ImageLocation} with search term {ImageFileWithoutExtension}", imageLocation, imageFileWithoutExtension);
+                        imagePaths.AddRange(Directory.GetFiles(imageLocation, imageFileWithoutExtension + imageFileExtension, SearchOption.TopDirectoryOnly));
+                        imagePaths.AddRange(Directory.GetFiles(imageLocation, imageFileWithoutExtension + ".*" + imageFileExtension, SearchOption.TopDirectoryOnly));
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                AnsiConsole.WriteLine("Failed to get the image file " + imageNodeText);
+                AnsiConsole.WriteLine(ex.ToString());
+            }
+
+            if (!imagePaths.Any())
+            {
+                string imageFile = Path.Combine(appxManifest.Directory?.FullName ?? string.Empty, imageNodeText);
+                if (File.Exists(imageFile))
+                {
+                    imagePaths.Add(imageFile);
+                }
+            }
+
+            return imagePaths;
         }
     }
 }

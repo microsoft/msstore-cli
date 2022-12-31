@@ -44,5 +44,11 @@ namespace MSStore.CLI.Services
                 return false;
             }
         }
+
+        public byte[]? ConvertToByteArray(string image)
+        {
+            using var bitmap = SKBitmap.Decode(image);
+            return bitmap?.Bytes;
+        }
     }
 }

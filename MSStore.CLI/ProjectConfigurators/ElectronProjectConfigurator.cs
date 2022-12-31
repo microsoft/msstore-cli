@@ -92,6 +92,12 @@ namespace MSStore.CLI.ProjectConfigurators
             return (0, output);
         }
 
+        public override Task<List<string>> GetImagesAsync(string pathOrUrl, CancellationToken ct)
+        {
+            // TODO: implement
+            return Task.FromResult(new List<string>());
+        }
+
         internal static async Task UpdateManifestAsync(FileInfo electronProjectFile, DevCenterApplication app, string publisherDisplayName, IElectronManifestManager electronManifestManager, CancellationToken ct)
         {
             var electronManifest = await electronManifestManager.LoadAsync(electronProjectFile, ct);

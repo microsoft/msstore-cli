@@ -56,6 +56,8 @@ namespace MSStore.CLI.ProjectConfigurators
 
         public abstract IEnumerable<BuildArch>? DefaultBuildArchs { get; }
 
+        public abstract Task<List<string>> GetImagesAsync(string pathOrUrl, CancellationToken ct);
+
         public virtual Task<bool> CanConfigureAsync(string pathOrUrl, CancellationToken ct)
         {
             if (string.IsNullOrEmpty(pathOrUrl))

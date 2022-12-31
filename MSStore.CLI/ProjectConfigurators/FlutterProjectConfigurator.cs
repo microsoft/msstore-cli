@@ -153,26 +153,37 @@ namespace MSStore.CLI.ProjectConfigurators
             return 0;
         }
 
+        public override Task<List<string>> GetImagesAsync(string pathOrUrl, CancellationToken ct)
+        {
+            var (projectRootPath, _) = GetInfo(pathOrUrl);
+
+            var icon = GetIcon(projectRootPath);
+            if (icon != null)
+            {
+                return Task.FromResult(new List<string> { icon });
+            }
+
+            return Task.FromResult(new List<string>());
+        }
+
         private static async Task<string?> GenerateImageFromIcoAsync(DirectoryInfo projectRootPath, IImageConverter imageConverter, CancellationToken ct)
         {
             try
             {
-                var resourcesDirInfo = new DirectoryInfo(Path.Combine(projectRootPath.FullName, "windows", "runner", "resources"));
-                if (!resourcesDirInfo.Exists)
+                var icon = GetIcon(projectRootPath);
+                if (icon == string.Empty)
                 {
                     return string.Empty;
                 }
 
-                var icons = resourcesDirInfo.GetFiles("*.ico");
-                var icon = icons.FirstOrDefault();
                 if (icon == null)
                 {
                     return null;
                 }
 
-                var logoPath = Path.Combine(resourcesDirInfo.FullName, Path.GetFileNameWithoutExtension(icon.Name) + ".png");
+                var logoPath = Path.ChangeExtension(icon, ".png");
 
-                if (!await imageConverter.ConvertIcoToPngAsync(icon.FullName, logoPath, ct))
+                if (!await imageConverter.ConvertIcoToPngAsync(icon, logoPath, ct))
                 {
                     AnsiConsole.MarkupLine($"[red]Failed to convert icon to png.[/]");
                     return null;
@@ -185,6 +196,18 @@ namespace MSStore.CLI.ProjectConfigurators
                 AnsiConsole.MarkupLine($"[red]Error generating logo.png from icon.ico: {ex.Message}[/]");
                 return null;
             }
+        }
+
+        private static string? GetIcon(DirectoryInfo projectRootPath)
+        {
+            var resourcesDirInfo = new DirectoryInfo(Path.Combine(projectRootPath.FullName, "windows", "runner", "resources"));
+            if (!resourcesDirInfo.Exists)
+            {
+                return string.Empty;
+            }
+
+            var icons = resourcesDirInfo.GetFiles("*.ico");
+            return icons.FirstOrDefault()?.FullName;
         }
 
         private async Task InstallMsixDependencyAsync(DirectoryInfo projectRootPath, CancellationToken ct)

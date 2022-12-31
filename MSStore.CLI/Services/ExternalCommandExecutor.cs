@@ -95,5 +95,31 @@ namespace MSStore.CLI.Services
                 };
             }
         }
+
+        public async Task<string> FindToolAsync(string command, CancellationToken ct)
+        {
+            ExternalCommandExecutionResult result;
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                result = await RunAsync("where", command, Environment.CurrentDirectory, ct);
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                result = await RunAsync("which", command, Environment.CurrentDirectory, ct);
+            }
+            else
+            {
+                throw new PlatformNotSupportedException();
+            }
+
+            if (result.ExitCode != 0)
+            {
+                return string.Empty;
+            }
+
+            var toolPaths = result.StdOut.Trim();
+            var toolPathList = toolPaths.Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
+            return toolPathList.Length == 0 ? string.Empty : toolPathList[0];
+        }
     }
 }

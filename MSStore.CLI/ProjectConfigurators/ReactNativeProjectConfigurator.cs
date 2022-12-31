@@ -86,6 +86,15 @@ namespace MSStore.CLI.ProjectConfigurators
             return Task.FromResult((0, output));
         }
 
+        public override Task<List<string>> GetImagesAsync(string pathOrUrl, CancellationToken ct)
+        {
+            var (projectRootPath, _) = GetInfo(pathOrUrl);
+            var appxManifest = GetAppXManifest(projectRootPath);
+            var allImagesInManifest = UWPProjectConfigurator.GetAllImagesFromManifest(appxManifest, Logger);
+
+            return Task.FromResult(allImagesInManifest);
+        }
+
         internal static FileInfo GetAppXManifest(DirectoryInfo projectRootPath)
         {
             return FindFile(projectRootPath, "Package.appxmanifest");
