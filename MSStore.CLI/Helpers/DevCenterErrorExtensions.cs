@@ -1,8 +1,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-using MSStore.API.Packaged.Models;
 using System.Linq;
+using MSStore.API.Packaged.Models;
 
 namespace MSStore.CLI.Helpers
 {
