@@ -498,7 +498,7 @@ namespace MSStore.CLI.UnitTests
             ExternalCommandExecutor
                 .Setup(x => x.RunAsync(
                     It.Is<string>(s => s == "yarn"),
-                    It.Is<string>(s => s == "list --pattern react-native"),
+                    It.Is<string>(s => s == "why react-native"),
                     It.Is<string>(s => s == dirInfo.FullName),
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new ExternalCommandExecutionResult

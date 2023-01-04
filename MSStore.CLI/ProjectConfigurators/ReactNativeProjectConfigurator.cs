@@ -28,7 +28,7 @@ namespace MSStore.CLI.ProjectConfigurators
         public override string[]? PackageFilesExtensionExclude { get; }
         public override SearchOption PackageFilesSearchOption { get; } = SearchOption.TopDirectoryOnly;
         public override PublishFileSearchFilterStrategy PublishFileSearchFilterStrategy { get; } = PublishFileSearchFilterStrategy.Newest;
-        public override string OutputSubdirectory { get; } = Path.Join("windows", "obj", "MSStore.CLI");
+        public override string OutputSubdirectory { get; } = Path.Combine("windows", "obj", "MSStore.CLI");
         public override string DefaultInputSubdirectory { get; } = "windows";
 
         protected override DirectoryInfo GetInputDirectory(DirectoryInfo projectRootPath)
@@ -38,7 +38,7 @@ namespace MSStore.CLI.ProjectConfigurators
             var appxManifest = GetAppXManifest(windowsDirectory);
 
             return appxManifest?.Directory != null
-                ? new DirectoryInfo(Path.Join(appxManifest.Directory.FullName, "AppPackages"))
+                ? new DirectoryInfo(Path.Combine(appxManifest.Directory.FullName, "AppPackages"))
                 : windowsDirectory;
         }
 
@@ -86,13 +86,31 @@ namespace MSStore.CLI.ProjectConfigurators
             return Task.FromResult((0, output));
         }
 
-        public override Task<List<string>> GetImagesAsync(string pathOrUrl, CancellationToken ct)
+        public override Task<List<string>?> GetAppImagesAsync(string pathOrUrl, CancellationToken ct)
         {
             var (projectRootPath, _) = GetInfo(pathOrUrl);
             var appxManifest = GetAppXManifest(projectRootPath);
             var allImagesInManifest = UWPProjectConfigurator.GetAllImagesFromManifest(appxManifest, Logger);
 
-            return Task.FromResult(allImagesInManifest);
+            return Task.FromResult<List<string>?>(allImagesInManifest);
+        }
+
+        public override Task<List<string>?> GetDefaultImagesAsync(string pathOrUrl, CancellationToken ct)
+        {
+            var (projectRootPath, _) = GetInfo(pathOrUrl);
+            var appxAssetsFolder = GetDefaultAssetsAppxFolder(projectRootPath);
+            if (Directory.Exists(appxAssetsFolder))
+            {
+                var appxAssetsDir = new DirectoryInfo(appxAssetsFolder);
+                return Task.FromResult<List<string>?>(appxAssetsDir.GetFiles().Select(f => f.FullName).ToList());
+            }
+
+            return Task.FromResult<List<string>?>(null);
+        }
+
+        private static string? GetDefaultAssetsAppxFolder(DirectoryInfo projectRootPath)
+        {
+            return Path.Combine(projectRootPath.FullName, "node_modules", "react-native-windows", "template", "shared-app", "assets");
         }
 
         internal static FileInfo GetAppXManifest(DirectoryInfo projectRootPath)
@@ -116,7 +134,7 @@ namespace MSStore.CLI.ProjectConfigurators
         {
             var (projectRootPath, _) = GetInfo(pathOrUrl);
 
-            var windowsDirectory = new DirectoryInfo(Path.Join(projectRootPath.FullName, "windows"));
+            var windowsDirectory = new DirectoryInfo(Path.Combine(projectRootPath.FullName, "windows"));
             if (!windowsDirectory.Exists)
             {
                 throw new InvalidOperationException($"No 'windows' directory found in '{projectRootPath.FullName}'.");

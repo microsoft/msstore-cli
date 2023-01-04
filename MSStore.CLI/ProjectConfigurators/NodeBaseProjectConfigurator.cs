@@ -130,10 +130,10 @@ namespace MSStore.CLI.ProjectConfigurators
             });
         }
 
-        private static Dictionary<(string rootPath, string packageName), bool> _yarnListExecuted = new Dictionary<(string rootPath, string packageName), bool>();
+        private static Dictionary<(string rootPath, string packageName), bool> _yarnWhyExecuted = new Dictionary<(string rootPath, string packageName), bool>();
         protected async Task<bool> YarnPackageExistsAsync(DirectoryInfo projectRootPath, string packageName, bool useCache = true, CancellationToken ct = default)
         {
-            if (useCache && _yarnListExecuted.TryGetValue((projectRootPath.FullName, packageName), out var value))
+            if (useCache && _yarnWhyExecuted.TryGetValue((projectRootPath.FullName, packageName), out var value))
             {
                 Logger.LogInformation("Using cache. Yarn list already executed for {ProjectRootPath} and package {PackageName}. Result: {Result}", projectRootPath.FullName, packageName, value);
                 return value;
@@ -143,21 +143,21 @@ namespace MSStore.CLI.ProjectConfigurators
             {
                 try
                 {
-                    var result = await ExternalCommandExecutor.RunAsync("yarn", $"list --pattern {packageName}", projectRootPath.FullName, ct);
+                    var result = await ExternalCommandExecutor.RunAsync("yarn", $"why {packageName}", projectRootPath.FullName, ct);
                     if (result.ExitCode == 0 && result.StdOut.Contains($"─ {packageName}@"))
                     {
                         ctx.SuccessStatus($"'{packageName}' package is already installed, no need to install it again.");
-                        _yarnListExecuted[(projectRootPath.FullName, packageName)] = true;
+                        _yarnWhyExecuted[(projectRootPath.FullName, packageName)] = true;
                         return true;
                     }
 
                     ctx.SuccessStatus($"'{packageName}' package is not yet installed.");
-                    _yarnListExecuted[(projectRootPath.FullName, packageName)] = false;
+                    _yarnWhyExecuted[(projectRootPath.FullName, packageName)] = false;
                     return false;
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogError(ex, "Error running 'yarn list {PackageName}'.", packageName);
+                    Logger.LogError(ex, "Error running 'yarn why {PackageName}'.", packageName);
                     throw new MSStoreException($"Failed to check if '{packageName}' package is already installed..");
                 }
             });

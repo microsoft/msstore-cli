@@ -284,10 +284,15 @@ namespace MSStore.CLI.ProjectConfigurators
             return (0, output);
         }
 
-        public Task<List<string>> GetImagesAsync(string pathOrUrl, CancellationToken ct)
+        public Task<List<string>?> GetAppImagesAsync(string pathOrUrl, CancellationToken ct)
         {
             // TODO: implement
-            return Task.FromResult(new List<string>());
+            return Task.FromResult<List<string>?>(new List<string>());
+        }
+
+        public Task<List<string>?> GetDefaultImagesAsync(string pathOrUrl, CancellationToken ct)
+        {
+            return Task.FromResult<List<string>?>(null);
         }
 
         public Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(string pathOrUrl, DevCenterApplication? app, IEnumerable<BuildArch>? buildArchs, DirectoryInfo? inputDirectory, IStorePackagedAPI storePackagedAPI, CancellationToken ct)

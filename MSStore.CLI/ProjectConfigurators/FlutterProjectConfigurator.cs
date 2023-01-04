@@ -36,7 +36,7 @@ namespace MSStore.CLI.ProjectConfigurators
         public override string[]? PackageFilesExtensionExclude { get; }
         public override SearchOption PackageFilesSearchOption { get; } = SearchOption.TopDirectoryOnly;
         public override PublishFileSearchFilterStrategy PublishFileSearchFilterStrategy { get; } = PublishFileSearchFilterStrategy.Newest;
-        public override string OutputSubdirectory { get; } = Path.Join("build", "windows", "MSStore.CLI");
+        public override string OutputSubdirectory { get; } = Path.Combine("build", "windows", "MSStore.CLI");
         public override string DefaultInputSubdirectory { get; } = Path.Combine("build", "windows", "runner", "Release");
         public override IEnumerable<BuildArch>? DefaultBuildArchs => new[] { BuildArch.X64 };
 
@@ -153,17 +153,58 @@ namespace MSStore.CLI.ProjectConfigurators
             return 0;
         }
 
-        public override Task<List<string>> GetImagesAsync(string pathOrUrl, CancellationToken ct)
+        public override Task<List<string>?> GetAppImagesAsync(string pathOrUrl, CancellationToken ct)
         {
             var (projectRootPath, _) = GetInfo(pathOrUrl);
 
             var icon = GetIcon(projectRootPath);
             if (icon != null)
             {
-                return Task.FromResult(new List<string> { icon });
+                return Task.FromResult<List<string>?>(new List<string> { icon });
             }
 
-            return Task.FromResult(new List<string>());
+            return Task.FromResult<List<string>?>(new List<string>());
+        }
+
+        public override async Task<List<string>?> GetDefaultImagesAsync(string pathOrUrl, CancellationToken ct)
+        {
+            List<string> images = new List<string>();
+            var flutterExecutablePath = await _externalCommandExecutor.FindToolAsync("flutter", ct);
+            if (!string.IsNullOrEmpty(flutterExecutablePath))
+            {
+                var bin = Directory.GetParent(flutterExecutablePath);
+                if (bin != null)
+                {
+                    var flutterDir = bin.Parent;
+                    if (flutterDir != null && flutterDir.FullName != null)
+                    {
+                        var iconSubPath = Path.Combine("templates", "app_shared", "windows.tmpl", "runner", "resources", "app_icon.ico");
+                        var iconTemplateSubPath = $"{iconSubPath}.img.tmpl";
+                        var flutterDefaultAppIconTemplate = Path.Combine(flutterDir.FullName, "packages", "flutter_tools", iconTemplateSubPath);
+                        if (File.Exists(flutterDefaultAppIconTemplate))
+                        {
+                            var pubDartlangOrgDir = new DirectoryInfo(Path.Combine(flutterDir.FullName, ".pub-cache", "hosted", "pub.dartlang.org"));
+                            if (pubDartlangOrgDir.Exists)
+                            {
+                                var flutter_template_images = pubDartlangOrgDir
+                                    .GetDirectories("flutter_template_images-*", SearchOption.TopDirectoryOnly)
+                                    .OrderByDescending(d => d.Name)
+                                    .FirstOrDefault();
+                                if (flutter_template_images?.FullName != null)
+                                {
+                                    var flutterDefaultAppIcon = Path.Combine(flutter_template_images.FullName, iconSubPath);
+                                    if (File.Exists(flutterDefaultAppIcon))
+                                    {
+                                        images.Add(flutterDefaultAppIcon);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            return images;
         }
 
         private static async Task<string?> GenerateImageFromIcoAsync(DirectoryInfo projectRootPath, IImageConverter imageConverter, CancellationToken ct)
@@ -372,7 +413,7 @@ namespace MSStore.CLI.ProjectConfigurators
                         }
                         else
                         {
-                            msixFile = new FileInfo(Path.Join(projectRootPath.FullName, msixPath));
+                            msixFile = new FileInfo(Path.Combine(projectRootPath.FullName, msixPath));
                         }
                     }
 

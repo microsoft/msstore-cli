@@ -36,7 +36,7 @@ namespace MSStore.CLI.ProjectConfigurators
         public override string[]? PackageFilesExtensionExclude { get; }
         public override SearchOption PackageFilesSearchOption { get; } = SearchOption.TopDirectoryOnly;
         public override PublishFileSearchFilterStrategy PublishFileSearchFilterStrategy { get; } = PublishFileSearchFilterStrategy.Newest;
-        public override string OutputSubdirectory { get; } = Path.Join("obj", "MSStore.CLI");
+        public override string OutputSubdirectory { get; } = Path.Combine("obj", "MSStore.CLI");
         public override string DefaultInputSubdirectory { get; } = "AppPackages";
         public override IEnumerable<BuildArch>? DefaultBuildArchs => new[] { BuildArch.X64, BuildArch.Arm64 };
 
@@ -52,13 +52,19 @@ namespace MSStore.CLI.ProjectConfigurators
             return Task.FromResult((0, output));
         }
 
-        public override Task<List<string>> GetImagesAsync(string pathOrUrl, CancellationToken ct)
+        public override Task<List<string>?> GetAppImagesAsync(string pathOrUrl, CancellationToken ct)
         {
             var (_, manifestFile) = GetInfo(pathOrUrl);
 
             var allImagesInManifest = GetAllImagesFromManifest(manifestFile, Logger);
 
-            return Task.FromResult(allImagesInManifest);
+            return Task.FromResult<List<string>?>(allImagesInManifest);
+        }
+
+        public override Task<List<string>?> GetDefaultImagesAsync(string pathOrUrl, CancellationToken ct)
+        {
+            // Already covered by the default UWP images from the Windows SDK
+            return Task.FromResult<List<string>?>(null);
         }
 
         internal static void UpdateManifest(string appxManifestPath, DevCenterApplication app, string publisherDisplayName)
@@ -255,7 +261,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 }
             });
 
-            output ??= new DirectoryInfo(Path.Join(projectRootPath.FullName, "AppPackages"));
+            output ??= new DirectoryInfo(Path.Combine(projectRootPath.FullName, "AppPackages"));
 
             var bundleUploadFile = await AnsiConsole.Status().StartAsync("Building MSIX...", async ctx =>
             {

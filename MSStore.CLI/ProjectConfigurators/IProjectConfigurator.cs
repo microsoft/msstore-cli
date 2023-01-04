@@ -20,6 +20,8 @@ namespace MSStore.CLI.ProjectConfigurators
 
         Task<(int returnCode, DirectoryInfo? outputDirectory)> ConfigureAsync(string pathOrUrl, DirectoryInfo? output, string publisherDisplayName, DevCenterApplication app, IStorePackagedAPI storePackagedAPI, CancellationToken ct);
 
-        Task<List<string>> GetImagesAsync(string pathOrUrl, CancellationToken ct);
+        Task<List<string>?> GetAppImagesAsync(string pathOrUrl, CancellationToken ct);
+
+        Task<List<string>?> GetDefaultImagesAsync(string pathOrUrl, CancellationToken ct);
     }
 }

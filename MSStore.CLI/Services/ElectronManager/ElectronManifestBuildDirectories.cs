@@ -11,6 +11,8 @@ namespace MSStore.CLI.Services.ElectronManager
     {
         [JsonPropertyName("output")]
         public string? Output { get; set; }
+        [JsonPropertyName("buildResources")]
+        public string? BuildResources { get; set; }
         [JsonExtensionData]
         public Dictionary<string, JsonElement>? ExtensionData { get; set; }
     }

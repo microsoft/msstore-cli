@@ -257,7 +257,7 @@ namespace MSStore.CLI.UnitTests
             ExternalCommandExecutor
                 .Setup(x => x.RunAsync(
                     It.Is<string>(s => s == "yarn"),
-                    It.Is<string>(s => s == "list --pattern electron-builder"),
+                    It.Is<string>(s => s == "why electron-builder"),
                     It.Is<string>(s => s == dirInfo.FullName),
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult
@@ -314,7 +314,7 @@ namespace MSStore.CLI.UnitTests
             ExternalCommandExecutor
                 .Setup(x => x.RunAsync(
                     It.Is<string>(s => s == "yarn"),
-                    It.Is<string>(s => s == "list --pattern electron-builder"),
+                    It.Is<string>(s => s == "why electron-builder"),
                     It.Is<string>(s => s == dirInfo.FullName),
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult

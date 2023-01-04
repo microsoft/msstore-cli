@@ -110,7 +110,6 @@ namespace MSStore.CLI.Commands
             private readonly ITokenManager _tokenManager;
             private readonly IPartnerCenterManager _partnerCenterManager;
             private readonly IImageConverter _imageConverter;
-            private readonly IExternalCommandExecutor _externalCommandExecutor;
             private readonly TelemetryClient _telemetryClient;
 
             public string PathOrUrl { get; set; } = null!;
@@ -134,7 +133,6 @@ namespace MSStore.CLI.Commands
                 ITokenManager tokenManager,
                 IPartnerCenterManager partnerCenterManager,
                 IImageConverter imageConverter,
-                IExternalCommandExecutor externalCommandExecutor,
                 TelemetryClient telemetryClient)
             {
                 _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -145,7 +143,6 @@ namespace MSStore.CLI.Commands
                 _tokenManager = tokenManager ?? throw new ArgumentNullException(nameof(tokenManager));
                 _partnerCenterManager = partnerCenterManager ?? throw new ArgumentNullException(nameof(partnerCenterManager));
                 _imageConverter = imageConverter ?? throw new ArgumentNullException(nameof(imageConverter));
-                _externalCommandExecutor = externalCommandExecutor ?? throw new ArgumentNullException(nameof(externalCommandExecutor));
                 _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
             }
 
@@ -267,10 +264,11 @@ namespace MSStore.CLI.Commands
                     Output = outputDirectory;
                 }
 
-                var images = await configurator.GetImagesAsync(PathOrUrl, ct);
-                if (images.Any())
+                var appImages = await configurator.GetAppImagesAsync(PathOrUrl, ct);
+                if (appImages?.Any() == true)
                 {
-                    var defaultImages = await ProjectImagesHelper.GetDefaultImagesUsedByAppAsync(images, _imageConverter, _externalCommandExecutor, _logger, ct);
+                    var projectSpecificDefaultImages = await configurator.GetDefaultImagesAsync(PathOrUrl, ct);
+                    var defaultImages = ProjectImagesHelper.GetDefaultImagesUsedByApp(appImages, projectSpecificDefaultImages, _imageConverter, _logger);
                     if (defaultImages.Any())
                     {
                         AnsiConsole.MarkupLine($"[bold yellow]The following images are using the default values and should be updated:[/]");

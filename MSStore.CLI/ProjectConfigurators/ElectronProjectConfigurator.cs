@@ -44,6 +44,14 @@ namespace MSStore.CLI.ProjectConfigurators
             }
         }
 
+        public string DefaultBuildResources
+        {
+            get
+            {
+                return _electronManifest?.Build?.Directories?.BuildResources ?? "build";
+            }
+        }
+
         public override IEnumerable<BuildArch>? DefaultBuildArchs => new[] { BuildArch.X64, BuildArch.Arm64 };
 
         public override async Task<bool> CanConfigureAsync(string pathOrUrl, CancellationToken ct)
@@ -84,7 +92,9 @@ namespace MSStore.CLI.ProjectConfigurators
                 return (-1, null);
             }
 
-            await UpdateManifestAsync(electronProjectFile, app, publisherDisplayName, _electronManifestManager, ct);
+            _electronManifest = await UpdateManifestAsync(electronProjectFile, app, publisherDisplayName, _electronManifestManager, ct);
+
+            CopyDefaultImages(projectRootPath);
 
             AnsiConsole.WriteLine($"Electron project '{electronProjectFile.FullName}' is now configured to build to the Microsoft Store!");
             AnsiConsole.MarkupLine("For more information on building your Electron project to the Microsoft Store, see [link]https://www.electron.build/configuration/appx#how-to-publish-your-electron-app-to-the-windows-app-store[/]");
@@ -92,13 +102,95 @@ namespace MSStore.CLI.ProjectConfigurators
             return (0, output);
         }
 
-        public override Task<List<string>> GetImagesAsync(string pathOrUrl, CancellationToken ct)
+        private void CopyDefaultImages(DirectoryInfo projectRootPath)
         {
-            // TODO: implement
-            return Task.FromResult(new List<string>());
+            var defaultAssets = new Dictionary<string, string>()
+            {
+                { "SampleAppx.50x50.png", "StoreLogo.png" },
+                { "SampleAppx.150x150.png", "Square150x150Logo.png" },
+                { "SampleAppx.44x44.png", "Square44x44Logo.png" },
+                { "SampleAppx.310x150.png", "Wide310x150Logo.png" }
+            };
+
+            var appxAssetsFolder = GetDefaultAssetsAppxFolder();
+            if (appxAssetsFolder == null)
+            {
+                return;
+            }
+
+            var appxFolder = Path.Combine(projectRootPath.FullName, DefaultBuildResources, "appx");
+            if (!Directory.Exists(appxFolder))
+            {
+                Directory.CreateDirectory(appxFolder);
+            }
+
+            foreach (var image in defaultAssets)
+            {
+                var originImagePath = Path.Combine(appxAssetsFolder, image.Key);
+                if (File.Exists(originImagePath))
+                {
+                    var destinationImagePath = Path.Combine(appxFolder, image.Value);
+                    File.Copy(originImagePath, destinationImagePath, true);
+                }
+            }
         }
 
-        internal static async Task UpdateManifestAsync(FileInfo electronProjectFile, DevCenterApplication app, string publisherDisplayName, IElectronManifestManager electronManifestManager, CancellationToken ct)
+        public override Task<List<string>?> GetAppImagesAsync(string pathOrUrl, CancellationToken ct)
+        {
+            var appxFolder = Path.Combine(pathOrUrl, DefaultBuildResources, "appx");
+
+            // https://www.electron.build/configuration/appx#appx-assets
+            var fileNames = new List<string>
+            {
+                "StoreLogo",
+                "Square150x150Logo",
+                "Square44x44Logo",
+                "Wide310x150Logo",
+                "BadgeLogo",
+                "LargeTile",
+                "SmallTile",
+                "SplashScreen"
+            };
+
+            return Task.FromResult<List<string>?>(
+                Directory.GetFiles(appxFolder)
+                    .Where(f => fileNames
+                        .Any(n => Path.GetFileNameWithoutExtension(f)
+                                      .Equals(n, StringComparison.OrdinalIgnoreCase)))
+                    .ToList());
+        }
+
+        public override Task<List<string>?> GetDefaultImagesAsync(string pathOrUrl, CancellationToken ct)
+        {
+            var appxAssetsFolder = GetDefaultAssetsAppxFolder();
+            if (Directory.Exists(appxAssetsFolder))
+            {
+                var appxAssetsDir = new DirectoryInfo(appxAssetsFolder);
+                return Task.FromResult<List<string>?>(appxAssetsDir.GetFiles().Select(f => f.FullName).ToList());
+            }
+
+            return Task.FromResult<List<string>?>(null);
+        }
+
+        private static string? GetDefaultAssetsAppxFolder()
+        {
+            var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var winCodeSign = Path.Combine(appData, "electron-builder", "Cache", "winCodeSign");
+            var winCodeSignDir = new DirectoryInfo(winCodeSign);
+            if (winCodeSignDir.Exists)
+            {
+                var winCodeSignDirs = winCodeSignDir.GetDirectories("winCodeSign-*", SearchOption.TopDirectoryOnly);
+                if (winCodeSignDirs.Length > 0)
+                {
+                    var winCodeSignDirInfo = winCodeSignDirs.OrderByDescending(d => d.Name).First();
+                    return Path.Combine(winCodeSignDirInfo.FullName, "appxAssets");
+                }
+            }
+
+            return null;
+        }
+
+        internal static async Task<ElectronManifest> UpdateManifestAsync(FileInfo electronProjectFile, DevCenterApplication app, string publisherDisplayName, IElectronManifestManager electronManifestManager, CancellationToken ct)
         {
             var electronManifest = await electronManifestManager.LoadAsync(electronProjectFile, ct);
 
@@ -132,6 +224,8 @@ namespace MSStore.CLI.ProjectConfigurators
             electronManifest.MSStoreCLIAppID = app.Id;
 
             await electronManifestManager.SaveAsync(electronManifest, electronProjectFile, ct);
+
+            return electronManifest;
         }
 
         public override async Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(string pathOrUrl, DevCenterApplication? app, IEnumerable<BuildArch>? buildArchs, DirectoryInfo? output, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
@@ -233,7 +327,7 @@ namespace MSStore.CLI.ProjectConfigurators
                         }
                         else
                         {
-                            msixFile = new FileInfo(Path.Join(projectRootPath.FullName, msixPath));
+                            msixFile = new FileInfo(Path.Combine(projectRootPath.FullName, msixPath));
                         }
                     }
 
@@ -249,14 +343,19 @@ namespace MSStore.CLI.ProjectConfigurators
 
         public override async Task<string?> GetAppIdAsync(FileInfo? fileInfo, CancellationToken ct)
         {
+            await EnsureElectronManifestAsync(fileInfo, ct);
+
+            return _electronManifest?.MSStoreCLIAppID;
+        }
+
+        private async Task EnsureElectronManifestAsync(FileInfo? fileInfo, CancellationToken ct)
+        {
             if (fileInfo == null)
             {
-                return null;
+                return;
             }
 
             _electronManifest ??= await _electronManifestManager.LoadAsync(fileInfo, ct);
-
-            return _electronManifest.MSStoreCLIAppID;
         }
 
         public override async Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, DirectoryInfo? inputDirectory, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
@@ -264,7 +363,7 @@ namespace MSStore.CLI.ProjectConfigurators
             if (_electronManifest == null)
             {
                 var (_, manifestFile) = GetInfo(pathOrUrl);
-                _electronManifest = await _electronManifestManager.LoadAsync(manifestFile, ct);
+                await EnsureElectronManifestAsync(manifestFile, ct);
             }
 
             return await base.PublishAsync(pathOrUrl, app, inputDirectory, storePackagedAPI, ct);
