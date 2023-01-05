@@ -264,20 +264,7 @@ namespace MSStore.CLI.Commands
                     Output = outputDirectory;
                 }
 
-                var appImages = await configurator.GetAppImagesAsync(PathOrUrl, ct);
-                if (appImages?.Any() == true)
-                {
-                    var projectSpecificDefaultImages = await configurator.GetDefaultImagesAsync(PathOrUrl, ct);
-                    var defaultImages = ProjectImagesHelper.GetDefaultImagesUsedByApp(appImages, projectSpecificDefaultImages, _imageConverter, _logger);
-                    if (defaultImages.Any())
-                    {
-                        AnsiConsole.MarkupLine($"[bold yellow]The following images are using the default values and should be updated:[/]");
-                        foreach (var image in defaultImages)
-                        {
-                            AnsiConsole.MarkupLine($"[bold yellow]  {image}[/]");
-                        }
-                    }
-                }
+                await configurator.ValidateImagesAsync(PathOrUrl, _imageConverter, _logger, ct);
 
                 outputDirectory = null;
                 if (Package == true || Publish == true)

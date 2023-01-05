@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
+using Microsoft.Extensions.Logging;
 using MSStore.CLI.Helpers;
 using MSStore.CLI.ProjectConfigurators;
 using MSStore.CLI.Services;
@@ -31,6 +32,8 @@ namespace MSStore.CLI.Commands
         {
             private readonly IProjectConfiguratorFactory _projectConfiguratorFactory;
             private readonly IStoreAPIFactory _storeAPIFactory;
+            private readonly IImageConverter _imageConverter;
+            private readonly ILogger _logger;
             private readonly TelemetryClient _telemetryClient;
 
             public string PathOrUrl { get; set; } = null!;
@@ -42,10 +45,14 @@ namespace MSStore.CLI.Commands
             public Handler(
                 IProjectConfiguratorFactory projectConfiguratorFactory,
                 IStoreAPIFactory storeAPIFactory,
+                IImageConverter imageConverter,
+                ILogger<Handler> logger,
                 TelemetryClient telemetryClient)
             {
                 _projectConfiguratorFactory = projectConfiguratorFactory ?? throw new ArgumentNullException(nameof(projectConfiguratorFactory));
                 _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
+                _imageConverter = imageConverter ?? throw new ArgumentNullException(nameof(imageConverter));
+                _logger = logger ?? throw new ArgumentNullException(nameof(logger));
                 _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
             }
 
@@ -92,6 +99,8 @@ namespace MSStore.CLI.Commands
                 {
                     props["Archs"] = string.Join(",", buildArchs);
                 }
+
+                await configurator.ValidateImagesAsync(PathOrUrl, _imageConverter, _logger, ct);
 
                 var (returnCode, outputDirectory) = await projectPackager.PackageAsync(PathOrUrl, null, buildArchs, Output, storePackagedAPI, ct);
 
