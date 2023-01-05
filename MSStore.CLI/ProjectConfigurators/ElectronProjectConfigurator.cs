@@ -152,6 +152,11 @@ namespace MSStore.CLI.ProjectConfigurators
                 "SplashScreen"
             };
 
+            if (!Directory.Exists(appxFolder))
+            {
+                return Task.FromResult<List<string>?>(null);
+            }
+
             return Task.FromResult<List<string>?>(
                 Directory.GetFiles(appxFolder)
                     .Where(f => fileNames
