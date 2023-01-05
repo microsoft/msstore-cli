@@ -19,6 +19,7 @@
 
         <PropertyGroup>
             <_MakeMsix_WorkDir>$(OutDir)msix</_MakeMsix_WorkDir>
+            <_MakePri_WorkDir>$(MSBuildThisFileDirectory)obj\$(Platform)\</_MakePri_WorkDir>
             <_MakeMsix_OutDir>$(OutDir)</_MakeMsix_OutDir>
             <_MakeMsix_OutFilename>$(_MakeMsix_OutDir)$(MakeMsixOutputFilename)</_MakeMsix_OutFilename>
             <MakeMsixOutputFilename>$(_MakeMsix_OutFilename)</MakeMsixOutputFilename>
@@ -27,16 +28,30 @@
             <_MakeMsix_Path Condition="'$(_MakeMsix_Path)' == ''">$(_MakeMsix_Directory)$(_MakeMsix_Executable)</_MakeMsix_Path>
             <_MakeMsix_Parameters>/o /h SHA256</_MakeMsix_Parameters>
             <_MakeMsixCommand>&quot;$(_MakeMsix_Path)&quot; pack $(_MakeMsix_Parameters) /d $(_MakeMsix_WorkDir) /p $(_MakeMsix_OutFilename)</_MakeMsixCommand>
+            <_MakePRI_Directory>C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\</_MakePRI_Directory>
+            <_MakePRI_Executable>makepri.exe</_MakePRI_Executable>
+            <_MakePRI_Path Condition="'$(_MakePRI_Path)' == ''">$(_MakePRI_Directory)$(_MakePRI_Executable)</_MakePRI_Path>
+            <_MakePRI_CreateConfig_Parameters>/cf $(_MakePri_WorkDir)priconfig.xml /dq en-US /o</_MakePRI_CreateConfig_Parameters>
+            <_MakePRI_New_Parameters>/pr $(_MakeMsix_WorkDir) /cf $(_MakePri_WorkDir)priconfig.xml /of $(_MakeMsix_WorkDir)\resources.pri</_MakePRI_New_Parameters>
+            <_MakePRICreateConfigCommand>&quot;$(_MakePRI_Path)&quot; createconfig $(_MakePRI_CreateConfig_Parameters)</_MakePRICreateConfigCommand>
+            <_MakePRINewCommand>&quot;$(_MakePRI_Path)&quot; new $(_MakePRI_New_Parameters)</_MakePRINewCommand>
         </PropertyGroup>
         <RemoveDir Directories="$(_MakeMsix_WorkDir)" Condition="Exists('$(_MakeMsix_WorkDir)')" />
         <Delete Files="$(OutDir)$(MakeMsixOutputFilename)"/>
         <MakeDir Directories="$(_MakeMsix_WorkDir)" Condition="!Exists('$(_MakeMsix_WorkDir)')" />
         <Message Text="MakeMSIX: Copy @(MakeMsixInputs) to $(_MakeMsix_WorkDir)" Importance="normal" />
         <Copy SourceFiles="@(MakeMsixInputs)" DestinationFolder="$(_MakeMsix_WorkDir)" SkipUnchangedFiles="true" />
-        <Message Text="MakeMSIX: Copy @(MakeMsixInputAssets) to $(_MakeMsix_WorkDir)\Assets" Importance="normal" Condition="'@(MakeMsixInputAssets)' != ''"/>
+        <Message Text="MakeMSIX: Copy @(MakeMsixInputAssets) to $(_MakeMsix_WorkDir)\Assets\en-US" Importance="normal" Condition="'@(MakeMsixInputAssets)' != ''"/>
         <MakeDir Directories="$(_MakeMsix_WorkDir)\Assets" Condition="'@(MakeMsixInputAssets)' != '' and !Exists('$(_MakeMsix_WorkDir)\Assets')" />
-        <Copy SourceFiles="@(MakeMsixInputAssets)" DestinationFolder="$(_MakeMsix_WorkDir)\Assets" SkipUnchangedFiles="true" Condition="'@(MakeMsixInputAssets)' != ''"/>
+        <MakeDir Directories="$(_MakeMsix_WorkDir)\Assets\en-US" Condition="'@(MakeMsixInputAssets)' != '' and !Exists('$(_MakeMsix_WorkDir)\Assets\en-US')" />
+        <Copy SourceFiles="@(MakeMsixInputAssets)" DestinationFolder="$(_MakeMsix_WorkDir)\Assets\en-US" SkipUnchangedFiles="true" Condition="'@(MakeMsixInputAssets)' != ''"/>
 
+        <Message Text="MakePRICreateConfig: Command: $(_MakePRICreateConfigCommand)" Importance="normal" />
+        <Exec Command="$(_MakePRICreateConfigCommand)" />
+        
+        <Message Text="MakePRINewCommand: Command: $(_MakePRINewCommand)" Importance="normal" />
+        <Exec Command="$(_MakePRINewCommand)" />
+        
         <Message Text="MakeMSIX: Command: $(_MakeMsixCommand)" Importance="normal" />
         <Exec Command="$(_MakeMsixCommand)" />
     </Target>
