@@ -144,7 +144,8 @@ namespace MSStore.CLI.ProjectConfigurators
                 try
                 {
                     var result = await ExternalCommandExecutor.RunAsync("yarn", $"why {packageName}", projectRootPath.FullName, ct);
-                    if (result.ExitCode == 0 && result.StdOut.Contains($"─ {packageName}@"))
+                    if (result.ExitCode == 0 &&
+                        (result.StdOut.Contains($"─ {packageName}@") || result.StdOut.Contains($"=> Found \"{packageName}@")))
                     {
                         ctx.SuccessStatus($"'{packageName}' package is already installed, no need to install it again.");
                         _yarnWhyExecuted[(projectRootPath.FullName, packageName)] = true;
