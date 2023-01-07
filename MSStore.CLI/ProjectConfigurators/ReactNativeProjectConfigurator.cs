@@ -120,7 +120,13 @@ namespace MSStore.CLI.ProjectConfigurators
 
         private static FileInfo FindFile(DirectoryInfo projectRootPath, string searchPattern)
         {
-            var files = projectRootPath.GetFiles(searchPattern, SearchOption.AllDirectories);
+            var files = projectRootPath.GetFiles(searchPattern, SearchOption.AllDirectories).ToList();
+
+            var nodeModules = projectRootPath.GetDirectories("node_modules", SearchOption.TopDirectoryOnly).FirstOrDefault();
+            if (nodeModules != null)
+            {
+                files = files.Where(f => !f.FullName.StartsWith(nodeModules.FullName, StringComparison.OrdinalIgnoreCase)).ToList();
+            }
 
             if (!files.Any())
             {
