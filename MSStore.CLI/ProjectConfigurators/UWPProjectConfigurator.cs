@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
@@ -39,6 +38,8 @@ namespace MSStore.CLI.ProjectConfigurators
         public override string OutputSubdirectory { get; } = Path.Combine("obj", "MSStore.CLI");
         public override string DefaultInputSubdirectory { get; } = "AppPackages";
         public override IEnumerable<BuildArch>? DefaultBuildArchs => new[] { BuildArch.X64, BuildArch.Arm64 };
+
+        public override bool PackageOnlyOnWindows => true;
 
         public override Task<(int returnCode, DirectoryInfo? outputDirectory)> ConfigureAsync(string pathOrUrl, DirectoryInfo? output, string publisherDisplayName, DevCenterApplication app, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
@@ -196,12 +197,6 @@ namespace MSStore.CLI.ProjectConfigurators
 
         internal static async Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(DirectoryInfo projectRootPath, IEnumerable<BuildArch>? buildArchs, FileInfo? solutionPath, string[] packageFilesExtensionInclude, DirectoryInfo? output, IExternalCommandExecutor externalCommandExecutor, ILogger logger, CancellationToken ct)
         {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                AnsiConsole.MarkupLine("[red]Packaging UWP apps is only supported on Windows[/]");
-                return (-1, null);
-            }
-
             var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
 
             var vswhere = Path.Combine(programFiles, "Microsoft Visual Studio", "Installer", "vswhere.exe");

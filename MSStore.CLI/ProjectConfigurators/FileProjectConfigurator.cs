@@ -56,6 +56,8 @@ namespace MSStore.CLI.ProjectConfigurators
 
         public abstract IEnumerable<BuildArch>? DefaultBuildArchs { get; }
 
+        public abstract bool PackageOnlyOnWindows { get; }
+
         public abstract Task<List<string>?> GetAppImagesAsync(string pathOrUrl, CancellationToken ct);
         public abstract Task<List<string>?> GetDefaultImagesAsync(string pathOrUrl, CancellationToken ct);
 

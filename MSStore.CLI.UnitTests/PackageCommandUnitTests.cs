@@ -163,14 +163,19 @@ namespace MSStore.CLI.UnitTests
                     "package",
                     path,
                     "--verbose"
-                }, -1);
+                }, -6);
 
-            result.Should().Contain("Packaging UWP apps is only supported on Windows");
+            result.Should().Contain("This project type can only be packaged on Windows.");
         }
 
         [TestMethod]
         public async Task PackageCommandForFlutterAppsShouldCallFlutter()
         {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Assert.Inconclusive("This test is only valid on Windows platforms");
+            }
+
             var path = CopyFilesRecursively("FlutterProject");
 
             var dirInfo = new DirectoryInfo(path);
@@ -218,6 +223,11 @@ namespace MSStore.CLI.UnitTests
         [TestMethod]
         public async Task PackageCommandForFlutterAppsShouldCallFlutterWithOutputParameter()
         {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Assert.Inconclusive("This test is only valid on Windows platforms");
+            }
+
             var path = CopyFilesRecursively("FlutterProject");
 
             var dirInfo = new DirectoryInfo(path);
@@ -285,6 +295,11 @@ namespace MSStore.CLI.UnitTests
         [TestMethod]
         public async Task PackageCommandForElectronNpmAppsShouldCallElectronNpm()
         {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Assert.Inconclusive("This test is only valid on Windows platforms");
+            }
+
             var path = CopyFilesRecursively(Path.Combine("ElectronProject", "Npm"));
 
             var dirInfo = new DirectoryInfo(path);
@@ -321,6 +336,11 @@ namespace MSStore.CLI.UnitTests
         [TestMethod]
         public async Task PackageCommandForElectronYarnAppsShouldCallElectronYarn()
         {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Assert.Inconclusive("This test is only valid on Windows platforms");
+            }
+
             var path = CopyFilesRecursively(Path.Combine("ElectronProject", "Yarn"));
 
             var dirInfo = new DirectoryInfo(path);

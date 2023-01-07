@@ -54,6 +54,8 @@ namespace MSStore.CLI.ProjectConfigurators
 
         public override IEnumerable<BuildArch>? DefaultBuildArchs => new[] { BuildArch.X64, BuildArch.Arm64 };
 
+        public override bool PackageOnlyOnWindows => true;
+
         public override async Task<bool> CanConfigureAsync(string pathOrUrl, CancellationToken ct)
         {
             if (!await base.CanConfigureAsync(pathOrUrl, ct))

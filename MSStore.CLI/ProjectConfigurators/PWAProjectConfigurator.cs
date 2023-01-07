@@ -59,6 +59,8 @@ namespace MSStore.CLI.ProjectConfigurators
         public string DefaultInputSubdirectory { get; } = string.Empty;
         public IEnumerable<BuildArch>? DefaultBuildArchs { get; }
 
+        public bool PackageOnlyOnWindows => false;
+
         public Task<bool> CanConfigureAsync(string pathOrUrl, CancellationToken ct)
         {
             var uri = GetUri(pathOrUrl);

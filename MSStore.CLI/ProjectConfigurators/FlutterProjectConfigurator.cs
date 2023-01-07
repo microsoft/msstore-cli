@@ -40,6 +40,8 @@ namespace MSStore.CLI.ProjectConfigurators
         public override string DefaultInputSubdirectory { get; } = Path.Combine("build", "windows", "runner", "Release");
         public override IEnumerable<BuildArch>? DefaultBuildArchs => new[] { BuildArch.X64 };
 
+        public override bool PackageOnlyOnWindows => true;
+
         public override async Task<(int returnCode, DirectoryInfo? outputDirectory)> ConfigureAsync(string pathOrUrl, DirectoryInfo? output, string publisherDisplayName, DevCenterApplication app, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             var (projectRootPath, flutterProjectFile) = GetInfo(pathOrUrl);

@@ -12,6 +12,7 @@ namespace MSStore.CLI.ProjectConfigurators
 {
     internal interface IProjectPackager
     {
+        bool PackageOnlyOnWindows { get; }
         IEnumerable<BuildArch>? DefaultBuildArchs { get; }
         Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(string pathOrUrl, DevCenterApplication? app, IEnumerable<BuildArch>? buildArchs, DirectoryInfo? output, IStorePackagedAPI storePackagedAPI, CancellationToken ct);
     }

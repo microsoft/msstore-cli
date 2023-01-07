@@ -8,6 +8,7 @@ using System.CommandLine.Invocation;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Logging;
@@ -101,6 +102,12 @@ namespace MSStore.CLI.Commands
                 }
 
                 await configurator.ValidateImagesAsync(PathOrUrl, _imageConverter, _logger, ct);
+
+                if (projectPackager.PackageOnlyOnWindows && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    AnsiConsole.MarkupLine("[red]This project type can only be packaged on Windows.[/]");
+                    return await _telemetryClient.TrackCommandEventAsync<Handler>(-6, props, ct);
+                }
 
                 var (returnCode, outputDirectory) = await projectPackager.PackageAsync(PathOrUrl, null, buildArchs, Output, storePackagedAPI, ct);
 
