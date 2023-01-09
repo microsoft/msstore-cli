@@ -111,6 +111,7 @@ namespace MSStore.CLI.Commands
             private readonly ITokenManager _tokenManager;
             private readonly IPartnerCenterManager _partnerCenterManager;
             private readonly IImageConverter _imageConverter;
+            private readonly IConfigurationManager<Configurations> _configurationManager;
             private readonly TelemetryClient _telemetryClient;
 
             public string PathOrUrl { get; set; } = null!;
@@ -134,6 +135,7 @@ namespace MSStore.CLI.Commands
                 ITokenManager tokenManager,
                 IPartnerCenterManager partnerCenterManager,
                 IImageConverter imageConverter,
+                IConfigurationManager<Configurations> configurationManager,
                 TelemetryClient telemetryClient)
             {
                 _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -144,6 +146,7 @@ namespace MSStore.CLI.Commands
                 _tokenManager = tokenManager ?? throw new ArgumentNullException(nameof(tokenManager));
                 _partnerCenterManager = partnerCenterManager ?? throw new ArgumentNullException(nameof(partnerCenterManager));
                 _imageConverter = imageConverter ?? throw new ArgumentNullException(nameof(imageConverter));
+                _configurationManager = configurationManager ?? throw new ArgumentNullException(nameof(configurationManager));
                 _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
             }
 
@@ -231,12 +234,23 @@ namespace MSStore.CLI.Commands
                     }
                     else
                     {
-                        // Temporary disabled until permissions are approved
-                        PublisherDisplayName = await _consoleReader.RequestStringAsync("Please, provide the PublisherDisplayName", false, ct);
+                        var config = await _configurationManager.LoadAsync(ct: ct);
+                        PublisherDisplayName = config.PublisherDisplayName;
+
                         if (string.IsNullOrEmpty(PublisherDisplayName))
                         {
-                            AnsiConsole.MarkupLine("[bold red]Invalid Publisher Display Name[/]");
-                            return await _telemetryClient.TrackCommandEventAsync<Handler>(-1, props, ct);
+                            PublisherDisplayName = await _consoleReader.RequestStringAsync("Please, provide the PublisherDisplayName", false, ct);
+                            if (string.IsNullOrEmpty(PublisherDisplayName))
+                            {
+                                AnsiConsole.MarkupLine("[bold red]Invalid Publisher Display Name[/]");
+                                return await _telemetryClient.TrackCommandEventAsync<Handler>(-1, props, ct);
+                            }
+
+                            if (config.PublisherDisplayName != PublisherDisplayName)
+                            {
+                                config.PublisherDisplayName = PublisherDisplayName;
+                                await _configurationManager.SaveAsync(config, ct);
+                            }
                         }
                     }
                 }
@@ -250,6 +264,13 @@ namespace MSStore.CLI.Commands
                 }
 
                 AnsiConsole.WriteLine($"This seems to be a {configurator.ConfiguratorProjectType} project.");
+
+                bool verbose = context.ParseResult.IsVerbose();
+                if (verbose)
+                {
+                    AnsiConsole.WriteLine($"Using PublisherDisplayName: {PublisherDisplayName}");
+                }
+
                 AnsiConsole.WriteLine("Lets set it up for you!");
                 AnsiConsole.WriteLine();
 

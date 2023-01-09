@@ -8,6 +8,7 @@ using System.CommandLine.Invocation;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Logging;
+using MSStore.CLI.Commands.Settings;
 using MSStore.CLI.Helpers;
 using MSStore.CLI.Services;
 using MSStore.CLI.Services.Telemetry;
@@ -25,20 +26,28 @@ namespace MSStore.CLI.Commands
                 "Enable (empty/true) or Disable (false) telemetry.");
             enableTelemetry.AddAlias("-t");
             AddOption(enableTelemetry);
+
+            AddCommand(new SetPublisherDisplayNameCommand());
+
+            this.SetHandler(() =>
+            {
+            });
         }
 
         public new class Handler : ICommandHandler
         {
             private readonly TelemetryClient _telemetryClient;
             private readonly IConfigurationManager<TelemetryConfigurations> _telemetryConfigurationManager;
+            private readonly IConfigurationManager<Configurations> _configurationManager;
             private readonly ILogger _logger;
 
             public bool? EnableTelemetry { get; set; }
 
-            public Handler(TelemetryClient telemetryClient, IConfigurationManager<TelemetryConfigurations> telemetryConfigurationManager, ILogger<Handler> logger)
+            public Handler(TelemetryClient telemetryClient, IConfigurationManager<TelemetryConfigurations> telemetryConfigurationManager, IConfigurationManager<Configurations> configurationManager, ILogger<Handler> logger)
             {
                 _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
                 _telemetryConfigurationManager = telemetryConfigurationManager ?? throw new ArgumentNullException(nameof(telemetryConfigurationManager));
+                _configurationManager = configurationManager ?? throw new ArgumentNullException(nameof(configurationManager));
                 _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             }
 
@@ -61,6 +70,9 @@ namespace MSStore.CLI.Commands
                         helpBuilder.Write(context.ParseResult.CommandResult.Command, Console.Out);
 
                         _logger.LogInformation("TelemetryEnabled = {TelemetryEnabled}", telemetryConfigurations.TelemetryEnabled);
+
+                        var config = await _configurationManager.LoadAsync(ct: ct);
+                        _logger.LogInformation("PublisherDisplayName = {PublisherDisplayName}", config.PublisherDisplayName);
                     }
                     else
                     {

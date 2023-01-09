@@ -15,6 +15,7 @@ namespace MSStore.CLI
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(InfoCommand.Handler))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ReconfigureCommand.Handler))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(SettingsCommand.Handler))]
+        [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Commands.Settings.SetPublisherDisplayNameCommand.Handler))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Commands.Apps.ListCommand.Handler))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Commands.Apps.GetCommand.Handler))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Commands.Submission.StatusCommand.Handler))]
@@ -35,6 +36,7 @@ namespace MSStore.CLI
                   .UseCommandHandler<InfoCommand, InfoCommand.Handler>()
                   .UseCommandHandler<ReconfigureCommand, ReconfigureCommand.Handler>()
                   .UseCommandHandler<SettingsCommand, SettingsCommand.Handler>()
+                  .UseCommandHandler<Commands.Settings.SetPublisherDisplayNameCommand, Commands.Settings.SetPublisherDisplayNameCommand.Handler>()
                   .UseCommandHandler<PackageCommand, PackageCommand.Handler>()
                   .UseCommandHandler<PublishCommand, PublishCommand.Handler>()
                   .UseCommandHandler<Commands.Apps.ListCommand, Commands.Apps.ListCommand.Handler>()

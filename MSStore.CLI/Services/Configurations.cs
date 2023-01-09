@@ -21,6 +21,10 @@ namespace MSStore.CLI.Services
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? DevCenterScope { get; set; }
 
+        // To be removed when PartnerCenterManager.Enabled == true
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? PublisherDisplayName { get; set; }
+
         public StoreConfigurations GetStoreConfigurations() => new()
         {
             SellerId = SellerId,
