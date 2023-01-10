@@ -32,7 +32,7 @@ namespace MSStore.CLI.UnitTests
         {
             var path = CopyFilesRecursively("UWPProject");
 
-            UWPProjectConfigurator.UpdateManifest(Path.Combine(path, "Package.appxmanifest"), FakeApps[0], "publisher");
+            UWPProjectConfigurator.UpdateManifest(Path.Combine(path, "Package.appxmanifest"), FakeApps[0], "publisher", null);
             var appPackagesFolder = Directory.CreateDirectory(Path.Combine(path, "AppPackages"));
             await File.WriteAllTextAsync(Path.Combine(appPackagesFolder.FullName, "test.msixupload"), string.Empty);
 
@@ -60,6 +60,7 @@ namespace MSStore.CLI.UnitTests
                 new FileInfo(Path.Combine(path, "pubspec.yaml")),
                 FakeApps[0],
                 "publisher",
+                null,
                 null,
                 CancellationToken.None);
             var appPackagesFolder = Directory.CreateDirectory(Path.Combine(path, "build", "windows", "runner", "Release"));
@@ -90,6 +91,7 @@ namespace MSStore.CLI.UnitTests
                 new FileInfo(Path.Combine(path, "package.json")),
                 FakeApps[0],
                 "publisher",
+                null,
                 ElectronManifestManager.Object,
                 CancellationToken.None);
             var appPackagesFolder = Directory.CreateDirectory(Path.Combine(path, "dist"));
@@ -129,7 +131,7 @@ namespace MSStore.CLI.UnitTests
 
             var appxManifest = ReactNativeProjectConfigurator.GetAppXManifest(new DirectoryInfo(path));
 
-            UWPProjectConfigurator.UpdateManifest(appxManifest.FullName, FakeApps[0], "publisher");
+            UWPProjectConfigurator.UpdateManifest(appxManifest.FullName, FakeApps[0], "publisher", null);
 
             var appPackagesFolder = Directory.CreateDirectory(Path.Combine(appxManifest.Directory!.FullName, "AppPackages"));
             await File.WriteAllTextAsync(Path.Combine(appPackagesFolder.FullName, "test.appxupload"), string.Empty);

@@ -25,6 +25,7 @@ namespace MSStore.CLI.Commands
             : base("package", "Helps you package your Microsoft Store Application as an MSIX.")
         {
             AddArgument(InitCommand.PathOrUrl);
+            AddOption(InitCommand.Version);
             AddOption(InitCommand.Output);
             AddOption(InitCommand.Arch);
         }
@@ -38,6 +39,8 @@ namespace MSStore.CLI.Commands
             private readonly TelemetryClient _telemetryClient;
 
             public string PathOrUrl { get; set; } = null!;
+
+            public Version? Version { get; set; } = null!;
 
             public DirectoryInfo? Output { get; set; } = null!;
 
@@ -109,7 +112,7 @@ namespace MSStore.CLI.Commands
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(-6, props, ct);
                 }
 
-                var (returnCode, outputDirectory) = await projectPackager.PackageAsync(PathOrUrl, null, buildArchs, Output, storePackagedAPI, ct);
+                var (returnCode, outputDirectory) = await projectPackager.PackageAsync(PathOrUrl, null, buildArchs, Version, Output, storePackagedAPI, ct);
 
                 if (returnCode == 0 && outputDirectory != null)
                 {

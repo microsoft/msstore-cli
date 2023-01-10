@@ -17,5 +17,7 @@ namespace MSStore.CLI.Services.ElectronManager
         [JsonPropertyName("msstoreCliAppId")]
         [JsonPropertyOrder(int.MaxValue)]
         public string? MSStoreCLIAppID { get; set; }
+        [JsonPropertyName("version")]
+        public string? Version { get; set; }
     }
 }

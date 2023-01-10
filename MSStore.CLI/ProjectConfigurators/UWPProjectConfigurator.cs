@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using MSStore.API;
 using MSStore.API.Packaged;
 using MSStore.API.Packaged.Models;
+using MSStore.CLI.Helpers;
 using MSStore.CLI.Services;
 using Spectre.Console;
 
@@ -41,11 +42,11 @@ namespace MSStore.CLI.ProjectConfigurators
 
         public override bool PackageOnlyOnWindows => true;
 
-        public override Task<(int returnCode, DirectoryInfo? outputDirectory)> ConfigureAsync(string pathOrUrl, DirectoryInfo? output, string publisherDisplayName, DevCenterApplication app, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public override Task<(int returnCode, DirectoryInfo? outputDirectory)> ConfigureAsync(string pathOrUrl, DirectoryInfo? output, string publisherDisplayName, DevCenterApplication app, Version? version, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             var (projectRootPath, manifestFile) = GetInfo(pathOrUrl);
 
-            UpdateManifest(manifestFile.FullName, app, publisherDisplayName);
+            UpdateManifest(manifestFile.FullName, app, publisherDisplayName, version);
 
             AnsiConsole.WriteLine($"UWP project at '{projectRootPath.FullName}' is now configured to build to the Microsoft Store!");
             AnsiConsole.MarkupLine("For more information on building your UWP project to the Microsoft Store, see [link]https://learn.microsoft.com/windows/msix/package/packaging-uwp-apps[/]");
@@ -68,7 +69,7 @@ namespace MSStore.CLI.ProjectConfigurators
             return Task.FromResult<List<string>?>(null);
         }
 
-        internal static void UpdateManifest(string appxManifestPath, DevCenterApplication app, string publisherDisplayName)
+        internal static void UpdateManifest(string appxManifestPath, DevCenterApplication app, string publisherDisplayName, Version? version)
         {
             XmlDocument xmlDoc = new XmlDocument
             {
@@ -143,6 +144,15 @@ namespace MSStore.CLI.ProjectConfigurators
                 {
                     publisher.Value = app.PublisherName;
                 }
+
+                if (version != null)
+                {
+                    var versionAttribute = identity.Attributes?["Version"];
+                    if (versionAttribute != null)
+                    {
+                        versionAttribute.Value = version.ToVersionString();
+                    }
+                }
             }
 
             var phoneIdentity = xmlDoc.SelectSingleNode("/ns:Package/mp:PhoneIdentity", nsmgr);
@@ -188,14 +198,39 @@ namespace MSStore.CLI.ProjectConfigurators
             xmlDoc.Save(appxManifestPath);
         }
 
-        public override async Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(string pathOrUrl, DevCenterApplication? app, IEnumerable<BuildArch>? buildArchs, DirectoryInfo? output, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        internal static void UpdateManifestVersion(string appxManifestPath, Version version)
         {
-            (DirectoryInfo projectRootPath, _) = GetInfo(pathOrUrl);
+            XmlDocument xmlDoc = new XmlDocument
+            {
+                PreserveWhitespace = true
+            };
 
-            return await PackageAsync(projectRootPath, buildArchs, null, PackageFilesExtensionInclude, output, _externalCommandExecutor, Logger, ct);
+            xmlDoc.Load(appxManifestPath);
+
+            XmlNamespaceManager nsmgr = new XmlNamespaceManager(xmlDoc.NameTable);
+            nsmgr.AddNamespace("ns", "http://schemas.microsoft.com/appx/manifest/foundation/windows10");
+
+            var identity = xmlDoc.SelectSingleNode("/ns:Package/ns:Identity", nsmgr);
+            if (identity != null)
+            {
+                var versionAttribute = identity.Attributes?["Version"];
+                if (versionAttribute != null)
+                {
+                    versionAttribute.Value = version.ToVersionString();
+                }
+            }
+
+            xmlDoc.Save(appxManifestPath);
         }
 
-        internal static async Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(DirectoryInfo projectRootPath, IEnumerable<BuildArch>? buildArchs, FileInfo? solutionPath, string[] packageFilesExtensionInclude, DirectoryInfo? output, IExternalCommandExecutor externalCommandExecutor, ILogger logger, CancellationToken ct)
+        public override async Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(string pathOrUrl, DevCenterApplication? app, IEnumerable<BuildArch>? buildArchs, Version? version, DirectoryInfo? output, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        {
+            (DirectoryInfo projectRootPath, FileInfo manifestFile) = GetInfo(pathOrUrl);
+
+            return await PackageAsync(projectRootPath, buildArchs, null, PackageFilesExtensionInclude, manifestFile, version, output, _externalCommandExecutor, Logger, ct);
+        }
+
+        internal static async Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(DirectoryInfo projectRootPath, IEnumerable<BuildArch>? buildArchs, FileInfo? solutionPath, string[] packageFilesExtensionInclude, FileInfo appxManifestFile, Version? version, DirectoryInfo? output, IExternalCommandExecutor externalCommandExecutor, ILogger logger, CancellationToken ct)
         {
             var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
 
@@ -257,6 +292,11 @@ namespace MSStore.CLI.ProjectConfigurators
             });
 
             output ??= new DirectoryInfo(Path.Combine(projectRootPath.FullName, "AppPackages"));
+
+            if (version != null)
+            {
+                UpdateManifestVersion(appxManifestFile.FullName, version);
+            }
 
             var bundleUploadFile = await AnsiConsole.Status().StartAsync("Building MSIX...", async ctx =>
             {

@@ -75,12 +75,12 @@ namespace MSStore.CLI.ProjectConfigurators
             }
         }
 
-        public override Task<(int returnCode, DirectoryInfo? outputDirectory)> ConfigureAsync(string pathOrUrl, DirectoryInfo? output, string publisherDisplayName, DevCenterApplication app, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public override Task<(int returnCode, DirectoryInfo? outputDirectory)> ConfigureAsync(string pathOrUrl, DirectoryInfo? output, string publisherDisplayName, DevCenterApplication app, Version? version, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             var (projectRootPath, reactNativeProjectFile) = GetInfo(pathOrUrl);
             var appxManifest = GetAppXManifest(projectRootPath);
 
-            UWPProjectConfigurator.UpdateManifest(appxManifest.FullName, app, publisherDisplayName);
+            UWPProjectConfigurator.UpdateManifest(appxManifest.FullName, app, publisherDisplayName, version);
 
             AnsiConsole.WriteLine($"React Native project '{reactNativeProjectFile.FullName}', with AppX manifest file at '{appxManifest.FullName}', is now configured to build to the Microsoft Store!");
             AnsiConsole.MarkupLine("For more information on building your React Native project to the Microsoft Store, see [link]https://microsoft.github.io/react-native-windows/docs/app-publishing[/]");
@@ -138,7 +138,7 @@ namespace MSStore.CLI.ProjectConfigurators
             return files.First();
         }
 
-        public override async Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(string pathOrUrl, DevCenterApplication? app, IEnumerable<BuildArch>? buildArchs, DirectoryInfo? output, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public override async Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(string pathOrUrl, DevCenterApplication? app, IEnumerable<BuildArch>? buildArchs, Version? version, DirectoryInfo? output, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             var (projectRootPath, _) = GetInfo(pathOrUrl);
 
@@ -159,7 +159,7 @@ namespace MSStore.CLI.ProjectConfigurators
 
             output ??= GetInputDirectory(projectRootPath);
 
-            return await UWPProjectConfigurator.PackageAsync(appxManifest.Directory, buildArchs, solutionFile, PackageFilesExtensionInclude, output, ExternalCommandExecutor, Logger, ct);
+            return await UWPProjectConfigurator.PackageAsync(appxManifest.Directory, buildArchs, solutionFile, PackageFilesExtensionInclude, appxManifest, version, output, ExternalCommandExecutor, Logger, ct);
         }
 
         public override Task<string?> GetAppIdAsync(FileInfo? fileInfo, CancellationToken ct)

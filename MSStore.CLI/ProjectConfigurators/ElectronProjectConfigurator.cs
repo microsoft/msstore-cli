@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using MSStore.API;
 using MSStore.API.Packaged;
 using MSStore.API.Packaged.Models;
+using MSStore.CLI.Helpers;
 using MSStore.CLI.Services;
 using MSStore.CLI.Services.ElectronManager;
 using Spectre.Console;
@@ -85,7 +86,7 @@ namespace MSStore.CLI.ProjectConfigurators
             }
         }
 
-        public override async Task<(int returnCode, DirectoryInfo? outputDirectory)> ConfigureAsync(string pathOrUrl, DirectoryInfo? output, string publisherDisplayName, DevCenterApplication app, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public override async Task<(int returnCode, DirectoryInfo? outputDirectory)> ConfigureAsync(string pathOrUrl, DirectoryInfo? output, string publisherDisplayName, DevCenterApplication app, Version? version, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             var (projectRootPath, electronProjectFile) = GetInfo(pathOrUrl);
 
@@ -94,7 +95,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 return (-1, null);
             }
 
-            _electronManifest = await UpdateManifestAsync(electronProjectFile, app, publisherDisplayName, _electronManifestManager, ct);
+            _electronManifest = await UpdateManifestAsync(electronProjectFile, app, publisherDisplayName, version, _electronManifestManager, ct);
 
             CopyDefaultImages(projectRootPath);
 
@@ -197,7 +198,7 @@ namespace MSStore.CLI.ProjectConfigurators
             return null;
         }
 
-        internal static async Task<ElectronManifest> UpdateManifestAsync(FileInfo electronProjectFile, DevCenterApplication app, string publisherDisplayName, IElectronManifestManager electronManifestManager, CancellationToken ct)
+        internal static async Task<ElectronManifest> UpdateManifestAsync(FileInfo electronProjectFile, DevCenterApplication app, string publisherDisplayName, Version? version, IElectronManifestManager electronManifestManager, CancellationToken ct)
         {
             var electronManifest = await electronManifestManager.LoadAsync(electronProjectFile, ct);
 
@@ -230,12 +231,17 @@ namespace MSStore.CLI.ProjectConfigurators
             electronManifest.Build.Appx.ApplicationId = "App";
             electronManifest.MSStoreCLIAppID = app.Id;
 
+            if (version != null)
+            {
+                electronManifest.Version = version.ToVersionString(true);
+            }
+
             await electronManifestManager.SaveAsync(electronManifest, electronProjectFile, ct);
 
             return electronManifest;
         }
 
-        public override async Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(string pathOrUrl, DevCenterApplication? app, IEnumerable<BuildArch>? buildArchs, DirectoryInfo? output, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public override async Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(string pathOrUrl, DevCenterApplication? app, IEnumerable<BuildArch>? buildArchs, Version? version, DirectoryInfo? output, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             var (projectRootPath, electronProjectFile) = GetInfo(pathOrUrl);
 
@@ -260,6 +266,17 @@ namespace MSStore.CLI.ProjectConfigurators
                     {
                         throw new MSStoreException("Failed to run 'npm install'.");
                     }
+                }
+            }
+
+            if (version != null)
+            {
+                var electronManifest = await _electronManifestManager.LoadAsync(electronProjectFile, ct);
+                var versionStr = version.ToVersionString(true);
+                if (electronManifest.Version != versionStr)
+                {
+                    electronManifest.Version = versionStr;
+                    await _electronManifestManager.SaveAsync(electronManifest, electronProjectFile, ct);
                 }
             }
 

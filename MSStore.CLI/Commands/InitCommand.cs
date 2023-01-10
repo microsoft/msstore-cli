@@ -29,6 +29,7 @@ namespace MSStore.CLI.Commands
         internal static readonly Argument<string> PathOrUrl;
         internal static readonly Option<DirectoryInfo?> Output;
         internal static readonly Option<IEnumerable<BuildArch>> Arch;
+        internal static readonly Option<Version?> Version;
 
         static InitCommand()
         {
@@ -71,6 +72,21 @@ namespace MSStore.CLI.Commands
             {
                 AllowMultipleArgumentsPerToken = true,
             };
+
+            Version = new Option<Version?>(
+                aliases: new string[] { "--version", "-ver" },
+                parseArgument: result =>
+                {
+                    var version = result.Tokens.Single().Value;
+                    if (System.Version.TryParse(version, out var parsedVersion))
+                    {
+                        return parsedVersion;
+                    }
+
+                    result.ErrorMessage = $"Invalid version: '{version}'.{Environment.NewLine}";
+                    return null;
+                },
+                description: "The version used when building the app. If not provided, the version from the project file will be used.");
         }
 
         public InitCommand()
@@ -99,6 +115,8 @@ namespace MSStore.CLI.Commands
             AddOption(Output);
 
             AddOption(Arch);
+
+            AddOption(Version);
         }
 
         public new class Handler : ICommandHandler
@@ -121,6 +139,8 @@ namespace MSStore.CLI.Commands
             public bool? Package { get; set; }
 
             public bool? Publish { get; set; }
+
+            public Version? Version { get; set; } = null!;
 
             public DirectoryInfo? Output { get; set; } = null!;
 
@@ -274,7 +294,7 @@ namespace MSStore.CLI.Commands
                 AnsiConsole.WriteLine("Lets set it up for you!");
                 AnsiConsole.WriteLine();
 
-                var (result, outputDirectory) = await configurator.ConfigureAsync(PathOrUrl, Output, PublisherDisplayName, app, storePackagedAPI, ct);
+                var (result, outputDirectory) = await configurator.ConfigureAsync(PathOrUrl, Output, PublisherDisplayName, app, Version, storePackagedAPI, ct);
 
                 if (result != 0)
                 {
@@ -315,7 +335,7 @@ namespace MSStore.CLI.Commands
                         return await _telemetryClient.TrackCommandEventAsync<Handler>(-6, props, ct);
                     }
 
-                    (result, outputDirectory) = await projectPackager.PackageAsync(PathOrUrl, app, buildArchs, Output, storePackagedAPI, ct);
+                    (result, outputDirectory) = await projectPackager.PackageAsync(PathOrUrl, app, buildArchs, Version, Output, storePackagedAPI, ct);
                 }
 
                 if (result != 0)

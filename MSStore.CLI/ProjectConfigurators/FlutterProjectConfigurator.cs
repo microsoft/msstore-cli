@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using MSStore.API;
 using MSStore.API.Packaged;
 using MSStore.API.Packaged.Models;
+using MSStore.CLI.Helpers;
 using MSStore.CLI.Services;
 using Spectre.Console;
 
@@ -42,13 +43,13 @@ namespace MSStore.CLI.ProjectConfigurators
 
         public override bool PackageOnlyOnWindows => true;
 
-        public override async Task<(int returnCode, DirectoryInfo? outputDirectory)> ConfigureAsync(string pathOrUrl, DirectoryInfo? output, string publisherDisplayName, DevCenterApplication app, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public override async Task<(int returnCode, DirectoryInfo? outputDirectory)> ConfigureAsync(string pathOrUrl, DirectoryInfo? output, string publisherDisplayName, DevCenterApplication app, Version? version, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             var (projectRootPath, flutterProjectFile) = GetInfo(pathOrUrl);
 
             await InstallMsixDependencyAsync(projectRootPath, ct);
 
-            var result = await UpdateManifestAsync(projectRootPath, flutterProjectFile, app, publisherDisplayName, _imageConverter, ct);
+            var result = await UpdateManifestAsync(projectRootPath, flutterProjectFile, app, publisherDisplayName, version, _imageConverter, ct);
             if (result != 0)
             {
                 return (result, null);
@@ -60,7 +61,7 @@ namespace MSStore.CLI.ProjectConfigurators
             return (0, output);
         }
 
-        internal static async Task<int> UpdateManifestAsync(DirectoryInfo projectRootPath, FileInfo flutterProjectFile, DevCenterApplication app, string publisherDisplayName, IImageConverter? imageConverter, CancellationToken ct)
+        internal static async Task<int> UpdateManifestAsync(DirectoryInfo projectRootPath, FileInfo flutterProjectFile, DevCenterApplication app, string publisherDisplayName, Version? version, IImageConverter? imageConverter, CancellationToken ct)
         {
             using var fileStream = flutterProjectFile.Open(FileMode.Open, FileAccess.ReadWrite);
 
@@ -141,7 +142,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 TryAddOrUpdate("logo_path", Path.GetRelativePath(projectRootPath.FullName, imagePath));
             }
 
-            TryAddOrUpdate("msix_version", "0.0.1.0");
+            TryAddOrUpdate("msix_version", version != null ? version.ToVersionString() : "0.0.1.0");
             TryAddOrUpdate("identity_name", app.PackageIdentityName);
             TryAddOrUpdate("publisher", app.PublisherName);
             TryAddOrUpdate("publisher_display_name", publisherDisplayName);
@@ -336,7 +337,7 @@ namespace MSStore.CLI.ProjectConfigurators
             });
         }
 
-        public override async Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(string pathOrUrl, DevCenterApplication? app, IEnumerable<BuildArch>? buildArchs, DirectoryInfo? output, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public override async Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(string pathOrUrl, DevCenterApplication? app, IEnumerable<BuildArch>? buildArchs, Version? version, DirectoryInfo? output, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             var (projectRootPath, flutterProjectFile) = GetInfo(pathOrUrl);
 
@@ -358,6 +359,11 @@ namespace MSStore.CLI.ProjectConfigurators
                     if (output != null)
                     {
                         args += $" --output-path \"{output.FullName}\"";
+                    }
+
+                    if (version != null)
+                    {
+                        args += $" --version {version.ToVersionString()}";
                     }
 
                     if (buildArchs?.Any() == true)

@@ -112,7 +112,7 @@ namespace MSStore.CLI.ProjectConfigurators
             return null;
         }
 
-        public async Task<(int returnCode, DirectoryInfo? outputDirectory)> ConfigureAsync(string pathOrUrl, DirectoryInfo? output, string publisherDisplayName, DevCenterApplication app, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public async Task<(int returnCode, DirectoryInfo? outputDirectory)> ConfigureAsync(string pathOrUrl, DirectoryInfo? output, string publisherDisplayName, DevCenterApplication app, Version? version, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             var uri = GetUri(pathOrUrl);
 
@@ -210,15 +210,15 @@ namespace MSStore.CLI.ProjectConfigurators
 
                     try
                     {
-                        var classicVersion = new Version(maxVersion.Major, maxVersion.Minor, maxVersion.Build + 1);
-                        var version = new Version(maxVersion.Major, maxVersion.Minor, maxVersion.Build + 2);
+                        var classicVersion = version != null ? version : new Version(maxVersion.Major, maxVersion.Minor, maxVersion.Build + 1);
+                        var zipVersion = new Version(classicVersion.Major, classicVersion.Minor, classicVersion.Build + 1);
                         await _pwaBuilderClient.GenerateZipAsync(
                             new GenerateZipRequest
                             {
                                 Url = uri.ToString(),
                                 Name = app.PrimaryName ?? string.Empty,
                                 PackageId = app.PackageIdentityName,
-                                Version = version.ToString(),
+                                Version = zipVersion.ToString(),
                                 AllowSigning = true,
                                 ClassicPackage = new ClassicPackage
                                 {
@@ -297,7 +297,7 @@ namespace MSStore.CLI.ProjectConfigurators
             return Task.FromResult<List<string>?>(null);
         }
 
-        public Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(string pathOrUrl, DevCenterApplication? app, IEnumerable<BuildArch>? buildArchs, DirectoryInfo? inputDirectory, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(string pathOrUrl, DevCenterApplication? app, IEnumerable<BuildArch>? buildArchs, Version? version, DirectoryInfo? inputDirectory, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             if (GetUri(pathOrUrl) != null && inputDirectory != null)
             {
