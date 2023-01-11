@@ -4,8 +4,8 @@
     <ItemGroup>
         <MakeMsixInputAssets Include="$(MSBuildThisFileDirectory)Assets\*" />
         <MakeMsixInputs Include="$(MSBuildThisFileDirectory)obj\$(Platform)\appxmanifest.xml" />
-        <MakeMsixInputs Include="$(PublishFolderPath)\**\*" />
-        <MakeMsixInputs Remove="$(PublishFolderPath)\**\*.md" />
+        <MakeMsixInputs Include="$(PublishFolderPath)\**\*" Condition="$(PublishFolderPath) != ''"/>
+        <MakeMsixInputs Remove="$(PublishFolderPath)\**\*.md" Condition="$(PublishFolderPath) != ''"/>
     </ItemGroup>
 
     <PropertyGroup>
@@ -15,7 +15,8 @@
 
     <Target Name="MakeMSIX"
       Inputs="@(MakeMsixInputs);@(MakeMsixInputAssets)"
-      Outputs="$(OutDir)$(MakeMsixOutputFilename)">
+      Outputs="$(OutDir)$(MakeMsixOutputFilename)"
+      Condition="$(PublishFolderPath) != ''">
 
         <PropertyGroup>
             <_MakeMsix_WorkDir>$(OutDir)msix</_MakeMsix_WorkDir>
