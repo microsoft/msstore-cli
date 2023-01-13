@@ -44,6 +44,11 @@ namespace MSStore.CLI.Services
                     cmd.StartInfo.Arguments = arguments;
                 }
 
+                if (_logger.IsEnabled(LogLevel.Information))
+                {
+                    AnsiConsole.WriteLine($"Running: {cmd.StartInfo.FileName} {cmd.StartInfo.Arguments}");
+                }
+
                 cmd.StartInfo.RedirectStandardInput = true;
                 cmd.StartInfo.RedirectStandardOutput = true;
                 cmd.StartInfo.RedirectStandardError = true;
