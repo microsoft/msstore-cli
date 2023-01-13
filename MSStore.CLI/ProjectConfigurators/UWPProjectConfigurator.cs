@@ -344,7 +344,7 @@ namespace MSStore.CLI.ProjectConfigurators
 
                     if (bundleUploadFile == null)
                     {
-                        throw new MSStoreException($"Could not find any file with extensions {string.Join(", ", $"'{packageFilesExtensionInclude}'")}!");
+                        throw new MSStoreException($"Could not find any file with extensions {string.Join(", ", packageFilesExtensionInclude.Select(e => $"'{e}'"))}!");
                     }
 
                     ctx.SuccessStatus("MSIX built successfully!");
