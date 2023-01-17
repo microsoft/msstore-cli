@@ -18,7 +18,11 @@ namespace MSStore.CLI.Services
 
             try
             {
-                using (HttpClient httpClient = new HttpClient())
+                using (HttpClient httpClient = new HttpClient(
+                    new HttpClientHandler
+                    {
+                        CheckCertificateRevocationList = true
+                    }))
                 {
                     using var request = new HttpRequestMessage(HttpMethod.Get, url);
 
