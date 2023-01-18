@@ -193,7 +193,7 @@ namespace MSStore.CLI.UnitTests
 
             var imageConverter = new Mock<IImageConverter>();
             imageConverter
-                .Setup(x => x.ConvertIcoToPngAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Setup(x => x.ConvertIcoToPngAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
 
             ElectronManifestManager = new Mock<ElectronManifestManager> { CallBase = true };

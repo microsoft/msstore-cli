@@ -62,6 +62,7 @@ namespace MSStore.CLI.UnitTests
                 "publisher",
                 null,
                 null,
+                null,
                 CancellationToken.None);
             var appPackagesFolder = Directory.CreateDirectory(Path.Combine(path, "build", "windows", "runner", "Release"));
             await File.WriteAllTextAsync(Path.Combine(appPackagesFolder.FullName, "test.msix"), string.Empty);

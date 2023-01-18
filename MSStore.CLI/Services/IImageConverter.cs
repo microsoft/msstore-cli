@@ -8,7 +8,7 @@ namespace MSStore.CLI.Services
 {
     internal interface IImageConverter
     {
-        Task<bool> ConvertIcoToPngAsync(string sourceFilePath, string destinationFilePath, CancellationToken ct);
+        Task<bool> ConvertIcoToPngAsync(string sourceFilePath, string destinationFilePath, int destinationWidth, int destinationHeight, int paddingX, int paddingY, CancellationToken ct);
         byte[]? ConvertToByteArray(string image);
     }
 }

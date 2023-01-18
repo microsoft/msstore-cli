@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -49,7 +50,7 @@ namespace MSStore.CLI.ProjectConfigurators
 
             await InstallMsixDependencyAsync(projectRootPath, ct);
 
-            var result = await UpdateManifestAsync(projectRootPath, flutterProjectFile, app, publisherDisplayName, version, _imageConverter, ct);
+            var result = await UpdateManifestAsync(projectRootPath, flutterProjectFile, app, publisherDisplayName, version, _imageConverter, _externalCommandExecutor, ct);
             if (result != 0)
             {
                 return (result, null);
@@ -61,7 +62,7 @@ namespace MSStore.CLI.ProjectConfigurators
             return (0, output);
         }
 
-        internal static async Task<int> UpdateManifestAsync(DirectoryInfo projectRootPath, FileInfo flutterProjectFile, DevCenterApplication app, string publisherDisplayName, Version? version, IImageConverter? imageConverter, CancellationToken ct)
+        internal static async Task<int> UpdateManifestAsync(DirectoryInfo projectRootPath, FileInfo flutterProjectFile, DevCenterApplication app, string publisherDisplayName, Version? version, IImageConverter? imageConverter, IExternalCommandExecutor? externalCommandExecutor, CancellationToken ct)
         {
             using var fileStream = flutterProjectFile.Open(FileMode.Open, FileAccess.ReadWrite);
 
@@ -93,9 +94,9 @@ namespace MSStore.CLI.ProjectConfigurators
             }
 
             string? imagePath = null;
-            if (imageConverter != null)
+            if (imageConverter != null && externalCommandExecutor != null)
             {
-                imagePath = await GenerateImageFromIcoAsync(projectRootPath, imageConverter, ct);
+                imagePath = await GenerateImageFromIcoAsync(projectRootPath, imageConverter, externalCommandExecutor, ct);
 
                 if (imagePath == null)
                 {
@@ -156,23 +157,85 @@ namespace MSStore.CLI.ProjectConfigurators
             return 0;
         }
 
-        public override Task<List<string>?> GetAppImagesAsync(string pathOrUrl, CancellationToken ct)
+        public override async Task<List<string>?> GetAppImagesAsync(string pathOrUrl, CancellationToken ct)
         {
-            var (projectRootPath, _) = GetInfo(pathOrUrl);
+            var (projectRootPath, flutterProjectFile) = GetInfo(pathOrUrl);
 
-            var icon = GetIcon(projectRootPath);
-            if (icon != null)
+            var images = new List<string>();
+
+            var icoIcon = GetIcoIcon(projectRootPath);
+            if (icoIcon != null)
             {
-                return Task.FromResult<List<string>?>(new List<string> { icon });
+                images.Add(icoIcon);
             }
 
-            return Task.FromResult<List<string>?>(new List<string>());
+            var icon = await GetIconAsync(projectRootPath, flutterProjectFile, ct);
+            if (icon != null)
+            {
+                images.Add(icon);
+            }
+
+            return images;
+        }
+
+        private static async Task<string?> GetIconAsync(DirectoryInfo? projectRootPath, FileInfo? flutterProjectFile, CancellationToken ct)
+        {
+            if (projectRootPath == null || flutterProjectFile == null)
+            {
+                return null;
+            }
+
+            var logoPath = await GetYamlPropertyAsync(flutterProjectFile, "logo_path", ct);
+            if (logoPath == null)
+            {
+                return null;
+            }
+
+            return Path.Combine(projectRootPath.FullName, logoPath);
         }
 
         public override async Task<List<string>?> GetDefaultImagesAsync(string pathOrUrl, CancellationToken ct)
         {
             List<string> images = new List<string>();
-            var flutterExecutablePath = await _externalCommandExecutor.FindToolAsync("flutter", ct);
+
+            var flutterDir = await GetFlutterDirAsync(_externalCommandExecutor, ct);
+            if (flutterDir == null)
+            {
+                return images;
+            }
+
+            var iconSubPath = Path.Combine("templates", "app_shared", "windows.tmpl", "runner", "resources", "app_icon.ico");
+            var iconTemplateSubPath = $"{iconSubPath}.img.tmpl";
+
+            var flutterDefaultAppIconTemplate = Path.Combine(flutterDir, "packages", "flutter_tools", iconTemplateSubPath);
+            if (File.Exists(flutterDefaultAppIconTemplate))
+            {
+                var flutter_template_images = GetPubPackagePath(flutterDir, "flutter_template_images");
+
+                if (flutter_template_images?.FullName != null)
+                {
+                    var flutterDefaultAppIcon = Path.Combine(flutter_template_images.FullName, iconSubPath);
+                    if (File.Exists(flutterDefaultAppIcon))
+                    {
+                        images.Add(flutterDefaultAppIcon);
+                    }
+                }
+            }
+
+            var msix = GetPubPackagePath(flutterDir, "msix");
+
+            if (msix?.FullName != null)
+            {
+                var iconsSubPath = Path.Combine(msix.FullName, "lib", "assets", "icons");
+                images.AddRange(Directory.GetFiles(iconsSubPath, "*.png", SearchOption.TopDirectoryOnly));
+            }
+
+            return images;
+        }
+
+        private static async Task<string?> GetFlutterDirAsync(IExternalCommandExecutor externalCommandExecutor, CancellationToken ct)
+        {
+            var flutterExecutablePath = await externalCommandExecutor.FindToolAsync("flutter", ct);
             if (!string.IsNullOrEmpty(flutterExecutablePath))
             {
                 var bin = Directory.GetParent(flutterExecutablePath);
@@ -181,40 +244,33 @@ namespace MSStore.CLI.ProjectConfigurators
                     var flutterDir = bin.Parent;
                     if (flutterDir != null && flutterDir.FullName != null)
                     {
-                        var iconSubPath = Path.Combine("templates", "app_shared", "windows.tmpl", "runner", "resources", "app_icon.ico");
-                        var iconTemplateSubPath = $"{iconSubPath}.img.tmpl";
-                        var flutterDefaultAppIconTemplate = Path.Combine(flutterDir.FullName, "packages", "flutter_tools", iconTemplateSubPath);
-                        if (File.Exists(flutterDefaultAppIconTemplate))
-                        {
-                            var pubDartlangOrgDir = new DirectoryInfo(Path.Combine(flutterDir.FullName, ".pub-cache", "hosted", "pub.dartlang.org"));
-                            if (pubDartlangOrgDir.Exists)
-                            {
-                                var flutter_template_images = pubDartlangOrgDir
-                                    .GetDirectories("flutter_template_images-*", SearchOption.TopDirectoryOnly)
-                                    .OrderByDescending(d => d.Name)
-                                    .FirstOrDefault();
-                                if (flutter_template_images?.FullName != null)
-                                {
-                                    var flutterDefaultAppIcon = Path.Combine(flutter_template_images.FullName, iconSubPath);
-                                    if (File.Exists(flutterDefaultAppIcon))
-                                    {
-                                        images.Add(flutterDefaultAppIcon);
-                                    }
-                                }
-                            }
-                        }
+                        return flutterDir.FullName;
                     }
                 }
             }
 
-            return images;
+            return null;
         }
 
-        private static async Task<string?> GenerateImageFromIcoAsync(DirectoryInfo projectRootPath, IImageConverter imageConverter, CancellationToken ct)
+        private static DirectoryInfo? GetPubPackagePath(string flutterDir, string packageName, string version = "*")
+        {
+            var pubDartlangOrgDir = new DirectoryInfo(Path.Combine(flutterDir, ".pub-cache", "hosted", "pub.dartlang.org"));
+            if (pubDartlangOrgDir.Exists)
+            {
+                return pubDartlangOrgDir
+                    .GetDirectories($"{packageName}-{version}", SearchOption.TopDirectoryOnly)
+                    .OrderByDescending(d => d.Name)
+                    .FirstOrDefault();
+            }
+
+            return null;
+        }
+
+        private static async Task<string?> GenerateImageFromIcoAsync(DirectoryInfo projectRootPath, IImageConverter imageConverter, IExternalCommandExecutor externalCommandExecutor, CancellationToken ct)
         {
             try
             {
-                var icon = GetIcon(projectRootPath);
+                var icon = GetIcoIcon(projectRootPath);
                 if (icon == string.Empty)
                 {
                     return string.Empty;
@@ -225,12 +281,33 @@ namespace MSStore.CLI.ProjectConfigurators
                     return null;
                 }
 
-                var logoPath = Path.ChangeExtension(icon, ".png");
+                var flutterDir = await GetFlutterDirAsync(externalCommandExecutor, ct);
 
-                if (!await imageConverter.ConvertIcoToPngAsync(icon, logoPath, ct))
+                DirectoryInfo? msix = null;
+                bool isDefaultIcon = false;
+                if (flutterDir != null)
                 {
-                    AnsiConsole.MarkupLine($"[red]Failed to convert icon to png.[/]");
-                    return null;
+                    msix = GetPubPackagePath(flutterDir, "msix");
+                    isDefaultIcon = IsDefaultIcon(flutterDir, icon, imageConverter);
+                }
+
+                var logoPath = Path.ChangeExtension(icon, ".png");
+                if (flutterDir == null || msix?.FullName == null || !isDefaultIcon)
+                {
+                    if (!await imageConverter.ConvertIcoToPngAsync(icon, logoPath, 256, 256, 12, 12, ct))
+                    {
+                        AnsiConsole.MarkupLine($"[red]Failed to convert icon to png.[/]");
+                        return null;
+                    }
+                }
+                else
+                {
+                    var iconsSubPath = Path.Combine(msix.FullName, "lib", "assets", "icons");
+                    var file = Directory.GetFiles(iconsSubPath, "StoreLogo.scale-400.png", SearchOption.TopDirectoryOnly).FirstOrDefault();
+                    if (file != null)
+                    {
+                        File.Copy(file, logoPath, true);
+                    }
                 }
 
                 return logoPath;
@@ -242,7 +319,35 @@ namespace MSStore.CLI.ProjectConfigurators
             }
         }
 
-        private static string? GetIcon(DirectoryInfo projectRootPath)
+        private static bool IsDefaultIcon(string flutterDir, string iconPath, IImageConverter imageConverter)
+        {
+            var flutter_template_images = GetPubPackagePath(flutterDir, "flutter_template_images");
+
+            if (flutter_template_images?.FullName != null)
+            {
+                var iconSubPath = Path.Combine("templates", "app_shared", "windows.tmpl", "runner", "resources", "app_icon.ico");
+                var flutterDefaultAppIcon = Path.Combine(flutter_template_images.FullName, iconSubPath);
+                if (File.Exists(flutterDefaultAppIcon))
+                {
+                    try
+                    {
+                        var byte1Array = imageConverter.ConvertToByteArray(iconPath);
+                        var byte2Array = imageConverter.ConvertToByteArray(flutterDefaultAppIcon);
+                        if (byte1Array != null && byte2Array != null)
+                        {
+                            return SHA512.HashData(byte1Array).SequenceEqual(SHA512.HashData(byte2Array));
+                        }
+                    }
+                    catch
+                    {
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static string? GetIcoIcon(DirectoryInfo projectRootPath)
         {
             var resourcesDirInfo = new DirectoryInfo(Path.Combine(projectRootPath.FullName, "windows", "runner", "resources"));
             if (!resourcesDirInfo.Exists)
@@ -339,7 +444,7 @@ namespace MSStore.CLI.ProjectConfigurators
 
         public override async Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(string pathOrUrl, DevCenterApplication? app, IEnumerable<BuildArch>? buildArchs, Version? version, DirectoryInfo? output, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
-            var (projectRootPath, flutterProjectFile) = GetInfo(pathOrUrl);
+            var (projectRootPath, _) = GetInfo(pathOrUrl);
 
             if (app == null)
             {
@@ -435,15 +540,20 @@ namespace MSStore.CLI.ProjectConfigurators
             });
         }
 
-        public override async Task<string?> GetAppIdAsync(FileInfo? fileInfo, CancellationToken ct)
+        public override Task<string?> GetAppIdAsync(FileInfo? fileInfo, CancellationToken ct)
         {
-            if (fileInfo == null)
+            return GetYamlPropertyAsync(fileInfo, "msstore_appId", ct);
+        }
+
+        private static async Task<string?> GetYamlPropertyAsync(FileInfo? flutterProjectFile, string property, CancellationToken ct)
+        {
+            if (flutterProjectFile == null)
             {
                 return null;
             }
 
-            string? appId = null;
-            using var fileStream = fileInfo.Open(FileMode.Open, FileAccess.ReadWrite);
+            string? propertyValue = null;
+            using var fileStream = flutterProjectFile.Open(FileMode.Open, FileAccess.ReadWrite);
 
             string[] yamlLines;
 
@@ -459,24 +569,19 @@ namespace MSStore.CLI.ProjectConfigurators
                 {
                     try
                     {
-                        var indexOfMsstoreAppId = line.IndexOf("msstore_appId", StringComparison.OrdinalIgnoreCase);
-                        if (indexOfMsstoreAppId > -1)
+                        var indexOfProperty = line.IndexOf(property, StringComparison.OrdinalIgnoreCase);
+                        if (indexOfProperty > -1)
                         {
                             var commentStartIndex = line.IndexOf('#');
-                            if (commentStartIndex == -1 || commentStartIndex > indexOfMsstoreAppId)
+                            if (commentStartIndex == -1 || commentStartIndex > indexOfProperty)
                             {
-                                if (commentStartIndex > indexOfMsstoreAppId)
+                                if (commentStartIndex > indexOfProperty)
                                 {
-                                    appId = line.Substring(0, commentStartIndex).Split(':').LastOrDefault()?.Trim();
+                                    propertyValue = line.Substring(0, commentStartIndex).Split(':').LastOrDefault()?.Trim();
                                 }
                                 else
                                 {
-                                    appId = line.Split(':').LastOrDefault()?.Trim();
-                                }
-
-                                if (string.IsNullOrEmpty(appId))
-                                {
-                                    throw new MSStoreException("Failed to find the 'msstore_appId' in the pubspec.yaml file.");
+                                    propertyValue = line.Split(':').LastOrDefault()?.Trim();
                                 }
                             }
                         }
@@ -487,7 +592,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 }
             }
 
-            return appId;
+            return propertyValue;
         }
     }
 }
