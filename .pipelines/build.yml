@@ -1,0 +1,56 @@
+trigger:
+  branches:
+    include:
+      - main
+pr: none
+
+parameters:
+  - name: dotnet_configurations
+    type: object
+    default:
+      - Release
+  - name: buildPlatforms
+    type: object
+    default:
+      - x64
+      - arm64
+
+name: 0.0.$(Date:yyMM).$(Date:dd)$(Rev:rr)
+
+jobs:
+  - job: Build_And_Run_CodeQL
+    displayName: Build and Run CodeQL
+    strategy:
+      matrix:
+        ${{ each dotnet_config in parameters.dotnet_configurations }}:
+          Windows_${{ dotnet_config }}:
+            os: windows-latest
+            dotnet_configuration: ${{ dotnet_config }}
+          Linux_${{ dotnet_config }}:
+            os: ubuntu-latest
+            dotnet_configuration: ${{ dotnet_config }}
+          Mac_${{ dotnet_config }}:
+            os: macos-latest
+            dotnet_configuration: ${{ dotnet_config }}
+    pool:
+      vmImage: $(os)
+    steps:
+    - checkout: self
+    - task: UseDotNet@2
+      displayName: Setup .NET 7
+      inputs:
+        version: 7.0.x
+    - script: mv -f ./.pipelines/release-nuget.config ./nuget.config
+      displayName: Add release package source
+    - task: NuGetAuthenticate@0
+    - script: dotnet restore MSStore.CLI.sln /p:Configuration=$(dotnet_configuration)
+      displayName: Restore dependencies
+    - template: ./templates/build-nuget.yaml
+      parameters:
+        dotnet_configuration: $(dotnet_configuration)
+        AgentOS: $(Agent.OS)
+        DoEsrp: false
+    - template: ./templates/after-build.yaml
+      parameters:
+        dotnet_configuration: $(dotnet_configuration)
+        AgentOS: $(Agent.OS)

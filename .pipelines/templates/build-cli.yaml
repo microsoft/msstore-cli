@@ -13,7 +13,7 @@ steps:
     custom: tool
     arguments: install --tool-path . nbgv
   displayName: Install NBGV tool
-- script: |
+- bash: |
     echo "##vso[task.setvariable variable=AgentOS;]${{ parameters.AgentOS }}"
 - script: ./nbgv cloud
   condition: startsWith(variables.AgentOS, 'Darwin')

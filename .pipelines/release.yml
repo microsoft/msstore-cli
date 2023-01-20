@@ -18,8 +18,6 @@ parameters:
     type: boolean
     default: true
 
-#     0.0.yyMM.dd##
-#     0.0.1904.0900
 name: 0.0.$(Date:yyMM).$(Date:dd)$(Rev:rr)
 
 stages:
@@ -176,38 +174,7 @@ stages:
           dotnet_configuration: $(dotnet_configuration)
           AgentOS: $(Agent.OS)
           DoEsrp: ${{ parameters.DoEsrp }}
-      - task: ms.vss-governance-buildtask.governance-build-task-component-detection.ComponentGovernanceComponentDetection@0
-        displayName: 'Component Detection'
-        condition: and(succeededOrFailed(), not(eq(variables['Build.Reason'], 'PullRequest')))
-        inputs:
-          ignoreDirectories: 'MSStore.CLI.UnitTests'
-      - task: BinSkim@3
-        displayName: Run Binskim Analysis
-        condition: and(succeeded(), startsWith(variables['dotnet_configuration'], 'Release'), startsWith(variables['Agent.OS'], 'Windows_NT'))
-        inputs:
-          InputType: 'Basic'
-          Function: 'analyze'
-          ${{ if ne(variables['dotnet_runtime'], 'net7.0-windows10.0.17763.0') }}:
-            AnalyzeTarget: 'MSStore.CLI/bin/$(dotnet_configuration)/$(dotnet_framework)/$(dotnet_runtime)-$(dotnet_arch)/publish/msstore.exe'
-          ${{ else }}:
-            AnalyzeTarget: 'MSStore.CLI/bin/$(dotnet_configuration)/$(dotnet_framework)/$(dotnet_runtime)-$(dotnet_arch)/publish/msstore'
-          AnalyzeVerbose: true
-          toolVersion: 'Latest'
-      - task: SdtReport@2
-        condition: and(startsWith(variables['dotnet_configuration'], 'Release'), startsWith(variables['Agent.OS'], 'Windows_NT'))
-        inputs:
-          GdnExportAllTools: true
-      - task: PublishSecurityAnalysisLogs@3
-        displayName: 'Publish Guardian Artifacts'
-        condition: and(succeededOrFailed(), startsWith(variables['dotnet_configuration'], 'Release'), startsWith(variables['Agent.OS'], 'Windows_NT'))
-      - task: securedevelopmentteam.vss-secure-development-tools.build-task-postanalysis.PostAnalysis@1
-        displayName: 'Post Analysis'
-        condition: and(startsWith(variables['dotnet_configuration'], 'Release'), startsWith(variables['Agent.OS'], 'Windows_NT'))
-        inputs:
-          BinSkim: true
-      - script: |
-          git tag v$(GitBuildVersionSimple)
-          git push origin v$(GitBuildVersionSimple)
-        displayName: Push tag for release builds
-        condition: and(startsWith(variables['Build.SourceBranch'], 'refs/heads/rel/v'), startsWith(variables['Agent.OS'], 'Windows_NT'), eq(variables['dotnet_arch'], 'x64'))
-        workingDirectory: $(Build.SourcesDirectory)
+      - template: ./templates/after-build.yaml
+        parameters:
+          dotnet_configuration: $(dotnet_configuration)
+          AgentOS: $(Agent.OS)
