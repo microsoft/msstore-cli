@@ -27,7 +27,7 @@ namespace MSStore.CLI.Services
             {
                 AnsiConsole.MarkupLine($"Press [b green]Enter[/] to open the browser at this page: [link]{url.EscapeMarkup()}[/]");
 
-                if (!string.IsNullOrEmpty(await _consoleReader.ReadNextAsync(false, ct)))
+                if (await _consoleReader.ReadNextAsync(false, ct) != string.Empty)
                 {
                     return;
                 }
