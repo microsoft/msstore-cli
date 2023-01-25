@@ -6,6 +6,7 @@ namespace MSStore.CLI.ProjectConfigurators
     internal enum PublishFileSearchFilterStrategy
     {
         All,
-        Newest
+        Newest,
+        OneLevelDown
     }
 }

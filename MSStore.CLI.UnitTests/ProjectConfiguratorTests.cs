@@ -476,6 +476,8 @@ namespace MSStore.CLI.UnitTests
         {
             var path = CopyFilesRecursively("UWPProject");
 
+            DefaultMSBuildExecution(new DirectoryInfo(path));
+
             var result = await ParseAndInvokeAsync(
                 new string[]
                 {
@@ -487,6 +489,34 @@ namespace MSStore.CLI.UnitTests
             result = CleanResult(result);
 
             result.Should().Contain("This seems to be a UWP project.");
+
+            var appxManifestFileContents = await File.ReadAllTextAsync(Path.Combine(path, "Package.appxmanifest"));
+
+            appxManifestFileContents.Should().Contain("Fake App");
+        }
+
+        [TestMethod]
+        public async Task ProjectConfiguratorParsesWinUIProject()
+        {
+            var path = CopyFilesRecursively("WinUIProject");
+
+            var dirInfo = new DirectoryInfo(path);
+
+            DefaultMSBuildExecution(dirInfo);
+
+            SetupWinUI(dirInfo);
+
+            var result = await ParseAndInvokeAsync(
+                new string[]
+                {
+                    "init",
+                    path,
+                    "--verbose"
+                });
+
+            result = CleanResult(result);
+
+            result.Should().Contain("This seems to be a Windows App SDK/WinUI project.");
 
             var appxManifestFileContents = await File.ReadAllTextAsync(Path.Combine(path, "Package.appxmanifest"));
 

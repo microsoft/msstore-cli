@@ -89,7 +89,7 @@ namespace MSStore.CLI.UnitTests
                         s.Contains("\"MSBuild.exe\"")),
                     It.Is<string>(s =>
                         s.Contains("/p:Configuration=Release;AppxBundle=Always;Platform=X64;AppxBundlePlatforms=\"X64|ARM64\"")
-                        && s.Contains($"AppxPackageDir=\"{customPath}\"")
+                        && s.Contains($"AppxPackageDir={customPath}\\;")
                         && s.EndsWith("UapAppxPackageBuildMode=StoreUpload)")),
                     It.Is<string>(s => s == dirInfo.FullName),
                     It.IsAny<CancellationToken>()))
@@ -116,37 +116,6 @@ namespace MSStore.CLI.UnitTests
             ExternalCommandExecutor.VerifyAll();
         }
 
-        private void DefaultMSBuildExecution(DirectoryInfo dirInfo)
-        {
-            ExternalCommandExecutor
-                            .Setup(x => x.RunAsync(
-                                It.Is<string>(s =>
-                                    s.Contains("vswhere.exe")),
-                                It.Is<string>(s =>
-                                    s.Contains("-latest -requires Microsoft.Component.MSBuild -find MSBuild\\**\\Bin\\MSBuild.exe")),
-                                It.Is<string>(s => s == dirInfo.FullName),
-                                It.IsAny<CancellationToken>()))
-                            .ReturnsAsync(new Services.ExternalCommandExecutionResult
-                            {
-                                ExitCode = 0,
-                                StdOut = "MSBuild.exe",
-                                StdErr = string.Empty
-                            });
-
-            ExternalCommandExecutor
-                .Setup(x => x.RunAsync(
-                    It.Is<string>(s => s.Contains("\"MSBuild.exe\"")),
-                    It.Is<string>(s => s.Contains("/t:restore")),
-                    It.Is<string>(s => s == dirInfo.FullName),
-                    It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new Services.ExternalCommandExecutionResult
-                {
-                    ExitCode = 0,
-                    StdOut = string.Empty,
-                    StdErr = string.Empty
-                });
-        }
-
         [TestMethod]
         public async Task PackageCommandForUWPAppsShouldNotWorkIfNotWindows()
         {
@@ -156,6 +125,154 @@ namespace MSStore.CLI.UnitTests
             }
 
             var path = CopyFilesRecursively("UWPProject");
+
+            var result = await ParseAndInvokeAsync(
+                new string[]
+                {
+                    "package",
+                    path,
+                    "--verbose"
+                }, -6);
+
+            result.Should().Contain("This project type can only be packaged on Windows.");
+        }
+
+        [TestMethod]
+        public async Task PackageCommandForWinUIAppsShouldCallMSBuildIfWindows()
+        {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Assert.Inconclusive("This test is only valid on Windows platforms");
+            }
+
+            var path = CopyFilesRecursively("WinUIProject");
+
+            var dirInfo = new DirectoryInfo(path);
+
+            DefaultMSBuildExecution(dirInfo);
+            SetupWinUI(dirInfo);
+
+            ExternalCommandExecutor
+                .Setup(x => x.RunAsync(
+                    It.Is<string>(s =>
+                        s.Contains("\"MSBuild.exe\"")),
+                    It.Is<string>(s =>
+                        s.Contains("/p:Configuration=Release;AppxBundle=Always;Platform=X64;AppxBundlePlatforms=X64")
+                        && s.Contains("UapAppxPackageBuildMode=StoreUpload")),
+                    It.Is<string>(s => s == dirInfo.FullName),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Services.ExternalCommandExecutionResult
+                {
+                    ExitCode = 0,
+                    StdOut = $"{Environment.NewLine}...{Environment.NewLine}abc -> {Path.Combine(path, "TestFile_x64.msix")}{Environment.NewLine}",
+                    StdErr = string.Empty
+                });
+
+            ExternalCommandExecutor
+                .Setup(x => x.RunAsync(
+                    It.Is<string>(s =>
+                        s.Contains("\"MSBuild.exe\"")),
+                    It.Is<string>(s =>
+                        s.Contains("/p:Configuration=Release;AppxBundle=Always;Platform=ARM64;AppxBundlePlatforms=ARM64")
+                        && s.Contains("UapAppxPackageBuildMode=StoreUpload")),
+                    It.Is<string>(s => s == dirInfo.FullName),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Services.ExternalCommandExecutionResult
+                {
+                    ExitCode = 0,
+                    StdOut = $"{Environment.NewLine}...{Environment.NewLine}abc -> {Path.Combine(path, "TestFile_arm64.msix")}{Environment.NewLine}",
+                    StdErr = string.Empty
+                });
+
+            var result = await ParseAndInvokeAsync(
+                new string[]
+                {
+                    "package",
+                    path,
+                    "--verbose"
+                });
+
+            ExternalCommandExecutor.VerifyAll();
+        }
+
+        [TestMethod]
+        public async Task PackageCommandForWinUIAppsShouldCallMSBuildWithOutputParameterIfWindows()
+        {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Assert.Inconclusive("This test is only valid on Windows platforms");
+            }
+
+            var path = CopyFilesRecursively("WinUIProject");
+
+            var dirInfo = new DirectoryInfo(path);
+
+            DefaultMSBuildExecution(dirInfo);
+            SetupWinUI(dirInfo);
+
+            var customPath = Path.Combine(Path.GetTempPath(), "CustomPath");
+
+            ExternalCommandExecutor
+                .Setup(x => x.RunAsync(
+                    It.Is<string>(s =>
+                        s.Contains("\"MSBuild.exe\"")),
+                    It.Is<string>(s =>
+                        s.Contains("/p:Configuration=Release;AppxBundle=Always;Platform=X64;AppxBundlePlatforms=X64")
+                        && s.Contains($"AppxPackageDir={customPath}\\;")
+                        && s.EndsWith($"AppxPackageTestDir={customPath}\\WinUIProject_1.0.0.0_X64_Test\\)")
+                        && s.Contains("UapAppxPackageBuildMode=StoreUpload")),
+                    It.Is<string>(s => s == dirInfo.FullName),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Services.ExternalCommandExecutionResult
+                {
+                    ExitCode = 0,
+                    StdOut = $"{Environment.NewLine}...{Environment.NewLine}abc -> {Path.Combine(customPath, "x64", "TestFile_x64.msix")}{Environment.NewLine}",
+                    StdErr = string.Empty
+                });
+
+            ExternalCommandExecutor
+                .Setup(x => x.RunAsync(
+                    It.Is<string>(s =>
+                        s.Contains("\"MSBuild.exe\"")),
+                    It.Is<string>(s =>
+                        s.Contains("/p:Configuration=Release;AppxBundle=Always;Platform=ARM64;AppxBundlePlatforms=ARM64")
+                        && s.Contains($"AppxPackageDir={customPath}\\;")
+                        && s.EndsWith($"AppxPackageTestDir={customPath}\\WinUIProject_1.0.0.0_ARM64_Test\\)")
+                        && s.Contains("UapAppxPackageBuildMode=StoreUpload")),
+                    It.Is<string>(s => s == dirInfo.FullName),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Services.ExternalCommandExecutionResult
+                {
+                    ExitCode = 0,
+                    StdOut = $"{Environment.NewLine}...{Environment.NewLine}abc -> {Path.Combine(customPath, "arm64", "TestFile_arm64.msix")}{Environment.NewLine}",
+                    StdErr = string.Empty
+                });
+
+            var result = await ParseAndInvokeAsync(
+                new string[]
+                {
+                    "package",
+                    path,
+                    "--output",
+                    customPath,
+                    "--verbose"
+                });
+
+            result.Should().Contain("The packaged app is here:");
+            result.Should().Contain(customPath);
+
+            ExternalCommandExecutor.VerifyAll();
+        }
+
+        [TestMethod]
+        public async Task PackageCommandForWinUIAppsShouldNotWorkIfNotWindows()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Assert.Inconclusive("This test is only valid on non-Windows platforms");
+            }
+
+            var path = CopyFilesRecursively("WinUIProject");
 
             var result = await ParseAndInvokeAsync(
                 new string[]

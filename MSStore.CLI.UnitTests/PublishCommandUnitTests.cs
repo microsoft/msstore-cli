@@ -32,6 +32,8 @@ namespace MSStore.CLI.UnitTests
         {
             var path = CopyFilesRecursively("UWPProject");
 
+            DefaultMSBuildExecution(new DirectoryInfo(path));
+
             UWPProjectConfigurator.UpdateManifest(Path.Combine(path, "Package.appxmanifest"), FakeApps[0], "publisher", null);
             var appPackagesFolder = Directory.CreateDirectory(Path.Combine(path, "AppPackages"));
             await File.WriteAllTextAsync(Path.Combine(appPackagesFolder.FullName, "test.msixupload"), string.Empty);
@@ -48,6 +50,37 @@ namespace MSStore.CLI.UnitTests
 
             result.Should().Contain("Submission commit success! Here is some data:");
             result.Should().Contain("test.msixupload");
+        }
+
+        [TestMethod]
+        public async Task PublishCommandForWinUIAppsShouldCallMSBuildIfWindows()
+        {
+            var path = CopyFilesRecursively("WinUIProject");
+
+            var dirInfo = new DirectoryInfo(path);
+            DefaultMSBuildExecution(dirInfo);
+            SetupWinUI(dirInfo);
+
+            UWPProjectConfigurator.UpdateManifest(Path.Combine(path, "Package.appxmanifest"), FakeApps[0], "publisher", null);
+            var appPackagesFolderX64 = Directory.CreateDirectory(Path.Combine(path, "AppPackages", "x64"));
+            var appPackagesFolderArm64 = Directory.CreateDirectory(Path.Combine(path, "AppPackages", "arm64"));
+
+            await File.WriteAllTextAsync(Path.Combine(appPackagesFolderX64.FullName, "test_x64.msix"), string.Empty);
+            await File.WriteAllTextAsync(Path.Combine(appPackagesFolderArm64.FullName, "test_arm64.msix"), string.Empty);
+
+            AddDefaultFakeSuccessfulSubmission();
+
+            var result = await ParseAndInvokeAsync(
+                new string[]
+                {
+                    "publish",
+                    path,
+                    "--verbose"
+                });
+
+            result.Should().Contain("Submission commit success! Here is some data:");
+            result.Should().Contain("test_x64.msix");
+            result.Should().Contain("test_arm64.msix");
         }
 
         [TestMethod]

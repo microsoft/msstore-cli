@@ -78,6 +78,7 @@ namespace MSStore.CLI
                         .AddSingleton<IProjectConfiguratorFactory, ProjectConfiguratorFactory>()
                         .AddScoped<IProjectConfigurator, FlutterProjectConfigurator>()
                         .AddScoped<IProjectConfigurator, UWPProjectConfigurator>()
+                        .AddScoped<IProjectConfigurator, WinUIProjectConfigurator>()
                         .AddScoped<IProjectConfigurator, PWAProjectConfigurator>()
                         .AddScoped<IProjectConfigurator, ElectronProjectConfigurator>()
                         .AddScoped<IProjectConfigurator, ReactNativeProjectConfigurator>()
@@ -93,6 +94,7 @@ namespace MSStore.CLI
                         .AddScoped<IImageConverter, ImageConverter>()
                         .AddScoped<IPWAAppInfoManager, PWAAppInfoManager>()
                         .AddScoped<IElectronManifestManager, ElectronManifestManager>()
+                        .AddScoped<INuGetPackageManager, NuGetPackageManager>()
                         .AddSingleton(telemetryClient);
                 })
                 .ConfigureStoreCLICommands()

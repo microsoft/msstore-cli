@@ -45,6 +45,7 @@ namespace MSStore.CLI.UnitTests
         internal Mock<ITokenManager> TokenManager { get; private set; } = null!;
         internal Mock<IPWAAppInfoManager> PWAAppInfoManager { get; private set; } = null!;
         internal Mock<ElectronManifestManager> ElectronManifestManager { get; private set; } = null!;
+        internal Mock<INuGetPackageManager> NuGetPackageManager { get; private set; } = null!;
         internal Mock<IZipFileManager> ZipFileManager { get; private set; } = null!;
         internal List<string> UserNames { get; } = new List<string>();
         internal List<string> Secrets { get; } = new List<string>();
@@ -198,6 +199,8 @@ namespace MSStore.CLI.UnitTests
 
             ElectronManifestManager = new Mock<ElectronManifestManager> { CallBase = true };
 
+            NuGetPackageManager = new Mock<INuGetPackageManager>();
+
             PWAAppInfoManager = new Mock<IPWAAppInfoManager>();
 
             ZipFileManager = new Mock<IZipFileManager>();
@@ -221,6 +224,7 @@ namespace MSStore.CLI.UnitTests
                         .AddSingleton(new TelemetryClient(new TelemetryConfiguration()))
                         .AddScoped<IProjectConfigurator, FlutterProjectConfigurator>()
                         .AddScoped<IProjectConfigurator, UWPProjectConfigurator>()
+                        .AddScoped<IProjectConfigurator, WinUIProjectConfigurator>()
                         .AddScoped<IProjectConfigurator, PWAProjectConfigurator>()
                         .AddScoped<IProjectConfigurator, ElectronProjectConfigurator>()
                         .AddScoped<IProjectConfigurator, ReactNativeProjectConfigurator>()
@@ -236,6 +240,7 @@ namespace MSStore.CLI.UnitTests
                         .AddScoped(sp => imageConverter.Object)
                         .AddScoped(sp => PWAAppInfoManager.Object)
                         .AddScoped<IElectronManifestManager>(sp => ElectronManifestManager.Object)
+                        .AddScoped(sp => NuGetPackageManager.Object)
                         .AddSingleton(Cli);
                 })
                 .ConfigureStoreCLICommands()
@@ -508,6 +513,49 @@ namespace MSStore.CLI.UnitTests
                     StdOut = installed ? "─ react-native@0.70.0" : "Done in 0s.",
                     StdErr = string.Empty
                 });
+        }
+
+        protected void DefaultMSBuildExecution(DirectoryInfo dirInfo)
+        {
+            UWPProjectConfigurator.ResetMSBuildPath();
+
+            ExternalCommandExecutor
+                            .Setup(x => x.RunAsync(
+                                It.Is<string>(s =>
+                                    s.Contains("vswhere.exe")),
+                                It.Is<string>(s =>
+                                    s.Contains("-latest -requires Microsoft.Component.MSBuild -find MSBuild\\**\\Bin\\MSBuild.exe")),
+                                It.Is<string>(s => s == dirInfo.FullName),
+                                It.IsAny<CancellationToken>()))
+                            .ReturnsAsync(new ExternalCommandExecutionResult
+                            {
+                                ExitCode = 0,
+                                StdOut = "MSBuild.exe",
+                                StdErr = string.Empty
+                            });
+
+            ExternalCommandExecutor
+                .Setup(x => x.RunAsync(
+                    It.Is<string>(s => s.Contains("\"MSBuild.exe\"")),
+                    It.Is<string>(s => s.Contains("/t:restore")),
+                    It.Is<string>(s => s == dirInfo.FullName),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new ExternalCommandExecutionResult
+                {
+                    ExitCode = 0,
+                    StdOut = string.Empty,
+                    StdErr = string.Empty
+                });
+        }
+
+        protected void SetupWinUI(DirectoryInfo dirInfo)
+        {
+            NuGetPackageManager
+                .Setup(x => x.IsPackageInstalledAsync(
+                    It.Is<DirectoryInfo>(d => d.FullName == dirInfo.FullName),
+                    It.Is<string>(s => s == "Microsoft.WindowsAppSDK"),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
         }
 
         protected Task<string> RunTestAsync(Func<InvocationContext, Task>? testCallback)

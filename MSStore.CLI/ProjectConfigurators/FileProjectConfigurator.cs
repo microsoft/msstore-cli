@@ -148,6 +148,10 @@ namespace MSStore.CLI.ProjectConfigurators
             {
                 packageFiles = packageFiles.OrderByDescending(f => f.LastWriteTimeUtc).Take(1);
             }
+            else if (PublishFileSearchFilterStrategy == PublishFileSearchFilterStrategy.OneLevelDown)
+            {
+                packageFiles = packageFiles.Where(f => f.Directory?.Parent?.FullName == inputDirectory.FullName);
+            }
 
             Logger.LogInformation("Trying to publish these {FileCount} files: {FileNames}", packageFiles.Count(), string.Join(", ", packageFiles.Select(f => $"'{f.FullName}'")));
 
