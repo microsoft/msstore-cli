@@ -5,6 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -32,6 +34,11 @@ namespace MSStore.CLI.ProjectConfigurators
 
         public override async Task<bool> CanConfigureAsync(string pathOrUrl, CancellationToken ct)
         {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return false;
+            }
+
             if (!await BaseCanConfigureAsync(pathOrUrl, ct))
             {
                 return false;
@@ -42,6 +49,7 @@ namespace MSStore.CLI.ProjectConfigurators
             return await IsWinUI3Async(manifestFile, ExternalCommandExecutor, NuGetPackageManager, Logger, ct);
         }
 
+        [SupportedOSPlatform("windows")]
         public override async Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(string pathOrUrl, DevCenterApplication? app, IEnumerable<BuildArch>? buildArchs, Version? version, DirectoryInfo? output, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             (DirectoryInfo projectRootPath, FileInfo manifestFile) = GetInfo(pathOrUrl);

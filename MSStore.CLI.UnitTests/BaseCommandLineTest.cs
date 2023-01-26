@@ -8,6 +8,7 @@ using System.CommandLine.Invocation;
 using System.CommandLine.IO;
 using System.CommandLine.Parsing;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Extensibility;
@@ -100,6 +101,17 @@ namespace MSStore.CLI.UnitTests
             }
 
             return targetPath;
+        }
+
+        protected static void AssertBasedOnTestDataProjectSubPath(string[] testDataProjectSubPath)
+        {
+            if (testDataProjectSubPath.Contains("UWPProject") || testDataProjectSubPath.Contains("WinUIProject"))
+            {
+                if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    Assert.Inconclusive("This test is only valid on non-Windows platforms");
+                }
+            }
         }
 
         [TestInitialize]
@@ -519,7 +531,30 @@ namespace MSStore.CLI.UnitTests
         {
             UWPProjectConfigurator.ResetMSBuildPath();
 
-            ExternalCommandExecutor
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                ExternalCommandExecutor
+                            .Setup(x => x.FindToolAsync(
+                                It.Is<string>(s => s == "dotnet"),
+                                It.IsAny<CancellationToken>()))
+                            .ReturnsAsync("/usr/bin/dotnet");
+
+                ExternalCommandExecutor
+                    .Setup(x => x.RunAsync(
+                        It.Is<string>(s => s.Contains("/usr/bin/dotnet")),
+                        It.Is<string>(s => s.Contains("msbuild") && s.Contains("/t:restore")),
+                        It.Is<string>(s => s == dirInfo.FullName),
+                        It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(new ExternalCommandExecutionResult
+                    {
+                        ExitCode = 0,
+                        StdOut = string.Empty,
+                        StdErr = string.Empty
+                    });
+            }
+            else
+            {
+                ExternalCommandExecutor
                             .Setup(x => x.RunAsync(
                                 It.Is<string>(s =>
                                     s.Contains("vswhere.exe")),
@@ -534,18 +569,19 @@ namespace MSStore.CLI.UnitTests
                                 StdErr = string.Empty
                             });
 
-            ExternalCommandExecutor
-                .Setup(x => x.RunAsync(
-                    It.Is<string>(s => s.Contains("\"MSBuild.exe\"")),
-                    It.Is<string>(s => s.Contains("/t:restore")),
-                    It.Is<string>(s => s == dirInfo.FullName),
-                    It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new ExternalCommandExecutionResult
-                {
-                    ExitCode = 0,
-                    StdOut = string.Empty,
-                    StdErr = string.Empty
-                });
+                ExternalCommandExecutor
+                    .Setup(x => x.RunAsync(
+                        It.Is<string>(s => s.Contains("\"MSBuild.exe\"")),
+                        It.Is<string>(s => s.Contains("/t:restore")),
+                        It.Is<string>(s => s == dirInfo.FullName),
+                        It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(new ExternalCommandExecutionResult
+                    {
+                        ExitCode = 0,
+                        StdOut = string.Empty,
+                        StdErr = string.Empty
+                    });
+            }
         }
 
         protected void SetupWinUI(DirectoryInfo dirInfo)
@@ -556,6 +592,55 @@ namespace MSStore.CLI.UnitTests
                     It.Is<string>(s => s == "Microsoft.WindowsAppSDK"),
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
+        }
+
+        protected void SetupBasedOnTestDataProjectSubPath(DirectoryInfo dirInfo, string[] testDataProjectSubPath)
+        {
+            if (testDataProjectSubPath.Contains("UWPProject"))
+            {
+                if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    Assert.Inconclusive("This test is only valid on non-Windows platforms");
+                }
+
+                DefaultMSBuildExecution(dirInfo);
+            }
+            else if (testDataProjectSubPath.Contains("WinUIProject"))
+            {
+                if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    Assert.Inconclusive("This test is only valid on non-Windows platforms");
+                }
+
+                DefaultMSBuildExecution(dirInfo);
+                SetupWinUI(dirInfo);
+            }
+            else if (testDataProjectSubPath.Contains("ReactNativeProject"))
+            {
+                if (testDataProjectSubPath.Contains("Npm"))
+                {
+                    SetupNpmListReactNative(dirInfo, true);
+                    SetupNpmInstall(dirInfo);
+                }
+                else if (testDataProjectSubPath.Contains("Yarn"))
+                {
+                    SetupYarnListReactNative(dirInfo, true);
+                    SetupYarnInstall(dirInfo);
+                }
+            }
+            else if (testDataProjectSubPath.Contains("ElectronProject"))
+            {
+                if (testDataProjectSubPath.Contains("Npm"))
+                {
+                    SetupNpmListReactNative(dirInfo, false);
+                    SetupNpmInstall(dirInfo);
+                }
+                else if (testDataProjectSubPath.Contains("Yarn"))
+                {
+                    SetupYarnListReactNative(dirInfo, false);
+                    SetupYarnInstall(dirInfo);
+                }
+            }
         }
 
         protected Task<string> RunTestAsync(Func<InvocationContext, Task>? testCallback)

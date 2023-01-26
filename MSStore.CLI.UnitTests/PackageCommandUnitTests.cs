@@ -117,27 +117,6 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
-        public async Task PackageCommandForUWPAppsShouldNotWorkIfNotWindows()
-        {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                Assert.Inconclusive("This test is only valid on non-Windows platforms");
-            }
-
-            var path = CopyFilesRecursively("UWPProject");
-
-            var result = await ParseAndInvokeAsync(
-                new string[]
-                {
-                    "package",
-                    path,
-                    "--verbose"
-                }, -6);
-
-            result.Should().Contain("This project type can only be packaged on Windows.");
-        }
-
-        [TestMethod]
         public async Task PackageCommandForWinUIAppsShouldCallMSBuildIfWindows()
         {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -265,14 +244,25 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
-        public async Task PackageCommandForWinUIAppsShouldNotWorkIfNotWindows()
+        [DataRow(-1, "WinUIProject")]
+        [DataRow(-1, "UWPProject")]
+        [DataRow(-6, "FlutterProject")]
+        [DataRow(-6, "ElectronProject", "Npm")]
+        [DataRow(-6, "ElectronProject", "Yarn")]
+        [DataRow(-6, "ReactNativeProject", "Npm")]
+        [DataRow(-6, "ReactNativeProject", "Yarn")]
+        public async Task PackageCommandShouldNotWorkIfNotWindowsOnSpecificPlatforms(int expectedResult, params string[] testDataProjectSubPath)
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 Assert.Inconclusive("This test is only valid on non-Windows platforms");
             }
 
-            var path = CopyFilesRecursively("WinUIProject");
+            var path = CopyFilesRecursively(Path.Combine(testDataProjectSubPath));
+
+            var dirInfo = new DirectoryInfo(path);
+
+            SetupBasedOnTestDataProjectSubPath(dirInfo, testDataProjectSubPath);
 
             var result = await ParseAndInvokeAsync(
                 new string[]
@@ -280,9 +270,12 @@ namespace MSStore.CLI.UnitTests
                     "package",
                     path,
                     "--verbose"
-                }, -6);
+                }, expectedResult);
 
-            result.Should().Contain("This project type can only be packaged on Windows.");
+            if (expectedResult == -6)
+            {
+                result.Should().Contain("This project type can only be packaged on Windows.");
+            }
         }
 
         [TestMethod]

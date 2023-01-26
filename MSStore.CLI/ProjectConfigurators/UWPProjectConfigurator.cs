@@ -5,6 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
@@ -62,6 +64,11 @@ namespace MSStore.CLI.ProjectConfigurators
 
         public override async Task<bool> CanConfigureAsync(string pathOrUrl, CancellationToken ct)
         {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return false;
+            }
+
             if (!await base.CanConfigureAsync(pathOrUrl, ct))
             {
                 return false;
@@ -258,6 +265,7 @@ namespace MSStore.CLI.ProjectConfigurators
             return new Version(1, 0, 0, 0);
         }
 
+        [SupportedOSPlatform("windows")]
         public override async Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(string pathOrUrl, DevCenterApplication? app, IEnumerable<BuildArch>? buildArchs, Version? version, DirectoryInfo? output, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             (DirectoryInfo projectRootPath, FileInfo manifestFile) = GetInfo(pathOrUrl);
@@ -265,6 +273,7 @@ namespace MSStore.CLI.ProjectConfigurators
             return await PackageAsync(projectRootPath, buildArchs, null, PackageFilesExtensionInclude, manifestFile, version, output, ExternalCommandExecutor, Logger, ct);
         }
 
+        [SupportedOSPlatform("windows")]
         internal static async Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(DirectoryInfo projectRootPath, IEnumerable<BuildArch>? buildArchs, FileInfo? solutionPath, string[] packageFilesExtensionInclude, FileInfo appxManifestFile, Version? version, DirectoryInfo? output, IExternalCommandExecutor externalCommandExecutor, ILogger logger, CancellationToken ct)
         {
             var workingDirectory = solutionPath?.Directory?.FullName ?? projectRootPath.FullName;
@@ -345,6 +354,7 @@ namespace MSStore.CLI.ProjectConfigurators
             return (0, bundleUploadFile != null ? new FileInfo(bundleUploadFile).Directory : null);
         }
 
+        [SupportedOSPlatform("windows")]
         protected static string GetVSWherePath()
         {
             var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
@@ -358,6 +368,7 @@ namespace MSStore.CLI.ProjectConfigurators
             _msBuildPath = null;
         }
 
+        [SupportedOSPlatform("windows")]
         protected static async Task<string?> GetMSBuildPathAsync(IExternalCommandExecutor externalCommandExecutor, ILogger logger, string workingDirectory, CancellationToken ct)
         {
             if (_msBuildPath != null)
@@ -398,7 +409,8 @@ namespace MSStore.CLI.ProjectConfigurators
         }
 
         private static Dictionary<string, bool> _nugetRestoreExecuted = new Dictionary<string, bool>();
-        protected static async Task RestorePackagesAsync(IExternalCommandExecutor externalCommandExecutor, ILogger logger, string workingDirectory, string? msbuildPath, CancellationToken ct)
+        [SupportedOSPlatform("windows")]
+        protected static async Task RestorePackagesAsync(IExternalCommandExecutor externalCommandExecutor, ILogger logger, string workingDirectory, string msbuildPath, CancellationToken ct)
         {
             if (_nugetRestoreExecuted.TryGetValue(workingDirectory, out var value) && value)
             {
@@ -432,6 +444,7 @@ namespace MSStore.CLI.ProjectConfigurators
         private static Dictionary<string, bool> _nuGetExistsExecuted = new Dictionary<string, bool>();
         protected INuGetPackageManager NuGetPackageManager { get; }
 
+        [SupportedOSPlatform("windows")]
         internal static async Task<bool> IsWinUI3Async(FileInfo appxManifestFile, IExternalCommandExecutor externalCommandExecutor, INuGetPackageManager nuGetPackageManager, ILogger logger, CancellationToken ct)
         {
             if (appxManifestFile.Directory?.FullName == null)

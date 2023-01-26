@@ -22,6 +22,20 @@ namespace MSStore.CLI.UnitTests
         [DataRow(null, typeof(WinUIProjectConfigurator), "WinUIProject")]
         public async Task ProjectConfiguratorFactoryFindsURLProperly(string pathOrUrl, Type expectedProjectConfiguratorType, params string[] testDataProjectSubPath)
         {
+            string? path = null;
+            if (testDataProjectSubPath != null && testDataProjectSubPath.Any())
+            {
+                var list = testDataProjectSubPath.ToList();
+                list.Insert(0, ".");
+                list.Insert(1, "TestData");
+                testDataProjectSubPath = list.ToArray();
+                path = Path.Combine(testDataProjectSubPath);
+
+                AssertBasedOnTestDataProjectSubPath(testDataProjectSubPath);
+
+                pathOrUrl = path;
+            }
+
             await RunTestAsync(async (context) =>
             {
                 var ct = context.GetCancellationToken();
@@ -29,52 +43,9 @@ namespace MSStore.CLI.UnitTests
                 var host = context.GetHost();
                 var projectConfiguratorFactory = host.Services.GetService<IProjectConfiguratorFactory>()!;
 
-                if (testDataProjectSubPath != null && testDataProjectSubPath.Any())
+                if (testDataProjectSubPath != null && testDataProjectSubPath.Any() && path != null)
                 {
-                    var list = testDataProjectSubPath.ToList();
-                    list.Insert(0, ".");
-                    list.Insert(1, "TestData");
-                    testDataProjectSubPath = list.ToArray();
-                    var path = Path.Combine(testDataProjectSubPath);
-                    var dirInfo = new DirectoryInfo(path);
-
-                    if (testDataProjectSubPath.Contains("UWPProject"))
-                    {
-                        DefaultMSBuildExecution(dirInfo);
-                    }
-                    else if(testDataProjectSubPath.Contains("WinUIProject"))
-                    {
-                        DefaultMSBuildExecution(dirInfo);
-                        SetupWinUI(dirInfo);
-                    }
-                    else if (testDataProjectSubPath.Contains("ReactNativeProject"))
-                    {
-                        if (testDataProjectSubPath.Contains("Npm"))
-                        {
-                            SetupNpmListReactNative(dirInfo, true);
-                            SetupNpmInstall(dirInfo);
-                        }
-                        else if (testDataProjectSubPath.Contains("Yarn"))
-                        {
-                            SetupYarnListReactNative(dirInfo, true);
-                            SetupYarnInstall(dirInfo);
-                        }
-                    }
-                    else if (testDataProjectSubPath.Contains("ElectronProject"))
-                    {
-                        if (testDataProjectSubPath.Contains("Npm"))
-                        {
-                            SetupNpmListReactNative(dirInfo, false);
-                            SetupNpmInstall(dirInfo);
-                        }
-                        else if (testDataProjectSubPath.Contains("Yarn"))
-                        {
-                            SetupYarnListReactNative(dirInfo, false);
-                            SetupYarnInstall(dirInfo);
-                        }
-                    }
-
-                    pathOrUrl = path;
+                    SetupBasedOnTestDataProjectSubPath(new DirectoryInfo(path), testDataProjectSubPath);
                 }
 
                 var projectConfigurator = await projectConfiguratorFactory.FindProjectConfiguratorAsync(pathOrUrl, ct);
