@@ -152,6 +152,8 @@ namespace MSStore.CLI.Helpers
                 else
                 {
                     AnsiConsole.WriteLine("Submission has failed. Please check the Errors collection of the submissionResource response.");
+
+                    await browserLauncher.OpenBrowserAsync($"https://partner.microsoft.com/dashboard/products/{productId}/submissions/{submissionId}", true, ct);
                 }
 
                 return -1;
