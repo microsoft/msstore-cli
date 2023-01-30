@@ -110,6 +110,9 @@ namespace MSStore.CLI.ProjectConfigurators
             var buildNamespace = "http://schemas.microsoft.com/developer/appx/2015/build";
             nsmgr.AddNamespace("build", buildNamespace);
 
+            bool metadataWasAppened = false;
+            bool buildItemAppIdWasAppended = false;
+
             var package = xmlDoc.SelectSingleNode("/ns:Package", nsmgr);
             if (package != null)
             {
@@ -142,6 +145,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 {
                     metadata = xmlDoc.CreateElement("build", "Metadata", buildNamespace);
                     package.AppendChild(metadata);
+                    metadataWasAppened = true;
                 }
 
                 var buildItemAppId = metadata.SelectSingleNode("//build:Item[@Name='MSStoreCLIAppId']", nsmgr);
@@ -150,6 +154,7 @@ namespace MSStore.CLI.ProjectConfigurators
                     buildItemAppId = xmlDoc.CreateElement("build", "Item", buildNamespace);
                     (buildItemAppId as XmlElement)?.SetAttribute("Name", "MSStoreCLIAppId");
                     metadata.AppendChild(buildItemAppId);
+                    buildItemAppIdWasAppended = true;
                 }
 
                 (buildItemAppId as XmlElement)?.SetAttribute("Value", app.Id);
@@ -221,6 +226,41 @@ namespace MSStore.CLI.ProjectConfigurators
             }
 
             xmlDoc.Save(appxManifestPath);
+
+            if (metadataWasAppened || buildItemAppIdWasAppended)
+            {
+                var appxManifestContent = File.ReadAllText(appxManifestPath);
+
+                if (metadataWasAppened)
+                {
+                    var openBuildMetadataText = "<build:Metadata>";
+                    var openBuildMetadataIndex = appxManifestContent.LastIndexOf(openBuildMetadataText, StringComparison.OrdinalIgnoreCase);
+                    if (openBuildMetadataIndex >= 0)
+                    {
+                        appxManifestContent = appxManifestContent.Insert(openBuildMetadataIndex, "  ");
+                    }
+                }
+
+                if (buildItemAppIdWasAppended)
+                {
+                    var closeBuildMetadataText = "</build:Metadata>";
+                    var closeBuildMetadataIndex = appxManifestContent.LastIndexOf(closeBuildMetadataText, StringComparison.OrdinalIgnoreCase);
+                    if (closeBuildMetadataIndex >= 0)
+                    {
+                        appxManifestContent = appxManifestContent.Insert(closeBuildMetadataIndex + closeBuildMetadataText.Length, Environment.NewLine);
+                        appxManifestContent = appxManifestContent.Insert(closeBuildMetadataIndex, Environment.NewLine + "  ");
+                    }
+
+                    var buildItemNameText = "<build:Item Name=\"MSStoreCLIAppId\"";
+                    var buildItemNameIndex = appxManifestContent.LastIndexOf(buildItemNameText, StringComparison.OrdinalIgnoreCase);
+                    if (buildItemNameIndex >= 0)
+                    {
+                        appxManifestContent = appxManifestContent.Insert(buildItemNameIndex, Environment.NewLine + "    ");
+                    }
+                }
+
+                File.WriteAllText(appxManifestPath, appxManifestContent);
+            }
         }
 
         internal static Version UpdateManifestVersion(string appxManifestPath, Version? version)
