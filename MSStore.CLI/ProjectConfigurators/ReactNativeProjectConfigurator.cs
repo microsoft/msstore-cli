@@ -18,9 +18,12 @@ namespace MSStore.CLI.ProjectConfigurators
 {
     internal class ReactNativeProjectConfigurator : NodeBaseProjectConfigurator
     {
-        public ReactNativeProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, ILogger<ReactNativeProjectConfigurator> logger)
+        private readonly IAppXManifestManager _appXManifestManager;
+
+        public ReactNativeProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, IAppXManifestManager appXManifestManager, ILogger<ReactNativeProjectConfigurator> logger)
             : base(externalCommandExecutor, browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, logger)
         {
+            _appXManifestManager = appXManifestManager ?? throw new ArgumentNullException(nameof(appXManifestManager));
         }
 
         public override string ConfiguratorProjectType { get; } = "React Native";
@@ -81,7 +84,7 @@ namespace MSStore.CLI.ProjectConfigurators
             var (projectRootPath, reactNativeProjectFile) = GetInfo(pathOrUrl);
             var appxManifest = GetAppXManifest(projectRootPath);
 
-            UWPProjectConfigurator.UpdateManifest(appxManifest.FullName, app, publisherDisplayName, version);
+            _appXManifestManager.UpdateManifest(appxManifest.FullName, app, publisherDisplayName, version);
 
             AnsiConsole.WriteLine($"React Native project '{reactNativeProjectFile.FullName}', with AppX manifest file at '{appxManifest.FullName}', is now configured to build to the Microsoft Store!");
             AnsiConsole.MarkupLine("For more information on building your React Native project to the Microsoft Store, see [link]https://microsoft.github.io/react-native-windows/docs/app-publishing[/]");
@@ -93,7 +96,7 @@ namespace MSStore.CLI.ProjectConfigurators
         {
             var (projectRootPath, _) = GetInfo(pathOrUrl);
             var appxManifest = GetAppXManifest(projectRootPath);
-            var allImagesInManifest = UWPProjectConfigurator.GetAllImagesFromManifest(appxManifest, Logger);
+            var allImagesInManifest = _appXManifestManager.GetAllImagesFromManifest(appxManifest, Logger);
 
             return Task.FromResult<List<string>?>(allImagesInManifest);
         }
@@ -114,29 +117,6 @@ namespace MSStore.CLI.ProjectConfigurators
         private static string? GetDefaultAssetsAppxFolder(DirectoryInfo projectRootPath)
         {
             return Path.Combine(projectRootPath.FullName, "node_modules", "react-native-windows", "template", "shared-app", "assets");
-        }
-
-        internal static FileInfo GetAppXManifest(DirectoryInfo projectRootPath)
-        {
-            return FindFile(projectRootPath, "Package.appxmanifest");
-        }
-
-        private static FileInfo FindFile(DirectoryInfo projectRootPath, string searchPattern)
-        {
-            var files = projectRootPath.GetFiles(searchPattern, SearchOption.AllDirectories).ToList();
-
-            var nodeModules = projectRootPath.GetDirectories("node_modules", SearchOption.TopDirectoryOnly).FirstOrDefault();
-            if (nodeModules != null)
-            {
-                files = files.Where(f => !f.FullName.StartsWith(nodeModules.FullName, StringComparison.OrdinalIgnoreCase)).ToList();
-            }
-
-            if (!files.Any())
-            {
-                throw new InvalidOperationException($"No '{searchPattern}' file found.");
-            }
-
-            return files.First();
         }
 
         [SupportedOSPlatform("windows")]
@@ -161,7 +141,7 @@ namespace MSStore.CLI.ProjectConfigurators
 
             output ??= GetInputDirectory(projectRootPath);
 
-            return await UWPProjectConfigurator.PackageAsync(appxManifest.Directory, buildArchs, solutionFile, PackageFilesExtensionInclude, appxManifest, version, output, ExternalCommandExecutor, Logger, ct);
+            return await UWPProjectConfigurator.PackageAsync(appxManifest.Directory, buildArchs, solutionFile, PackageFilesExtensionInclude, appxManifest, version, output, ExternalCommandExecutor, _appXManifestManager, Logger, ct);
         }
 
         public override Task<string?> GetAppIdAsync(FileInfo? fileInfo, CancellationToken ct)
@@ -173,7 +153,7 @@ namespace MSStore.CLI.ProjectConfigurators
 
             var appxManifest = GetAppXManifest(fileInfo.Directory);
 
-            return Task.FromResult(UWPProjectConfigurator.GetAppId(appxManifest));
+            return Task.FromResult(_appXManifestManager.GetAppId(appxManifest));
         }
     }
 }

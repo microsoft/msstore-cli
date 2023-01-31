@@ -40,7 +40,7 @@ namespace MSStore.CLI.UnitTests
 
             DefaultMSBuildExecution(new DirectoryInfo(path));
 
-            UWPProjectConfigurator.UpdateManifest(Path.Combine(path, "Package.appxmanifest"), FakeApps[0], "publisher", null);
+            AppXManifestManager.Object.UpdateManifest(Path.Combine(path, "Package.appxmanifest"), FakeApps[0], "publisher", null);
             var appPackagesFolder = Directory.CreateDirectory(Path.Combine(path, "AppPackages"));
             await File.WriteAllTextAsync(Path.Combine(appPackagesFolder.FullName, "test.msixupload"), string.Empty);
 
@@ -72,7 +72,45 @@ namespace MSStore.CLI.UnitTests
             DefaultMSBuildExecution(dirInfo);
             SetupWinUI(dirInfo);
 
-            UWPProjectConfigurator.UpdateManifest(Path.Combine(path, "Package.appxmanifest"), FakeApps[0], "publisher", null);
+            AppXManifestManager.Object.UpdateManifest(Path.Combine(path, "Package.appxmanifest"), FakeApps[0], "publisher", null);
+            var appPackagesFolderX64 = Directory.CreateDirectory(Path.Combine(path, "AppPackages", "x64"));
+            var appPackagesFolderArm64 = Directory.CreateDirectory(Path.Combine(path, "AppPackages", "arm64"));
+
+            await File.WriteAllTextAsync(Path.Combine(appPackagesFolderX64.FullName, "test_x64.msix"), string.Empty);
+            await File.WriteAllTextAsync(Path.Combine(appPackagesFolderArm64.FullName, "test_arm64.msix"), string.Empty);
+
+            AddDefaultFakeSuccessfulSubmission();
+
+            var result = await ParseAndInvokeAsync(
+                new string[]
+                {
+                    "publish",
+                    path,
+                    "--verbose"
+                });
+
+            result.Should().Contain("Submission commit success! Here is some data:");
+            result.Should().Contain("test_x64.msix");
+            result.Should().Contain("test_arm64.msix");
+        }
+
+        [TestMethod]
+        public async Task PublishCommandForMauiAppsShouldCallMSBuildIfWindows()
+        {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Assert.Inconclusive("This test is only valid on Windows platforms");
+            }
+
+            var path = CopyFilesRecursively("MauiProject");
+
+            var dirInfo = new DirectoryInfo(path);
+            DefaultDotnetRestoreExecution(dirInfo);
+            SetupWinUI(dirInfo);
+            SetupMaui(dirInfo.GetFiles("*.csproj").First());
+
+            AppXManifestManager.Object.MinimalUpdateManifest(Path.Combine(path, "Platforms", "Windows", "Package.appxmanifest"), FakeApps[0], "publisher");
+            MauiProjectConfigurator.UpdateCSProj(new FileInfo(Path.Combine(path, "MauiApp.csproj")), FakeApps[0]);
             var appPackagesFolderX64 = Directory.CreateDirectory(Path.Combine(path, "AppPackages", "x64"));
             var appPackagesFolderArm64 = Directory.CreateDirectory(Path.Combine(path, "AppPackages", "arm64"));
 
@@ -174,9 +212,9 @@ namespace MSStore.CLI.UnitTests
         {
             var path = CopyFilesRecursively(Path.Combine("ReactNativeProject", manifestType));
 
-            var appxManifest = ReactNativeProjectConfigurator.GetAppXManifest(new DirectoryInfo(path));
+            var appxManifest = FileProjectConfigurator.GetAppXManifest(new DirectoryInfo(path));
 
-            UWPProjectConfigurator.UpdateManifest(appxManifest.FullName, FakeApps[0], "publisher", null);
+            AppXManifestManager.Object.UpdateManifest(appxManifest.FullName, FakeApps[0], "publisher", null);
 
             var appPackagesFolder = Directory.CreateDirectory(Path.Combine(appxManifest.Directory!.FullName, "AppPackages"));
             await File.WriteAllTextAsync(Path.Combine(appPackagesFolder.FullName, "test.appxupload"), string.Empty);

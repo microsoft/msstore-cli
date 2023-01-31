@@ -10,5 +10,6 @@ namespace MSStore.CLI.Services
     internal interface INuGetPackageManager
     {
         Task<bool> IsPackageInstalledAsync(DirectoryInfo directory, string packageName, CancellationToken ct);
+        bool IsMaui(FileInfo fileInfo);
     }
 }

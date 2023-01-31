@@ -20,16 +20,13 @@ namespace MSStore.CLI.UnitTests
         [DataRow(null, typeof(ReactNativeProjectConfigurator), "ReactNativeProject", "Npm")]
         [DataRow(null, typeof(ReactNativeProjectConfigurator), "ReactNativeProject", "Yarn")]
         [DataRow(null, typeof(WinUIProjectConfigurator), "WinUIProject")]
+        [DataRow(null, typeof(MauiProjectConfigurator), "MauiProject")]
         public async Task ProjectConfiguratorFactoryFindsURLProperly(string pathOrUrl, Type expectedProjectConfiguratorType, params string[] testDataProjectSubPath)
         {
             string? path = null;
             if (testDataProjectSubPath != null && testDataProjectSubPath.Any())
             {
-                var list = testDataProjectSubPath.ToList();
-                list.Insert(0, ".");
-                list.Insert(1, "TestData");
-                testDataProjectSubPath = list.ToArray();
-                path = Path.Combine(testDataProjectSubPath);
+                path = CopyFilesRecursively(Path.Combine(testDataProjectSubPath));
 
                 AssertBasedOnTestDataProjectSubPath(testDataProjectSubPath);
 

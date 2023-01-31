@@ -82,6 +82,7 @@ namespace MSStore.CLI
                         .AddScoped<IProjectConfigurator, PWAProjectConfigurator>()
                         .AddScoped<IProjectConfigurator, ElectronProjectConfigurator>()
                         .AddScoped<IProjectConfigurator, ReactNativeProjectConfigurator>()
+                        .AddScoped<IProjectConfigurator, MauiProjectConfigurator>()
                         .AddScoped<ICLIConfigurator, CLIConfigurator>()
                         .AddSingleton<IStoreAPIFactory, StoreAPIFactory>()
                         .AddScoped<IPWABuilderClient, PWABuilderClient>()
@@ -95,6 +96,7 @@ namespace MSStore.CLI
                         .AddScoped<IPWAAppInfoManager, PWAAppInfoManager>()
                         .AddScoped<IElectronManifestManager, ElectronManifestManager>()
                         .AddScoped<INuGetPackageManager, NuGetPackageManager>()
+                        .AddScoped<IAppXManifestManager, AppXManifestManager>()
                         .AddSingleton(telemetryClient);
                 })
                 .ConfigureStoreCLICommands()

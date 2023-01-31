@@ -244,8 +244,98 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
+        public async Task PackageCommandForMauiAppsShouldCallMSBuildIfWindows()
+        {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Assert.Inconclusive("This test is only valid on Windows platforms");
+            }
+
+            var path = CopyFilesRecursively("MauiProject");
+
+            var dirInfo = new DirectoryInfo(path);
+
+            DefaultDotnetRestoreExecution(dirInfo);
+            SetupWinUI(dirInfo);
+            SetupMaui(dirInfo.GetFiles("*.csproj").First());
+
+            ExternalCommandExecutor
+                .Setup(x => x.RunAsync(
+                    It.Is<string>(s => s == "dotnet"),
+                    It.Is<string>(s => s.Contains("publish -f net7.0-windows10.0.19041.0 -r win10-x64 --self-contained /p:Configuration=Release")),
+                    It.Is<string>(s => s == dirInfo.FullName),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Services.ExternalCommandExecutionResult
+                {
+                    ExitCode = 0,
+                    StdOut = $"{Environment.NewLine}...{Environment.NewLine}abc -> {Path.Combine(path, "TestFile_x64.msix")}{Environment.NewLine}",
+                    StdErr = string.Empty
+                });
+
+            var result = await ParseAndInvokeAsync(
+                new string[]
+                {
+                    "package",
+                    path,
+                    "--verbose"
+                });
+
+            ExternalCommandExecutor.VerifyAll();
+        }
+
+        [TestMethod]
+        public async Task PackageCommandForMauiAppsShouldCallMSBuildWithOutputParameterIfWindows()
+        {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Assert.Inconclusive("This test is only valid on Windows platforms");
+            }
+
+            var path = CopyFilesRecursively("MauiProject");
+
+            var dirInfo = new DirectoryInfo(path);
+
+            DefaultDotnetRestoreExecution(dirInfo);
+            SetupWinUI(dirInfo);
+            SetupMaui(dirInfo.GetFiles("*.csproj").First());
+
+            var customPath = Path.Combine(Path.GetTempPath(), "CustomPath");
+
+            ExternalCommandExecutor
+                .Setup(x => x.RunAsync(
+                    It.Is<string>(s => s == "dotnet"),
+                    It.Is<string>(s => s.Contains("publish -f net7.0-windows10.0.19041.0 -r win10-x64 --self-contained /p:Configuration=Release")
+                        && s.Contains($"AppxPackageDir={customPath}\\;")
+                        && s.EndsWith($"AppxPackageTestDir={customPath}\\MauiProject_1.0.0.0_X64_Test\\")),
+                    It.Is<string>(s => s == dirInfo.FullName),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Services.ExternalCommandExecutionResult
+                {
+                    ExitCode = 0,
+                    StdOut = $"{Environment.NewLine}...{Environment.NewLine}abc -> {Path.Combine(customPath, "x64", "TestFile_x64.msix")}{Environment.NewLine}",
+                    StdErr = string.Empty
+                });
+
+            var result = await ParseAndInvokeAsync(
+                new string[]
+                {
+                    "package",
+                    path,
+                    "--output",
+                    customPath,
+                    "--verbose"
+                });
+
+            result.Should().Contain("The packaged app is here:");
+            result.Should().Contain(customPath);
+
+            ExternalCommandExecutor.VerifyAll();
+        }
+
+        [TestMethod]
         [DataRow(-1, "WinUIProject")]
         [DataRow(-1, "UWPProject")]
+        [DataRow(-6, "MauiProject")]
         [DataRow(-6, "FlutterProject")]
         [DataRow(-6, "ElectronProject", "Npm")]
         [DataRow(-6, "ElectronProject", "Yarn")]

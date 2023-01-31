@@ -21,8 +21,8 @@ namespace MSStore.CLI.ProjectConfigurators
 {
     internal class WinUIProjectConfigurator : UWPProjectConfigurator
     {
-        public WinUIProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, INuGetPackageManager nuGetPackageManager, ILogger<WinUIProjectConfigurator> logger)
-            : base(externalCommandExecutor, browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, nuGetPackageManager, logger)
+        public WinUIProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, INuGetPackageManager nuGetPackageManager, IAppXManifestManager appXManifestManager, ILogger<WinUIProjectConfigurator> logger)
+            : base(externalCommandExecutor, browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, nuGetPackageManager, appXManifestManager, logger)
         {
         }
 
@@ -67,7 +67,7 @@ namespace MSStore.CLI.ProjectConfigurators
 
             output ??= new DirectoryInfo(Path.Combine(projectRootPath.FullName, "AppPackages"));
 
-            version = UpdateManifestVersion(manifestFile.FullName, version);
+            version = AppXManifestManager.UpdateManifestVersion(manifestFile.FullName, version);
 
             var bundleUploadFile = await AnsiConsole.Status().StartAsync("Building MSIX...", async ctx =>
             {

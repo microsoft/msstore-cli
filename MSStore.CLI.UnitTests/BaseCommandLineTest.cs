@@ -46,6 +46,7 @@ namespace MSStore.CLI.UnitTests
         internal Mock<ITokenManager> TokenManager { get; private set; } = null!;
         internal Mock<IPWAAppInfoManager> PWAAppInfoManager { get; private set; } = null!;
         internal Mock<ElectronManifestManager> ElectronManifestManager { get; private set; } = null!;
+        internal Mock<AppXManifestManager> AppXManifestManager { get; private set; } = null!;
         internal Mock<INuGetPackageManager> NuGetPackageManager { get; private set; } = null!;
         internal Mock<IZipFileManager> ZipFileManager { get; private set; } = null!;
         internal List<string> UserNames { get; } = new List<string>();
@@ -97,7 +98,7 @@ namespace MSStore.CLI.UnitTests
 
             foreach (string newPath in Directory.GetFiles(sourcePath, "*.*", SearchOption.AllDirectories))
             {
-                File.Copy(newPath, newPath.Replace(sourcePath, targetPath), true);
+                File.Copy(newPath, newPath.Replace(sourcePath, targetPath).Replace(".template", string.Empty), true);
             }
 
             return targetPath;
@@ -105,7 +106,7 @@ namespace MSStore.CLI.UnitTests
 
         protected static void AssertBasedOnTestDataProjectSubPath(string[] testDataProjectSubPath)
         {
-            if (testDataProjectSubPath.Contains("UWPProject") || testDataProjectSubPath.Contains("WinUIProject"))
+            if (testDataProjectSubPath.Contains("UWPProject") || testDataProjectSubPath.Contains("WinUIProject") || testDataProjectSubPath.Contains("MauiProject"))
             {
                 if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
@@ -211,6 +212,8 @@ namespace MSStore.CLI.UnitTests
 
             ElectronManifestManager = new Mock<ElectronManifestManager> { CallBase = true };
 
+            AppXManifestManager = new Mock<AppXManifestManager> { CallBase = true };
+
             NuGetPackageManager = new Mock<INuGetPackageManager>();
 
             PWAAppInfoManager = new Mock<IPWAAppInfoManager>();
@@ -240,6 +243,7 @@ namespace MSStore.CLI.UnitTests
                         .AddScoped<IProjectConfigurator, PWAProjectConfigurator>()
                         .AddScoped<IProjectConfigurator, ElectronProjectConfigurator>()
                         .AddScoped<IProjectConfigurator, ReactNativeProjectConfigurator>()
+                        .AddScoped<IProjectConfigurator, MauiProjectConfigurator>()
                         .AddScoped<ICLIConfigurator, CLIConfigurator>()
                         .AddSingleton(FakeStoreAPIFactory.Object)
                         .AddScoped(sp => PWABuilderClient.Object)
@@ -253,6 +257,7 @@ namespace MSStore.CLI.UnitTests
                         .AddScoped(sp => PWAAppInfoManager.Object)
                         .AddScoped<IElectronManifestManager>(sp => ElectronManifestManager.Object)
                         .AddScoped(sp => NuGetPackageManager.Object)
+                        .AddScoped<IAppXManifestManager>(sp => AppXManifestManager.Object)
                         .AddSingleton(Cli);
                 })
                 .ConfigureStoreCLICommands()
@@ -531,57 +536,49 @@ namespace MSStore.CLI.UnitTests
         {
             UWPProjectConfigurator.ResetMSBuildPath();
 
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                ExternalCommandExecutor
-                            .Setup(x => x.FindToolAsync(
-                                It.Is<string>(s => s == "dotnet"),
-                                It.IsAny<CancellationToken>()))
-                            .ReturnsAsync("/usr/bin/dotnet");
+            ExternalCommandExecutor
+                        .Setup(x => x.RunAsync(
+                            It.Is<string>(s =>
+                                s.Contains("vswhere.exe")),
+                            It.Is<string>(s =>
+                                s.Contains("-latest -requires Microsoft.Component.MSBuild -find MSBuild\\**\\Bin\\MSBuild.exe")),
+                            It.Is<string>(s => s == dirInfo.FullName),
+                            It.IsAny<CancellationToken>()))
+                        .ReturnsAsync(new ExternalCommandExecutionResult
+                        {
+                            ExitCode = 0,
+                            StdOut = "MSBuild.exe",
+                            StdErr = string.Empty
+                        });
 
-                ExternalCommandExecutor
-                    .Setup(x => x.RunAsync(
-                        It.Is<string>(s => s.Contains("/usr/bin/dotnet")),
-                        It.Is<string>(s => s.Contains("msbuild") && s.Contains("/t:restore")),
-                        It.Is<string>(s => s == dirInfo.FullName),
-                        It.IsAny<CancellationToken>()))
-                    .ReturnsAsync(new ExternalCommandExecutionResult
-                    {
-                        ExitCode = 0,
-                        StdOut = string.Empty,
-                        StdErr = string.Empty
-                    });
-            }
-            else
-            {
-                ExternalCommandExecutor
-                            .Setup(x => x.RunAsync(
-                                It.Is<string>(s =>
-                                    s.Contains("vswhere.exe")),
-                                It.Is<string>(s =>
-                                    s.Contains("-latest -requires Microsoft.Component.MSBuild -find MSBuild\\**\\Bin\\MSBuild.exe")),
-                                It.Is<string>(s => s == dirInfo.FullName),
-                                It.IsAny<CancellationToken>()))
-                            .ReturnsAsync(new ExternalCommandExecutionResult
-                            {
-                                ExitCode = 0,
-                                StdOut = "MSBuild.exe",
-                                StdErr = string.Empty
-                            });
+            ExternalCommandExecutor
+                .Setup(x => x.RunAsync(
+                    It.Is<string>(s => s.Contains("\"MSBuild.exe\"")),
+                    It.Is<string>(s => s.Contains("/t:restore")),
+                    It.Is<string>(s => s == dirInfo.FullName),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new ExternalCommandExecutionResult
+                {
+                    ExitCode = 0,
+                    StdOut = string.Empty,
+                    StdErr = string.Empty
+                });
+        }
 
-                ExternalCommandExecutor
-                    .Setup(x => x.RunAsync(
-                        It.Is<string>(s => s.Contains("\"MSBuild.exe\"")),
-                        It.Is<string>(s => s.Contains("/t:restore")),
-                        It.Is<string>(s => s == dirInfo.FullName),
-                        It.IsAny<CancellationToken>()))
-                    .ReturnsAsync(new ExternalCommandExecutionResult
-                    {
-                        ExitCode = 0,
-                        StdOut = string.Empty,
-                        StdErr = string.Empty
-                    });
-            }
+        protected void DefaultDotnetRestoreExecution(DirectoryInfo dirInfo)
+        {
+            ExternalCommandExecutor
+                .Setup(x => x.RunAsync(
+                    It.Is<string>(s => s.Contains("dotnet")),
+                    It.Is<string>(s => s.Contains("restore")),
+                    It.Is<string>(s => s == dirInfo.FullName),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new ExternalCommandExecutionResult
+                {
+                    ExitCode = 0,
+                    StdOut = string.Empty,
+                    StdErr = string.Empty
+                });
         }
 
         protected void SetupWinUI(DirectoryInfo dirInfo)
@@ -592,6 +589,14 @@ namespace MSStore.CLI.UnitTests
                     It.Is<string>(s => s == "Microsoft.WindowsAppSDK"),
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
+        }
+
+        protected void SetupMaui(FileInfo fileInfo)
+        {
+            NuGetPackageManager
+                .Setup(x => x.IsMaui(
+                    It.Is<FileInfo>(f => f.FullName == fileInfo.FullName)))
+                .Returns(true);
         }
 
         protected void SetupBasedOnTestDataProjectSubPath(DirectoryInfo dirInfo, string[] testDataProjectSubPath)
@@ -614,6 +619,17 @@ namespace MSStore.CLI.UnitTests
 
                 DefaultMSBuildExecution(dirInfo);
                 SetupWinUI(dirInfo);
+            }
+            else if (testDataProjectSubPath.Contains("MauiProject"))
+            {
+                if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    Assert.Inconclusive("This test is only valid on non-Windows platforms");
+                }
+
+                DefaultMSBuildExecution(dirInfo);
+                SetupWinUI(dirInfo);
+                SetupMaui(dirInfo.GetFiles("*.csproj").First());
             }
             else if (testDataProjectSubPath.Contains("ReactNativeProject"))
             {

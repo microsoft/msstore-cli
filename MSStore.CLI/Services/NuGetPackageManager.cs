@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml;
 using Microsoft.Extensions.Logging;
 
 namespace MSStore.CLI.Services
@@ -19,7 +20,28 @@ namespace MSStore.CLI.Services
             _logger = logger;
         }
 
-        public async Task<bool> IsPackageInstalledAsync(DirectoryInfo directory, string packageName, CancellationToken ct)
+        public virtual bool IsMaui(FileInfo fileInfo)
+        {
+            if (!fileInfo.Exists)
+            {
+                return false;
+            }
+
+            XmlDocument xmlDoc = new XmlDocument
+            {
+                PreserveWhitespace = true
+            };
+
+            _logger.LogInformation("Checking if project is Maui");
+
+            xmlDoc.Load(fileInfo.FullName);
+
+            var useMauiNode = xmlDoc.SelectSingleNode("/Project/PropertyGroup/UseMaui");
+
+            return useMauiNode?.InnerText?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
+        }
+
+        public virtual async Task<bool> IsPackageInstalledAsync(DirectoryInfo directory, string packageName, CancellationToken ct)
         {
             var projectAssetsJson = directory.GetFiles(Path.Join("obj", "project.assets.json"), SearchOption.TopDirectoryOnly)?.FirstOrDefault();
             if (projectAssetsJson?.Directory?.FullName != null)

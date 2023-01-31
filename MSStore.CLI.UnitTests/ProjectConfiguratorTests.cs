@@ -534,6 +534,39 @@ namespace MSStore.CLI.UnitTests
             appxManifestFileContents.Should().Contain("Fake App");
         }
 
+        [TestMethod]
+        public async Task ProjectConfiguratorParsesMauiProject()
+        {
+            var path = CopyFilesRecursively("MauiProject");
+
+            var dirInfo = new DirectoryInfo(path);
+
+            DefaultMSBuildExecution(dirInfo);
+
+            SetupWinUI(dirInfo);
+            SetupMaui(dirInfo.GetFiles("*.csproj").First());
+
+            var result = await ParseAndInvokeAsync(
+                new string[]
+                {
+                    "init",
+                    path,
+                    "--verbose"
+                });
+
+            result = CleanResult(result);
+
+            result.Should().Contain("This seems to be a Maui project.");
+
+            var appxManifestFileContents = await File.ReadAllTextAsync(Path.Combine(path, "Platforms", "Windows", "Package.appxmanifest"));
+
+            appxManifestFileContents.Should().Contain("9PN3ABCDEFGA");
+
+            var csprojFileContents = await File.ReadAllTextAsync(Path.Combine(path, "MauiApp.csproj"));
+
+            csprojFileContents.Should().Contain("Fake App");
+        }
+
         private void SetupSuccessfullPWA()
         {
             FakeConsole

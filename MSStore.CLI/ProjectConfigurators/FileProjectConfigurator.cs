@@ -79,19 +79,47 @@ namespace MSStore.CLI.ProjectConfigurators
             }
         }
 
-        protected (DirectoryInfo projectRootPath, FileInfo projectFiles) GetInfo(string pathOrUrl)
+        protected (DirectoryInfo projectRootPath, FileInfo projectFile) GetInfo(string pathOrUrl)
         {
             DirectoryInfo projectRootPath = new DirectoryInfo(pathOrUrl);
-            FileInfo[] manifestFiles = projectRootPath.GetFiles(SupportedProjectPattern.First(), SearchOption.TopDirectoryOnly);
+            FileInfo[] projectFiles = projectRootPath.GetFiles(SupportedProjectPattern.First(), SearchOption.TopDirectoryOnly);
 
-            if (manifestFiles.Length == 0)
+            if (projectFiles.Length == 0)
             {
                 throw new InvalidOperationException($"No '{SupportedProjectPattern.First()}' file found in the project root directory.");
             }
 
-            var manifestFile = manifestFiles.First();
+            var projectFile = projectFiles.First();
 
-            return (projectRootPath, manifestFile);
+            return (projectRootPath, projectFile);
+        }
+
+        internal static FileInfo GetAppXManifest(DirectoryInfo projectRootPath)
+        {
+            return FindFile(projectRootPath, "Package.appxmanifest");
+        }
+
+        protected static FileInfo FindFile(DirectoryInfo projectRootPath, string searchPattern)
+        {
+            var files = projectRootPath.GetFiles(searchPattern, SearchOption.AllDirectories).ToList();
+
+            var rootDirectoriesToIgnore = new string[] { "node_modules", "obj", "bin" };
+
+            foreach (var ignoreDirectory in rootDirectoriesToIgnore)
+            {
+                var nodeModules = projectRootPath.GetDirectories(ignoreDirectory, SearchOption.TopDirectoryOnly).FirstOrDefault();
+                if (nodeModules != null)
+                {
+                    files = files.Where(f => !f.FullName.StartsWith(nodeModules.FullName, StringComparison.OrdinalIgnoreCase)).ToList();
+                }
+            }
+
+            if (!files.Any())
+            {
+                throw new InvalidOperationException($"No '{searchPattern}' file found.");
+            }
+
+            return files.First();
         }
 
         public abstract Task<(int returnCode, DirectoryInfo? outputDirectory)> ConfigureAsync(string pathOrUrl, DirectoryInfo? output, string publisherDisplayName, DevCenterApplication app, Version? version, IStorePackagedAPI storePackagedAPI, CancellationToken ct);
@@ -114,10 +142,10 @@ namespace MSStore.CLI.ProjectConfigurators
 
         public virtual async Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, DirectoryInfo? inputDirectory, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
-            var (projectRootPath, manifestFile) = GetInfo(pathOrUrl);
+            var (projectRootPath, projectFile) = GetInfo(pathOrUrl);
 
-            // Try to find AppId inside the manifest file
-            app = await storePackagedAPI.EnsureAppInitializedAsync(app, manifestFile, this, ct);
+            // Try to find AppId inside the manifestFile/projectFile file
+            app = await storePackagedAPI.EnsureAppInitializedAsync(app, projectFile, this, ct);
 
             if (app?.Id == null)
             {
