@@ -122,7 +122,7 @@ namespace MSStore.CLI.ProjectConfigurators
                     }
                 }
 
-                // Could not update, so lets add at the beggining of the msix_config section
+                // Could not update, so let's add at the beggining of the msix_config section
                 yamlLines.Insert(msixConfigLine + 1, $"  {key}: {value}");
             }
 

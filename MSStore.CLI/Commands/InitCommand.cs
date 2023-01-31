@@ -291,7 +291,7 @@ namespace MSStore.CLI.Commands
                     AnsiConsole.WriteLine($"Using PublisherDisplayName: {PublisherDisplayName}");
                 }
 
-                AnsiConsole.WriteLine("Lets set it up for you!");
+                AnsiConsole.WriteLine("Let's set it up for you!");
                 AnsiConsole.WriteLine();
 
                 var (result, outputDirectory) = await configurator.ConfigureAsync(PathOrUrl, Output, PublisherDisplayName, app, Version, storePackagedAPI, ct);
@@ -370,7 +370,7 @@ namespace MSStore.CLI.Commands
                 if (appList.Any() != true)
                 {
                     AnsiConsole.WriteLine("Your account has no registered apps yet.");
-                    AnsiConsole.MarkupLine("[b]Lets create one![/]");
+                    AnsiConsole.MarkupLine("[b]Let's create one![/]");
                     return await CreateNewAppAsync(ct);
                 }
 

@@ -575,7 +575,7 @@ namespace MSStore.CLI.Helpers
             {
                 submission.Listings = new Dictionary<string, DevCenterListing>();
 
-                AnsiConsole.WriteLine("Lets add listings to your application. Please enter the following information:");
+                AnsiConsole.WriteLine("Let's add listings to your application. Please enter the following information:");
 
                 var listingCount = 0;
                 do

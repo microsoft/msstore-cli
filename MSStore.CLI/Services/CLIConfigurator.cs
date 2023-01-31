@@ -64,7 +64,7 @@ namespace MSStore.CLI.Services
             MicrosoftStoreCLI.WelcomeMessage();
             AnsiConsole.MarkupLine("Use of the Microsoft Store CLI is subject to the terms of the Microsoft Privacy Statement: [link]https://aka.ms/privacy[/]");
             AnsiConsole.WriteLine("You might need to provide some credentials to call the Microsoft Store APIs.");
-            AnsiConsole.MarkupLine("[bold green]Lets start![/]");
+            AnsiConsole.MarkupLine("[bold green]Let's start![/]");
             AnsiConsole.WriteLine();
 
             var config = new Configurations();
@@ -382,7 +382,7 @@ namespace MSStore.CLI.Services
 
                 if (await _consoleReader.YesNoConfirmationAsync("Do you know if you are already registed?", ct))
                 {
-                    AnsiConsole.MarkupLine("Lets then associate your account with an [green]Azure AD Tenant[/].");
+                    AnsiConsole.MarkupLine("Let's then associate your account with an [green]Azure AD Tenant[/].");
 
                     AnsiConsole.WriteLine();
 
