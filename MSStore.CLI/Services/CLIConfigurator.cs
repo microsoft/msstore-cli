@@ -478,7 +478,7 @@ namespace MSStore.CLI.Services
                     if (_tokenManager.CurrentUser == null)
                     {
                         // If no cache, then get an access token, which will ask for credentials interactively
-                        await _tokenManager.GetTokenAsync(Array.Empty<string>(), ct);
+                        await _tokenManager.GetTokenAsync(GraphClient.GraphApplicationReadWriteScope, ct);
                     }
 
                     if (_tokenManager.CurrentUser == null)

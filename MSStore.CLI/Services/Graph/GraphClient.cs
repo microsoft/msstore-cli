@@ -16,8 +16,9 @@ namespace MSStore.CLI.Services.Graph
 {
     internal class GraphClient : IGraphClient, IDisposable
     {
+        internal static readonly string[] GraphApplicationReadWriteScope = new[] { "https://graph.microsoft.com/Application.ReadWrite.All" };
+
         private static readonly string JsonContentType = "application/json";
-        private static readonly string[] GraphApplicationReadWriteScope = new[] { "https://graph.microsoft.com/Application.ReadWrite.All" };
 
         private readonly HttpClient httpClient;
 
