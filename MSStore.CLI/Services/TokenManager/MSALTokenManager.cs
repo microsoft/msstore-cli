@@ -171,7 +171,14 @@ namespace MSStore.CLI.Services.TokenManager
             // clear the cache
             for (int i = 0; i < accounts.Count; i++)
             {
-                await _app.RemoveAsync(accounts[i]);
+                try
+                {
+                    await _app.RemoveAsync(accounts[i]);
+                }
+                catch
+                {
+                    // Ignore
+                }
             }
 
             var app = PublicClientApplicationBuilder.Create(ClientId)
