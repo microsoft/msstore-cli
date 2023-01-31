@@ -244,7 +244,6 @@ namespace MSStore.CLI.Services
 
                     clientSecret = newClientSecret;
 
-                    AnsiConsole.MarkupLine("We can't automatically do this (yet!)...");
                     AnsiConsole.MarkupLine("At the Partner Center website, at the [b green]Account settings[/]/[b green]User management[/]/[b green]Azure AD applications[/] page:");
                     var domainsString = string.Empty;
                     if (organization.Domain != null)
@@ -598,8 +597,6 @@ namespace MSStore.CLI.Services
                 try
                 {
                     var secret = await _graphClient.CreateAppSecretAsync(clientId, displayName, ct);
-
-                    AnsiConsole.MarkupLine($":check_mark_button: [green]Created Client/App Secret:[/] '[grey u]{secret.SecretText}[/]'");
 
                     return secret.SecretText;
                 }
