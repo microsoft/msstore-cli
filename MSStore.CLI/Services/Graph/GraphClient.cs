@@ -23,7 +23,7 @@ namespace MSStore.CLI.Services.Graph
 
         private readonly ITokenManager _tokenManager;
 
-        public bool Enabled => false;
+        public bool Enabled => true;
 
         public GraphClient(ITokenManager tokenManager)
         {
