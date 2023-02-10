@@ -14,14 +14,16 @@ namespace MSStore.CLI.Services
 {
     internal class AzureBlobManager : IAzureBlobManager
     {
+        private readonly IHttpClientFactory _httpClientFactory = null!;
+
+        public AzureBlobManager(IHttpClientFactory httpClientFactory)
+        {
+            _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
+        }
+
         public async Task<string> UploadFileAsync(string blobUri, string localFilePath, IProgress<double> progress, CancellationToken ct)
         {
-            using var httpClient = new HttpClient(
-                new HttpClientHandler
-                {
-                    CheckCertificateRevocationList = true
-                });
-
+            using var httpClient = _httpClientFactory.CreateClient("Default");
             using var request = new HttpRequestMessage(HttpMethod.Put, blobUri.Replace("+", "%2B"));
 
             using var fileStream = new FileStream(localFilePath, FileMode.Open, FileAccess.Read);

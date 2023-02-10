@@ -93,7 +93,7 @@ namespace MSStore.API
             }
         }
 
-        public async Task InitAsync(CancellationToken ct)
+        public async Task InitAsync(HttpClient? httpClient = null, CancellationToken ct = default)
         {
             // Get authorization token.
             Logger?.LogInformation("Getting authorization token");
@@ -111,7 +111,7 @@ namespace MSStore.API
                 return;
             }
 
-            _client = new SubmissionClient(accessToken, ServiceUrl)
+            _client = new SubmissionClient(accessToken, ServiceUrl, httpClient)
             {
                 DefaultHeaders = new Dictionary<string, string>()
                 {

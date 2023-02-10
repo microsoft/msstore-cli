@@ -9,6 +9,8 @@ using System.CommandLine.Parsing;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -98,6 +100,72 @@ namespace MSStore.CLI
                         .AddScoped<INuGetPackageManager, NuGetPackageManager>()
                         .AddScoped<IAppXManifestManager, AppXManifestManager>()
                         .AddSingleton(telemetryClient);
+
+                    services
+                        .AddHttpClient("Default")
+                        .ConfigurePrimaryHttpMessageHandler(() =>
+                        {
+                            return new HttpClientHandler
+                            {
+                                CheckCertificateRevocationList = true
+                            };
+                        });
+
+                    services
+                        .AddHttpClient(nameof(GraphClient), client =>
+                        {
+                            client.BaseAddress = new Uri("https://graph.microsoft.com/");
+                        })
+                        .ConfigurePrimaryHttpMessageHandler(() =>
+                        {
+                            return new HttpClientHandler
+                            {
+                                CheckCertificateRevocationList = true
+                            };
+                        });
+
+                    services
+                        .AddHttpClient(nameof(PartnerCenterManager), client =>
+                        {
+                            client.BaseAddress = new Uri("https://api.partnercenter.microsoft.com");
+                        })
+                        .ConfigurePrimaryHttpMessageHandler(() =>
+                        {
+                            return new HttpClientHandler
+                            {
+                                CheckCertificateRevocationList = true
+                            };
+                        });
+
+                    var userAgent = new ProductInfoHeaderValue("MSStoreCLI", typeof(PWABuilderClient).Assembly.GetName().Version?.ToString());
+
+                    services
+                        .AddHttpClient($"{nameof(PWABuilderClient)}/MSIX", client =>
+                        {
+                            client.BaseAddress = new Uri("https://pwabuilder-winserver.centralus.cloudapp.azure.com/msix/");
+                            client.DefaultRequestHeaders.UserAgent.Add(userAgent);
+                        })
+                        .ConfigurePrimaryHttpMessageHandler(() =>
+                        {
+                            return new HttpClientHandler
+                            {
+                                CheckCertificateRevocationList = true
+                            };
+                        });
+
+                    services
+                        .AddHttpClient($"{nameof(PWABuilderClient)}/API", client =>
+                        {
+                            client.BaseAddress = new Uri("https://pwabuilder-tests.azurewebsites.net/api/");
+                            client.DefaultRequestHeaders.UserAgent.Add(userAgent);
+                        })
+                        .ConfigurePrimaryHttpMessageHandler(() =>
+                        {
+                            return new HttpClientHandler
+                            {
+                                CheckCertificateRevocationList = true
+                            };
+                        });
                 })
                 .ConfigureStoreCLICommands()
                 .ConfigureLogging((hostContext, logging) =>
@@ -207,16 +275,6 @@ namespace MSStore.CLI
                     telemetryConfiguration.ConnectionString = telemetryConnectionStringProvider.AIConnectionString;
                 }
             }
-
-            /*
-            configuration.EnableAzureInstanceMetadataTelemetryModule = false;
-            configuration.EnableDiagnosticsTelemetryModule = false;
-            configuration.EnableHeartbeat = false;
-            configuration.EnableAdaptiveSampling = false;
-            configuration.EnableQuickPulseMetricStream = false;
-            configuration.EnableDependencyTrackingTelemetryModule = false;
-            configuration.EnablePerformanceCounterCollectionModule = false;
-            */
 
             if (telemetryConfigurations.TelemetryEnabled != true)
             {

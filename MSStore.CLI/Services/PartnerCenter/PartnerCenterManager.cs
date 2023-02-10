@@ -13,44 +13,21 @@ using MSStore.CLI.Services.TokenManager;
 
 namespace MSStore.CLI.Services.PartnerCenter
 {
-    internal class PartnerCenterManager : IPartnerCenterManager, IDisposable
+    internal class PartnerCenterManager : IPartnerCenterManager
     {
         private static readonly string JsonContentType = "application/json";
 
         private static readonly string[] PartnerCenterUserImpersonationScope = new[] { "https://api.partnercenter.microsoft.com/user_impersonation" };
 
-        private readonly HttpClient _httpClient;
-
         private readonly ITokenManager _tokenManager;
+        private readonly IHttpClientFactory _httpClientFactory;
 
         public bool Enabled => false;
 
-        public PartnerCenterManager(ITokenManager tokenManager)
+        public PartnerCenterManager(ITokenManager tokenManager, IHttpClientFactory httpClientFactory)
         {
-            _httpClient = new HttpClient(
-                new HttpClientHandler
-                {
-                    CheckCertificateRevocationList = true
-                })
-            {
-                BaseAddress = new Uri("https://api.partnercenter.microsoft.com")
-            };
-
             _tokenManager = tokenManager ?? throw new ArgumentNullException(nameof(tokenManager));
-        }
-
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                _httpClient?.Dispose();
-            }
+            _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
         }
 
         private async Task<T> InvokeAsync<T>(
@@ -66,7 +43,9 @@ namespace MSStore.CLI.Services.PartnerCenter
 
             ct.ThrowIfCancellationRequested();
 
-            using HttpResponseMessage response = await _httpClient.SendAsync(request, ct);
+            using var httpClient = _httpClientFactory.CreateClient(nameof(PartnerCenterManager));
+
+            using HttpResponseMessage response = await httpClient.SendAsync(request, ct);
 
             if (typeof(T) == typeof(string))
             {

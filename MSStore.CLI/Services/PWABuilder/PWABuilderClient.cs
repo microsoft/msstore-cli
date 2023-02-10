@@ -4,7 +4,6 @@
 using System;
 using System.IO;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -13,51 +12,14 @@ using MSStore.API;
 
 namespace MSStore.CLI.Services.PWABuilder
 {
-    internal class PWABuilderClient : IPWABuilderClient, IDisposable
+    internal class PWABuilderClient : IPWABuilderClient
     {
         private static readonly string JsonContentType = "application/json";
+        private readonly IHttpClientFactory _httpClientFactory;
 
-        private readonly HttpClient httpClient;
-        private readonly HttpClient httpClientTests;
-
-        public PWABuilderClient()
+        public PWABuilderClient(IHttpClientFactory httpClientFactory)
         {
-            var userAgent = new ProductInfoHeaderValue("MSStoreCLI", typeof(PWABuilderClient).Assembly.GetName().Version?.ToString());
-
-            httpClient = new HttpClient(
-                new HttpClientHandler
-                {
-                    CheckCertificateRevocationList = true
-                })
-            {
-                BaseAddress = new Uri("https://pwabuilder-winserver.centralus.cloudapp.azure.com/msix/")
-            };
-            httpClient.DefaultRequestHeaders.UserAgent.Add(userAgent);
-
-            httpClientTests = new HttpClient(
-                new HttpClientHandler
-                {
-                    CheckCertificateRevocationList = true
-                })
-            {
-                BaseAddress = new Uri("https://pwabuilder-tests.azurewebsites.net/api/")
-            };
-            httpClientTests.DefaultRequestHeaders.UserAgent.Add(userAgent);
-        }
-
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                httpClient?.Dispose();
-                httpClientTests?.Dispose();
-            }
+            _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
         }
 
         protected virtual void SetRequest(HttpRequestMessage request, object? requestContent)
@@ -115,6 +77,8 @@ namespace MSStore.CLI.Services.PWABuilder
 
             progress.Report(0);
 
+            using var httpClient = _httpClientFactory.CreateClient($"{nameof(PWABuilderClient)}/MSIX");
+
             using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
 
             if (response.Content.Headers.ContentDisposition?.DispositionType != "attachment")
@@ -152,11 +116,13 @@ namespace MSStore.CLI.Services.PWABuilder
 
         public async Task<WebManifestFetchResponse> FetchWebManifestAsync(Uri site, CancellationToken ct)
         {
+            using var httpClient = _httpClientFactory.CreateClient($"{nameof(PWABuilderClient)}/API");
+
             return await InvokeAsync<WebManifestFetchResponse>(
                 HttpMethod.Get,
                 $"FetchWebManifest?site={site}",
                 null,
-                httpClientTests,
+                httpClient,
                 ct);
         }
     }

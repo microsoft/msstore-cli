@@ -14,44 +14,21 @@ using MSStore.CLI.Services.TokenManager;
 
 namespace MSStore.CLI.Services.Graph
 {
-    internal class GraphClient : IGraphClient, IDisposable
+    internal class GraphClient : IGraphClient
     {
         internal static readonly string[] GraphApplicationReadWriteScope = new[] { "https://graph.microsoft.com/Application.ReadWrite.All" };
 
         private static readonly string JsonContentType = "application/json";
 
-        private readonly HttpClient httpClient;
-
         private readonly ITokenManager _tokenManager;
+        private readonly IHttpClientFactory _httpClientFactory = null!;
 
         public bool Enabled => true;
 
-        public GraphClient(ITokenManager tokenManager)
+        public GraphClient(ITokenManager tokenManager, IHttpClientFactory httpClientFactory)
         {
-            httpClient = new HttpClient(
-                new HttpClientHandler
-                {
-                    CheckCertificateRevocationList = true
-                })
-            {
-                BaseAddress = new Uri("https://graph.microsoft.com/")
-            };
-
             _tokenManager = tokenManager ?? throw new ArgumentNullException(nameof(tokenManager));
-        }
-
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                httpClient?.Dispose();
-            }
+            _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
         }
 
         private async Task<T> InvokeAsync<T>(
@@ -67,6 +44,8 @@ namespace MSStore.CLI.Services.Graph
             await SetRequestAsync(request, requestContent, extraHeaders, scopes, ct);
 
             ct.ThrowIfCancellationRequested();
+
+            using var httpClient = _httpClientFactory.CreateClient(nameof(GraphClient));
 
             using HttpResponseMessage response = await httpClient.SendAsync(request, ct);
 

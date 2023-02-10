@@ -86,7 +86,7 @@ namespace MSStore.API.Packaged
             }
         }
 
-        public async Task InitAsync(CancellationToken ct = default)
+        public async Task InitAsync(HttpClient? httpClient = null, CancellationToken ct = default)
         {
             // Get authorization token.
             Logger?.LogInformation("Getting DevCenter authorization token");
@@ -104,7 +104,7 @@ namespace MSStore.API.Packaged
                 return;
             }
 
-            _devCenterClient = new SubmissionClient(devCenterAccessToken, DevCenterUrl)
+            _devCenterClient = new SubmissionClient(devCenterAccessToken, DevCenterUrl, httpClient)
             {
                 DefaultHeaders = new Dictionary<string, string>()
                 {

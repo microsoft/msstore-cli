@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -15,12 +16,14 @@ namespace MSStore.CLI.Services
     {
         private readonly IConfigurationManager<Configurations> _configurationManager;
         private readonly ICredentialManager _credentialManager;
+        private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILogger<StoreAPI> _logger;
 
-        public StoreAPIFactory(IConfigurationManager<Configurations> configurationManager, ICredentialManager credentialManager, ILogger<StoreAPI> logger)
+        public StoreAPIFactory(IConfigurationManager<Configurations> configurationManager, ICredentialManager credentialManager, IHttpClientFactory httpClientFactory, ILogger<StoreAPI> logger)
         {
             _configurationManager = configurationManager ?? throw new ArgumentNullException(nameof(configurationManager));
             _credentialManager = credentialManager ?? throw new ArgumentNullException(nameof(credentialManager));
+            _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
@@ -43,7 +46,7 @@ namespace MSStore.CLI.Services
                     config.StoreApiScope,
                     _logger);
 
-                await storeAPI.InitAsync(ct);
+                await storeAPI.InitAsync(_httpClientFactory.CreateClient("Default"), ct);
 
                 return storeAPI;
             }
@@ -70,7 +73,7 @@ namespace MSStore.CLI.Services
                     config.DevCenterScope,
                     _logger);
 
-                await storePackagedAPI.InitAsync(ct);
+                await storePackagedAPI.InitAsync(_httpClientFactory.CreateClient("Default"), ct);
 
                 return storePackagedAPI;
             }

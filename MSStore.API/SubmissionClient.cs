@@ -25,7 +25,7 @@ namespace MSStore.API
     public class SubmissionClient : IDisposable
     {
         private readonly HttpClient httpClient;
-        private readonly HttpClient imageUploadClient;
+        private readonly bool httpClientIsInternal;
 
         private readonly AuthenticationResult accessToken;
 
@@ -52,7 +52,8 @@ namespace MSStore.API
         /// on behalf of a user
         /// </param>
         /// <param name="serviceUrl">The service URL.</param>
-        public SubmissionClient(AuthenticationResult accessToken, string serviceUrl)
+        /// <param name="httpClient">An HttpClient object to be used in the internal requests. Can be used for mocking.</param>
+        public SubmissionClient(AuthenticationResult accessToken, string serviceUrl, HttpClient? httpClient = null)
         {
             if (string.IsNullOrEmpty(accessToken?.AccessToken))
             {
@@ -65,19 +66,23 @@ namespace MSStore.API
             }
 
             this.accessToken = accessToken;
-            httpClient = new HttpClient(
-                new HttpClientHandler
-                {
-                    CheckCertificateRevocationList = true
-                })
+            if(httpClient != null)
             {
-                BaseAddress = new Uri(serviceUrl)
-            };
-            imageUploadClient = new HttpClient(
-                new HttpClientHandler
-                {
-                    CheckCertificateRevocationList = true
-                });
+                this.httpClient = httpClient;
+                httpClientIsInternal = false;
+            }
+            else
+            {
+                this.httpClient = new HttpClient(
+                    new HttpClientHandler
+                    {
+                        CheckCertificateRevocationList = true
+                    });
+                httpClientIsInternal = true;
+            }
+
+            this.httpClient.BaseAddress = new Uri(serviceUrl);
+
             DefaultHeaders = new Dictionary<string, string>();
         }
 
@@ -100,8 +105,10 @@ namespace MSStore.API
         {
             if (disposing)
             {
-                httpClient?.Dispose();
-                imageUploadClient?.Dispose();
+                if (httpClientIsInternal)
+                {
+                    httpClient?.Dispose();
+                }
             }
         }
 
@@ -262,30 +269,6 @@ namespace MSStore.API
             {
                 throw new MSStoreException(await response.Content.ReadAsStringAsync(ct));
             }
-        }
-
-        /// <summary>
-        /// Uploads a given Image Asset file to Asset Storage
-        /// </summary>
-        /// <param name="assetUploadUrl">Asset Storage Url</param>
-        /// <param name="fileStream">The Stream instance of file to be uploaded</param>
-        /// <param name="ct">Cancelation token.</param>
-        /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        public async Task UploadAssetAsync(string assetUploadUrl, Stream fileStream, CancellationToken ct)
-        {
-            using var request = new HttpRequestMessage(HttpMethod.Put, assetUploadUrl);
-
-            request.Headers.Add("x-ms-blob-type", "BlockBlob");
-            request.Content = new StreamContent(fileStream);
-            request.Content.Headers.ContentType = new MediaTypeHeaderValue(PngContentType);
-            using HttpResponseMessage response = await imageUploadClient.SendAsync(request, ct);
-
-            if (response.IsSuccessStatusCode)
-            {
-                return;
-            }
-
-            throw new MSStoreException(await response.Content.ReadAsStringAsync(ct));
         }
 
         /// <summary>
