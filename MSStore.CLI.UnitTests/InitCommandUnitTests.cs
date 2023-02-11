@@ -13,14 +13,15 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
-        [ExpectedException(typeof(ArgumentException))]
-        public async Task InitCommandShouldFailIfNoArgument()
+        public async Task InitCommandShouldUseDefaultDirectoryIfNoArgument()
         {
-            await ParseAndInvokeAsync(
+            var result = await ParseAndInvokeAsync(
                 new string[]
                 {
                     "init"
-                });
+                }, -1);
+
+            result.Should().Contain($"We could not find a project configurator for the project at '{Directory.GetCurrentDirectory()}'.");
         }
 
         [TestMethod]

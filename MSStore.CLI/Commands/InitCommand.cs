@@ -33,10 +33,10 @@ namespace MSStore.CLI.Commands
 
         static InitCommand()
         {
-            PathOrUrl = new Argument<string>("pathOrUrl", "The root directory path where the project file is, or a public URL that points to a PWA.");
+            PathOrUrl = new Argument<string>("pathOrUrl", () => Directory.GetCurrentDirectory().ToString(), "The root directory path where the project file is, or a public URL that points to a PWA.");
             PathOrUrl.AddValidator((result) =>
             {
-                var pathOrUrl = result.Tokens.Single().Value;
+                var pathOrUrl = result.Tokens.SingleOrDefault()?.Value ?? Directory.GetCurrentDirectory().ToString();
 
                 bool IsUri()
                 {
