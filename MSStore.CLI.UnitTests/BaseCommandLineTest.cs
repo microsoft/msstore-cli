@@ -76,7 +76,7 @@ namespace MSStore.CLI.UnitTests
                 }
             };
 
-        internal Organization DefaultOrganization { get; } = new Organization
+        internal static Organization DefaultOrganization { get; } = new Organization
         {
             Id = new Guid("F3C1CCB6-09C0-4BAB-BABA-C034BFB60EF9")
         };
