@@ -19,7 +19,7 @@ namespace MSStore.CLI.Commands
     internal class SettingsCommand : Command
     {
         public SettingsCommand()
-            : base("settings", "Change settings of the Microsoft Store CLI.")
+            : base("settings", "Change settings of the Microsoft Store Developer CLI.")
         {
             var enableTelemetry = new Option<bool>(
                 "--enableTelemetry",

@@ -62,7 +62,7 @@ namespace MSStore.CLI.Services
             }
 
             MicrosoftStoreCLI.WelcomeMessage();
-            AnsiConsole.MarkupLine("Use of the Microsoft Store CLI is subject to the terms of the Microsoft Privacy Statement: [link]https://aka.ms/privacy[/]");
+            AnsiConsole.MarkupLine("Use of the Microsoft Store Developer CLI is subject to the terms of the Microsoft Privacy Statement: [link]https://aka.ms/privacy[/]");
             AnsiConsole.WriteLine("You might need to provide some credentials to call the Microsoft Store APIs.");
             AnsiConsole.MarkupLine("[bold green]Let's start![/]");
             AnsiConsole.WriteLine();

@@ -15,7 +15,7 @@ namespace MSStore.CLI.Commands
     internal class ReconfigureCommand : Command
     {
         public ReconfigureCommand()
-            : base("reconfigure", "Re-configure the Microsoft Store CLI.")
+            : base("reconfigure", "Re-configure the Microsoft Store Developer CLI.")
         {
             var tenantId = new Option<Guid>(
                 aliases: new string[] { "--tenantId", "-t" },

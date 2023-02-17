@@ -23,7 +23,7 @@ namespace MSStore.CLI
         {
             AnsiConsole.WriteLine();
             AnsiConsole.Write(
-                new FigletText("Microsoft Store CLI")
+                new FigletText("Microsoft Store Dev CLI")
                     .Color(Color.Blue));
             AnsiConsole.WriteLine();
         }
@@ -31,7 +31,7 @@ namespace MSStore.CLI
         internal Option<bool> VerboseOption { get; }
 
         public MicrosoftStoreCLI()
-            : base(description: "CLI tool to automate Microsoft Store developer tasks.")
+            : base(description: "CLI tool to automate Microsoft Store Developer tasks.")
         {
             VerboseOption = new Option<bool>(
                 aliases: new string[] { "--verbose", "-v" },
@@ -88,7 +88,7 @@ namespace MSStore.CLI
                 {
                     HelpBuilder helpBuilder = new(LocalizationResources.Instance, CommandExtensions.GetBufferWidth());
                     helpBuilder.Write(context.ParseResult.RootCommandResult.Command, Console.Out);
-                    AnsiConsole.MarkupLine("Use of the Microsoft Store CLI is subject to the terms of the Microsoft Privacy Statement: [link]https://aka.ms/privacy[/]");
+                    AnsiConsole.MarkupLine("Use of the Microsoft Store Developer CLI is subject to the terms of the Microsoft Privacy Statement: [link]https://aka.ms/privacy[/]");
                 }
 
                 return 0;
