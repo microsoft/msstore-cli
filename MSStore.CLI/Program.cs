@@ -102,7 +102,10 @@ namespace MSStore.CLI
                         .AddSingleton(telemetryClient);
 
                     services
-                        .AddHttpClient("Default")
+                        .AddHttpClient("Default", client =>
+                        {
+                            AddMSCorrelationId(client.DefaultRequestHeaders);
+                        })
                         .ConfigurePrimaryHttpMessageHandler(() =>
                         {
                             return new HttpClientHandler
@@ -128,6 +131,7 @@ namespace MSStore.CLI
                         .AddHttpClient(nameof(PartnerCenterManager), client =>
                         {
                             client.BaseAddress = new Uri("https://api.partnercenter.microsoft.com");
+                            AddMSCorrelationId(client.DefaultRequestHeaders);
                         })
                         .ConfigurePrimaryHttpMessageHandler(() =>
                         {
@@ -137,13 +141,23 @@ namespace MSStore.CLI
                             };
                         });
 
-                    var userAgent = new ProductInfoHeaderValue("MSStoreCLI", typeof(PWABuilderClient).Assembly.GetName().Version?.ToString());
+                    void AddPWABuilderDefaultHeaders(HttpRequestHeaders defaultRequestHeaders)
+                    {
+                        defaultRequestHeaders.Add("Platform-Identifier", "MSStoreCLI");
+                        defaultRequestHeaders.Add("Platform-Identifier-Version", typeof(PWABuilderClient).Assembly.GetName().Version?.ToString());
+                        defaultRequestHeaders.Add("Correlation-Id", telemetryClient.Context.Session.Id);
+                    }
+
+                    void AddMSCorrelationId(HttpRequestHeaders defaultRequestHeaders)
+                    {
+                        defaultRequestHeaders.Add("ms-correlationid", telemetryClient.Context.Session.Id);
+                    }
 
                     services
                         .AddHttpClient($"{nameof(PWABuilderClient)}/MSIX", client =>
                         {
                             client.BaseAddress = new Uri("https://pwabuilder-winserver.centralus.cloudapp.azure.com/msix/");
-                            client.DefaultRequestHeaders.UserAgent.Add(userAgent);
+                            AddPWABuilderDefaultHeaders(client.DefaultRequestHeaders);
                         })
                         .ConfigurePrimaryHttpMessageHandler(() =>
                         {
@@ -157,7 +171,7 @@ namespace MSStore.CLI
                         .AddHttpClient($"{nameof(PWABuilderClient)}/API", client =>
                         {
                             client.BaseAddress = new Uri("https://pwabuilder-tests.azurewebsites.net/api/");
-                            client.DefaultRequestHeaders.UserAgent.Add(userAgent);
+                            AddPWABuilderDefaultHeaders(client.DefaultRequestHeaders);
                         })
                         .ConfigurePrimaryHttpMessageHandler(() =>
                         {
