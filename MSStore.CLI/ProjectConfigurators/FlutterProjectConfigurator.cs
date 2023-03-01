@@ -112,10 +112,10 @@ namespace MSStore.CLI.ProjectConfigurators
                     {
                         if (yamlLines[i].Contains(key, StringComparison.OrdinalIgnoreCase))
                         {
-                            var index = yamlLines[i].IndexOf($"{key}:", StringComparison.OrdinalIgnoreCase);
-                            if (index > 0)
+                            var index = yamlLines[i].IndexOf($"  {key}:", StringComparison.OrdinalIgnoreCase);
+                            if (index >= 0)
                             {
-                                yamlLines[i] = $"{yamlLines[i][..index]}{key}: {value}";
+                                yamlLines[i] = $"{yamlLines[i][..index]}  {key}: {value}";
                                 return;
                             }
                         }
