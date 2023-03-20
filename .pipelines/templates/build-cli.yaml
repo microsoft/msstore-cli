@@ -125,6 +125,9 @@ steps:
   inputs:
     sourceFolder: '$(System.DefaultWorkingDirectory)/MSStore.CLI/bin/${{ parameters.dotnet_configuration }}/${{ parameters.dotnet_framework }}/${{ parameters.dotnet_runtime }}-${{ parameters.dotnet_arch }}/publish/'
     targetFolder: '$(Build.ArtifactStagingDirectory)/CLI'
+    Contents: |
+      **
+      !*.md
 - publish: '$(Build.ArtifactStagingDirectory)/CLI'
   displayName: Upload Artifact - CLI
   artifact: CLI-${{ parameters.dotnet_runtime }}-${{ parameters.dotnet_arch }}
