@@ -20,13 +20,14 @@ steps:
   condition: startsWith(variables.AgentOS, 'Windows_NT')
   inputs:
     suppressionsFile: '$(System.DefaultWorkingDirectory)\.pipelines\CredScanSuppressions.json'
-- task: BinSkim@3
+- task: BinSkim@4
   displayName: Run Binskim Analysis
   condition: and(succeeded(), startsWith(variables.dotnet_configuration, 'Release'), startsWith(variables.AgentOS, 'Windows_NT'))
   inputs:
     InputType: 'Basic'
     Function: 'analyze'
-    AnalyzeTarget: '$(System.DefaultWorkingDirectory)\MSStore.API\bin\${{ parameters.dotnet_configuration }}\net7.0\MSStore.API.dll'
+    TargetPattern: guardianGlob
+    AnalyzeTargetGlob: '$(System.DefaultWorkingDirectory)\MSStore.API\bin\${{ parameters.dotnet_configuration }}\net7.0\MSStore.API.dll'
     AnalyzeVerbose: true
     toolVersion: 'Latest'
 - task: PoliCheck@2
@@ -45,8 +46,9 @@ steps:
 - task: PublishSecurityAnalysisLogs@3
   displayName: 'Publish Guardian Artifacts'
   condition: and(succeededOrFailed(), startsWith(variables.dotnet_configuration, 'Release'), startsWith(variables.AgentOS, 'Windows_NT'))
-- task: securedevelopmentteam.vss-secure-development-tools.build-task-postanalysis.PostAnalysis@1
+- task: securedevelopmentteam.vss-secure-development-tools.build-task-postanalysis.PostAnalysis@2
   displayName: 'Post Analysis'
   condition: and(startsWith(variables.dotnet_configuration, 'Release'), startsWith(variables.AgentOS, 'Windows_NT'))
   inputs:
-    BinSkim: true
+    GdnBreakAllTools: false
+    GdnBreakGdnToolBinSkim: true
