@@ -303,9 +303,17 @@ namespace MSStore.CLI.Helpers
                     return -1;
                 }
 
+                var oldSubmissionsIsCommitFailed = "CommitFailed".Equals(submission.Status, StringComparison.Ordinal);
+
                 var qs = System.Web.HttpUtility.ParseQueryString(submission.FileUploadUrl);
-                if (!DateTime.TryParse(qs["se"], out var fileUploadExpire) || fileUploadExpire < DateTime.UtcNow)
+                if (!DateTime.TryParse(qs["se"], out var fileUploadExpire) || fileUploadExpire < DateTime.UtcNow
+                    || oldSubmissionsIsCommitFailed)
                 {
+                    if (oldSubmissionsIsCommitFailed)
+                    {
+                        AnsiConsole.MarkupLine("[yellow]The submission was in a failed state. We will delete it and create a new one.[/]");
+                    }
+
                     success = await storePackagedAPI.DeleteSubmissionAsync(app.Id, submission.Id, _browserLauncher, logger, ct);
 
                     if (!success)
