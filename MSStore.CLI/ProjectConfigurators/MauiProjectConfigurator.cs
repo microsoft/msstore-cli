@@ -209,9 +209,24 @@ namespace MSStore.CLI.ProjectConfigurators
 
             output ??= new DirectoryInfo(Path.Combine(projectRootPath.FullName, "AppPackages"));
 
-            // TODO: Don't use the appx manifest version. Switch to the csprojs version.
-            // version = _appXManifestManager.UpdateManifestVersion(csProjectFile.FullName, version);
-            version ??= new Version(1, 0, 0, 0);
+            var properties = GetCsProjProperties(csProjectFile);
+            if (properties.WindowsTargetFramework == null)
+            {
+                throw new MSStoreException("Could not find a target framework for Windows");
+            }
+
+            if (version == null && !string.IsNullOrEmpty(properties.Version))
+            {
+                version = new Version(properties.Version);
+            }
+
+            var appxManifest = GetAppXManifest(projectRootPath);
+            version = _appXManifestManager.UpdateManifestVersion(appxManifest.FullName, version);
+
+            if (version.ToString() == "0.0.0.0")
+            {
+                version = new Version(1, 0, 0);
+            }
 
             var bundleUploadFile = await AnsiConsole.Status().StartAsync("Building MSIX...", async ctx =>
             {
@@ -227,12 +242,6 @@ namespace MSStore.CLI.ProjectConfigurators
 
                     var escapedOutput = output.FullName.Replace(" ", "%20");
 
-                    var targetFramework = GetWindowsTargetFramework(csProjectFile);
-                    if (targetFramework == null)
-                    {
-                        throw new MSStoreException("Could not find a target framework for Windows");
-                    }
-
                     var msBuildParamsList = new List<string>();
                     var projectName = csProjectFile.Directory?.Name ?? "App";
 
@@ -242,7 +251,7 @@ namespace MSStore.CLI.ProjectConfigurators
                         var runtime = $"win10-{appxBundlePlatform.ToLowerInvariant()}";
 
                         // Maybe switch AppxPackageTestDir to bin\Release\{targetFramework}\{runtime}\AppPackages\?
-                        msBuildParamsList.Add($"publish -f {targetFramework} -r {runtime} --self-contained /p:Configuration=Release;AppxBundle=Always;Platform={appxBundlePlatform};AppxBundlePlatforms={appxBundlePlatform};AppxPackageDir={escapedOutput}\\;UapAppxPackageBuildMode=StoreUpload;GenerateAppxPackageOnBuild=true;AppxPackageTestDir={escapedOutput}\\{projectName}_{version.ToVersionString()}_{appxBundlePlatform}_Test\\");
+                        msBuildParamsList.Add($"publish -f {properties.WindowsTargetFramework} -r {runtime} --self-contained /p:Configuration=Release;AppxBundle=Always;Platform={appxBundlePlatform};AppxBundlePlatforms={appxBundlePlatform};AppxPackageDir={escapedOutput}\\;UapAppxPackageBuildMode=StoreUpload;GenerateAppxPackageOnBuild=true;AppxPackageTestDir={escapedOutput}\\{projectName}_{version.ToVersionString()}_{appxBundlePlatform}_Test\\");
                     }
 
                     ExternalCommandExecutionResult? result = null;
@@ -300,16 +309,20 @@ namespace MSStore.CLI.ProjectConfigurators
             return (0, bundleUploadFile != null ? new FileInfo(bundleUploadFile).Directory : null);
         }
 
-        private static string? GetWindowsTargetFramework(FileInfo fileInfo)
+        // TODO: Update this code to use Microsoft.Build NuGet package
+        private static (string? WindowsTargetFramework, string? Version) GetCsProjProperties(FileInfo fileInfo)
         {
             if (!fileInfo.Exists)
             {
-                return null;
+                return (null, null);
             }
 
             XmlDocument xmlDoc = new XmlDocument();
 
             xmlDoc.Load(fileInfo.FullName);
+
+            string? windowsTargetFramework = null;
+            string? version = null;
 
             var targetFrameworksNodes = xmlDoc.SelectNodes("/Project/PropertyGroup/TargetFrameworks");
             if (targetFrameworksNodes != null && targetFrameworksNodes.Count > 0)
@@ -319,12 +332,20 @@ namespace MSStore.CLI.ProjectConfigurators
                     var targetFrameworks = targetFrameworksNode.InnerText.Split(";");
                     if (targetFrameworks.Any(tf => tf.Contains("windows10", StringComparison.InvariantCultureIgnoreCase)))
                     {
-                        return targetFrameworks.First(tf => tf.Contains("windows10", StringComparison.InvariantCultureIgnoreCase));
+                        windowsTargetFramework = targetFrameworks.First(tf => tf.Contains("windows10", StringComparison.InvariantCultureIgnoreCase));
+                        break;
                     }
                 }
             }
 
-            return null;
+            // Get ApplicationDisplayVersion
+            var applicationDisplayVersionNode = xmlDoc.SelectSingleNode("/Project/PropertyGroup/ApplicationDisplayVersion");
+            if (applicationDisplayVersionNode != null)
+            {
+                version = applicationDisplayVersionNode.InnerText;
+            }
+
+            return (windowsTargetFramework, version);
         }
     }
 }
