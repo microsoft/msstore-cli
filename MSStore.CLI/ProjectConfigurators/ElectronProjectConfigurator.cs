@@ -57,6 +57,11 @@ namespace MSStore.CLI.ProjectConfigurators
 
         public override bool PackageOnlyOnWindows => true;
 
+        public override AllowTargetFutureDeviceFamily[] AllowTargetFutureDeviceFamilies { get; } = new[]
+        {
+            AllowTargetFutureDeviceFamily.Desktop
+        };
+
         public override async Task<bool> CanConfigureAsync(string pathOrUrl, CancellationToken ct)
         {
             if (!await base.CanConfigureAsync(pathOrUrl, ct))

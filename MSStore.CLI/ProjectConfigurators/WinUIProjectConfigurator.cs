@@ -32,6 +32,13 @@ namespace MSStore.CLI.ProjectConfigurators
         public override SearchOption PackageFilesSearchOption { get; } = SearchOption.AllDirectories;
         public override PublishFileSearchFilterStrategy PublishFileSearchFilterStrategy { get; } = PublishFileSearchFilterStrategy.OneLevelDown;
 
+        public override AllowTargetFutureDeviceFamily[] AllowTargetFutureDeviceFamilies { get; } = new[]
+        {
+            AllowTargetFutureDeviceFamily.Desktop,
+            AllowTargetFutureDeviceFamily.Mobile,
+            AllowTargetFutureDeviceFamily.Holographic
+        };
+
         public override async Task<bool> CanConfigureAsync(string pathOrUrl, CancellationToken ct)
         {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))

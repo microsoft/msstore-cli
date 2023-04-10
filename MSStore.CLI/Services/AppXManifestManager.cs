@@ -69,21 +69,9 @@ namespace MSStore.CLI.Services
 
             UpdatePhoneIdentity(xmlDoc, nsmgr);
 
-            var properties = xmlDoc.SelectSingleNode("/ns:Package/ns:Properties", nsmgr);
-            if (properties != null)
-            {
-                var displayName = properties?["DisplayName"];
-                if (displayName != null)
-                {
-                    displayName.InnerText = app.PrimaryName ?? string.Empty;
-                }
+            SetAppPackagePropertyDisplayName(app, xmlDoc, nsmgr);
 
-                var publisherDisplayNameElement = properties?["PublisherDisplayName"];
-                if (publisherDisplayNameElement != null)
-                {
-                    publisherDisplayNameElement.InnerText = publisherDisplayName ?? string.Empty;
-                }
-            }
+            SetAppPackagePropertyPublisherDisplayName(publisherDisplayName, xmlDoc, nsmgr);
 
             SetAppDisplayName(app, xmlDoc, nsmgr);
 
@@ -159,15 +147,7 @@ namespace MSStore.CLI.Services
                 }
             }
 
-            var properties = xmlDoc.SelectSingleNode("/ns:Package/ns:Properties", nsmgr);
-            if (properties != null)
-            {
-                var publisherDisplayNameElement = properties?["PublisherDisplayName"];
-                if (publisherDisplayNameElement != null)
-                {
-                    publisherDisplayNameElement.InnerText = publisherDisplayName ?? string.Empty;
-                }
-            }
+            SetAppPackagePropertyPublisherDisplayName(publisherDisplayName, xmlDoc, nsmgr);
 
             xmlDoc.Save(appxManifestPath);
             FixBuildAppIdSpacing(appxManifestPath, metadataWasAppened, buildItemAppIdWasAppended);
@@ -256,6 +236,32 @@ namespace MSStore.CLI.Services
             }
 
             return (metadataWasAppened, buildItemAppIdWasAppended);
+        }
+
+        private static void SetAppPackagePropertyDisplayName(DevCenterApplication app, XmlDocument xmlDoc, XmlNamespaceManager nsmgr)
+        {
+            var properties = xmlDoc.SelectSingleNode("/ns:Package/ns:Properties", nsmgr);
+            if (properties != null)
+            {
+                var displayName = properties?["DisplayName"];
+                if (displayName != null)
+                {
+                    displayName.InnerText = app.PrimaryName ?? string.Empty;
+                }
+            }
+        }
+
+        private static void SetAppPackagePropertyPublisherDisplayName(string? publisherDisplayName, XmlDocument xmlDoc, XmlNamespaceManager nsmgr)
+        {
+            var properties = xmlDoc.SelectSingleNode("/ns:Package/ns:Properties", nsmgr);
+            if (properties != null)
+            {
+                var publisherDisplayNameElement = properties?["PublisherDisplayName"];
+                if (publisherDisplayNameElement != null)
+                {
+                    publisherDisplayNameElement.InnerText = publisherDisplayName ?? string.Empty;
+                }
+            }
         }
 
         public Version UpdateManifestVersion(string appxManifestPath, Version? version)

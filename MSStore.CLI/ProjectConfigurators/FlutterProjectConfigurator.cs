@@ -44,6 +44,11 @@ namespace MSStore.CLI.ProjectConfigurators
 
         public override bool PackageOnlyOnWindows => true;
 
+        public override AllowTargetFutureDeviceFamily[] AllowTargetFutureDeviceFamilies { get; } = new[]
+        {
+            AllowTargetFutureDeviceFamily.Desktop
+        };
+
         public override async Task<(int returnCode, DirectoryInfo? outputDirectory)> ConfigureAsync(string pathOrUrl, DirectoryInfo? output, string publisherDisplayName, DevCenterApplication app, Version? version, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             var (projectRootPath, flutterProjectFile) = GetInfo(pathOrUrl);

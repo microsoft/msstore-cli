@@ -260,7 +260,7 @@ namespace MSStore.CLI.Helpers
             return application;
         }
 
-        public static async Task<int> PublishAsync(this IStorePackagedAPI storePackagedAPI, DevCenterApplication app, FirstSubmissionDataCallback firstSubmissionDataCallback, DirectoryInfo output, IEnumerable<FileInfo> input, IBrowserLauncher _browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, ILogger logger, CancellationToken ct)
+        public static async Task<int> PublishAsync(this IStorePackagedAPI storePackagedAPI, DevCenterApplication app, FirstSubmissionDataCallback firstSubmissionDataCallback, AllowTargetFutureDeviceFamily[] allowTargetFutureDeviceFamilies, DirectoryInfo output, IEnumerable<FileInfo> input, IBrowserLauncher _browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, ILogger logger, CancellationToken ct)
         {
             if (app?.Id == null)
             {
@@ -363,7 +363,7 @@ namespace MSStore.CLI.Helpers
                 return -1;
             }
 
-            await FulfillApplicationAsync(app, submission, firstSubmissionDataCallback, consoleReader, ct);
+            await FulfillApplicationAsync(app, submission, firstSubmissionDataCallback, allowTargetFutureDeviceFamilies, consoleReader, ct);
 
             AnsiConsole.MarkupLine("New Submission [green]properly configured[/].");
             logger.LogInformation("New Submission properly configured. FileUploadUrl: {FileUploadUrl}", submission.FileUploadUrl);
@@ -562,7 +562,7 @@ namespace MSStore.CLI.Helpers
             return false;
         }
 
-        private static async Task FulfillApplicationAsync(DevCenterApplication app, DevCenterSubmission submission, FirstSubmissionDataCallback firstSubmissionDataCallback, IConsoleReader consoleReader, CancellationToken ct)
+        private static async Task FulfillApplicationAsync(DevCenterApplication app, DevCenterSubmission submission, FirstSubmissionDataCallback firstSubmissionDataCallback, AllowTargetFutureDeviceFamily[] allowTargetFutureDeviceFamilies, IConsoleReader consoleReader, CancellationToken ct)
         {
             if (submission.ApplicationCategory == DevCenterApplicationCategory.NotSet)
             {
@@ -653,10 +653,15 @@ namespace MSStore.CLI.Helpers
                 }
             }
 
-            UpdateKeyIfNotSet("Desktop", true);
-            UpdateKeyIfNotSet("Mobile", false);
-            UpdateKeyIfNotSet("Holographic", true);
-            UpdateKeyIfNotSet("Xbox", false);
+            void UpdateIfNotSet(AllowTargetFutureDeviceFamily allowTargetFutureDeviceFamily)
+            {
+                UpdateKeyIfNotSet(allowTargetFutureDeviceFamily.ToString(), allowTargetFutureDeviceFamilies.Contains(allowTargetFutureDeviceFamily));
+            }
+
+            UpdateIfNotSet(AllowTargetFutureDeviceFamily.Desktop);
+            UpdateIfNotSet(AllowTargetFutureDeviceFamily.Mobile);
+            UpdateIfNotSet(AllowTargetFutureDeviceFamily.Holographic);
+            UpdateIfNotSet(AllowTargetFutureDeviceFamily.Xbox);
         }
     }
 }

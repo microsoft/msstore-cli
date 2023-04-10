@@ -61,6 +61,12 @@ namespace MSStore.CLI.ProjectConfigurators
 
         public bool PackageOnlyOnWindows => false;
 
+        public AllowTargetFutureDeviceFamily[] AllowTargetFutureDeviceFamilies { get; } = new[]
+        {
+            AllowTargetFutureDeviceFamily.Desktop,
+            AllowTargetFutureDeviceFamily.Holographic
+        };
+
         public Task<bool> CanConfigureAsync(string pathOrUrl, CancellationToken ct)
         {
             var uri = GetUri(pathOrUrl);
@@ -379,6 +385,7 @@ namespace MSStore.CLI.ProjectConfigurators
             return await storePackagedAPI.PublishAsync(
                 app,
                 (listingLanguage, ct) => GetFirstSubmissionDataAsync(listingLanguage, uri, ct),
+                AllowTargetFutureDeviceFamilies,
                 output,
                 packageFiles,
                 _browserLauncher,

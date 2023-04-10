@@ -17,6 +17,7 @@ namespace MSStore.CLI.ProjectConfigurators
         SearchOption PackageFilesSearchOption { get; }
         string OutputSubdirectory { get; }
         string DefaultInputSubdirectory { get; }
+        AllowTargetFutureDeviceFamily[] AllowTargetFutureDeviceFamilies { get; }
         Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, DirectoryInfo? inputDirectory, IStorePackagedAPI storePackagedAPI, CancellationToken ct);
     }
 }
