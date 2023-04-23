@@ -527,6 +527,15 @@ namespace MSStore.CLI.ProjectConfigurators
 
                     var msixPath = msixLine.Substring(index + 1).Trim();
 
+                    if (Logger.IsEnabled(LogLevel.Information))
+                    {
+                        var msgIndex = msixPath.IndexOf("MSG : Logs written to ", StringComparison.OrdinalIgnoreCase);
+                        if (msgIndex != -1)
+                        {
+                            msixPath = msixPath[..msgIndex];
+                        }
+                    }
+
                     FileInfo? msixFile = null;
                     if (msixPath != null)
                     {
