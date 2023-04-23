@@ -386,7 +386,7 @@ namespace MSStore.CLI.UnitTests
             ExternalCommandExecutor
                 .Setup(x => x.RunAsync(
                     It.Is<string>(s => s == "flutter"),
-                    It.Is<string>(s => s == "pub run msix:build --store"),
+                    It.Is<string>(s => s == "pub run msix:build --store -v"),
                     It.Is<string>(s => s == dirInfo.FullName),
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult
@@ -399,7 +399,7 @@ namespace MSStore.CLI.UnitTests
             ExternalCommandExecutor
                 .Setup(x => x.RunAsync(
                     It.Is<string>(s => s == "flutter"),
-                    It.Is<string>(s => s == "pub run msix:pack --store"),
+                    It.Is<string>(s => s == "pub run msix:pack --store -v"),
                     It.Is<string>(s => s == dirInfo.FullName),
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult
@@ -440,7 +440,7 @@ namespace MSStore.CLI.UnitTests
             ExternalCommandExecutor
                 .Setup(x => x.RunAsync(
                     It.Is<string>(s => s == "flutter"),
-                    It.Is<string>(s => s == $"pub run msix:build --store --output-path \"{customPath}\""),
+                    It.Is<string>(s => s == $"pub run msix:build --store --output-path \"{customPath}\" -v"),
                     It.Is<string>(s => s == dirInfo.FullName),
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult
@@ -453,7 +453,7 @@ namespace MSStore.CLI.UnitTests
             ExternalCommandExecutor
                 .Setup(x => x.RunAsync(
                     It.Is<string>(s => s == "flutter"),
-                    It.Is<string>(s => s == $"pub run msix:pack --store --output-path \"{customPath}\""),
+                    It.Is<string>(s => s == $"pub run msix:pack --store --output-path \"{customPath}\" -v"),
                     It.Is<string>(s => s == dirInfo.FullName),
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult
