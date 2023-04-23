@@ -476,6 +476,11 @@ namespace MSStore.CLI.ProjectConfigurators
                         args += $" --version {version.ToVersionString()}";
                     }
 
+                    if (Logger.IsEnabled(LogLevel.Information))
+                    {
+                        args += " -v";
+                    }
+
                     if (buildArchs?.Any() == true)
                     {
                         if (!buildArchs.Contains(BuildArch.X64))
