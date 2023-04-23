@@ -115,6 +115,20 @@ namespace MSStore.CLI
                         });
 
                     services
+                        .AddHttpClient("DefaultLargeUploader", client =>
+                        {
+                            AddMSCorrelationId(client.DefaultRequestHeaders);
+                            client.Timeout = TimeSpan.FromMinutes(10);
+                        })
+                        .ConfigurePrimaryHttpMessageHandler(() =>
+                        {
+                            return new HttpClientHandler
+                            {
+                                CheckCertificateRevocationList = true
+                            };
+                        });
+
+                    services
                         .AddHttpClient(nameof(GraphClient), client =>
                         {
                             client.BaseAddress = new Uri("https://graph.microsoft.com/");

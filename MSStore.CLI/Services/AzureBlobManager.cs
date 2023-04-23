@@ -23,7 +23,7 @@ namespace MSStore.CLI.Services
 
         public async Task<string> UploadFileAsync(string blobUri, string localFilePath, IProgress<double> progress, CancellationToken ct)
         {
-            using var httpClient = _httpClientFactory.CreateClient("Default");
+            using var httpClient = _httpClientFactory.CreateClient("DefaultLargeUploader");
             using var request = new HttpRequestMessage(HttpMethod.Put, blobUri.Replace("+", "%2B"));
 
             using var fileStream = new FileStream(localFilePath, FileMode.Open, FileAccess.Read);
