@@ -20,7 +20,7 @@ namespace MSStore.CLI.Helpers
 {
     internal static class IStorePackagedAPIExtensions
     {
-        internal delegate Task<(string? Description, List<SubmissionImage> Images)> FirstSubmissionDataCallback(string listingLanguage, CancellationToken ct);
+        internal delegate Task<(string Description, List<SubmissionImage> Images)> FirstSubmissionDataCallback(string listingLanguage, CancellationToken ct);
 
         public static async Task<DevCenterSubmission?> GetAnySubmissionAsync(this IStorePackagedAPI storePackagedAPI, DevCenterApplication application, StatusContext ctx, ILogger logger, CancellationToken ct)
         {
@@ -260,7 +260,7 @@ namespace MSStore.CLI.Helpers
             return application;
         }
 
-        public static async Task<int> PublishAsync(this IStorePackagedAPI storePackagedAPI, DevCenterApplication app, FirstSubmissionDataCallback firstSubmissionDataCallback, AllowTargetFutureDeviceFamily[] allowTargetFutureDeviceFamilies, DirectoryInfo output, IEnumerable<FileInfo> input, IBrowserLauncher _browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, ILogger logger, CancellationToken ct)
+        public static async Task<int> PublishAsync(this IStorePackagedAPI storePackagedAPI, DevCenterApplication app, FirstSubmissionDataCallback firstSubmissionDataCallback, AllowTargetFutureDeviceFamily[] allowTargetFutureDeviceFamilies, DirectoryInfo output, IEnumerable<FileInfo> input, IBrowserLauncher _browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, IEnvironmentInformationService environmentInformationService, ILogger logger, CancellationToken ct)
         {
             if (app?.Id == null)
             {
@@ -363,7 +363,7 @@ namespace MSStore.CLI.Helpers
                 return -1;
             }
 
-            await FulfillApplicationAsync(app, submission, firstSubmissionDataCallback, allowTargetFutureDeviceFamilies, consoleReader, ct);
+            await FulfillApplicationAsync(app, submission, firstSubmissionDataCallback, allowTargetFutureDeviceFamilies, consoleReader, environmentInformationService, logger, ct);
 
             AnsiConsole.MarkupLine("New Submission [green]properly configured[/].");
             logger.LogInformation("New Submission properly configured. FileUploadUrl: {FileUploadUrl}", submission.FileUploadUrl);
@@ -562,53 +562,78 @@ namespace MSStore.CLI.Helpers
             return false;
         }
 
-        private static async Task FulfillApplicationAsync(DevCenterApplication app, DevCenterSubmission submission, FirstSubmissionDataCallback firstSubmissionDataCallback, AllowTargetFutureDeviceFamily[] allowTargetFutureDeviceFamilies, IConsoleReader consoleReader, CancellationToken ct)
+        private static async Task FulfillApplicationAsync(DevCenterApplication app, DevCenterSubmission submission, FirstSubmissionDataCallback firstSubmissionDataCallback, AllowTargetFutureDeviceFamily[] allowTargetFutureDeviceFamilies, IConsoleReader consoleReader, IEnvironmentInformationService environmentInformationService, ILogger logger, CancellationToken ct)
         {
             if (submission.ApplicationCategory == DevCenterApplicationCategory.NotSet)
             {
-                var categories = Enum.GetNames(typeof(DevCenterApplicationCategory))
-                    .Where(c => c != nameof(DevCenterApplicationCategory.NotSet))
-                    .ToArray();
+                if (environmentInformationService.IsRunningOnCI)
+                {
+                    AnsiConsole.MarkupLine("[yellow]Defaulting to DeveloperTools Category because this is running on CI. You MUST change this later![/]");
+                    logger.LogWarning("Defaulting to DeveloperTools Category because this is running on CI. You MUST change this later!");
 
-                var categoryString = await consoleReader.SelectionPromptAsync(
-                    "Please select the Application Category:",
-                    categories,
-                    20,
-                    ct: ct);
+                    submission.ApplicationCategory = DevCenterApplicationCategory.DeveloperTools;
+                }
+                else
+                {
+                    var categories = Enum.GetNames(typeof(DevCenterApplicationCategory))
+                        .Where(c => c != nameof(DevCenterApplicationCategory.NotSet))
+                        .ToArray();
 
-                submission.ApplicationCategory = (DevCenterApplicationCategory)Enum.Parse(typeof(DevCenterApplicationCategory), categoryString);
+                    var categoryString = await consoleReader.SelectionPromptAsync(
+                        "Please select the Application Category:",
+                        categories,
+                        20,
+                        ct: ct);
+
+                    submission.ApplicationCategory = (DevCenterApplicationCategory)Enum.Parse(typeof(DevCenterApplicationCategory), categoryString);
+                }
             }
 
             if (submission.Listings?.Any() != true)
             {
                 submission.Listings = new Dictionary<string, DevCenterListing>();
 
-                AnsiConsole.WriteLine("Let's add listings to your application. Please enter the following information:");
-
-                var listingCount = 0;
-                do
+                int listingCount;
+                if (environmentInformationService.IsRunningOnCI)
                 {
-                    AnsiConsole.WriteLine("\tHow many listings do you want to add? One is enough, but you might want to support more listing languages.");
-                    var listingCountString = await consoleReader.ReadNextAsync(false, ct);
-                    if (!int.TryParse(listingCountString, out listingCount))
-                    {
-                        AnsiConsole.WriteLine("Invalid listing count.");
-                    }
+                    listingCount = 1;
                 }
-                while (listingCount == 0);
+                else
+                {
+                    listingCount = 0;
+
+                    AnsiConsole.WriteLine("Let's add listings to your application. Please enter the following information:");
+                    do
+                    {
+                        AnsiConsole.WriteLine("\tHow many listings do you want to add? One is enough, but you might want to support more listing languages.");
+                        var listingCountString = await consoleReader.ReadNextAsync(false, ct);
+                        if (!int.TryParse(listingCountString, out listingCount))
+                        {
+                            AnsiConsole.WriteLine("Invalid listing count.");
+                        }
+                    }
+                    while (listingCount == 0);
+                }
 
                 for (var i = 0; i < listingCount; i++)
                 {
                     string? listingLanguage;
-                    do
+                    if (environmentInformationService.IsRunningOnCI)
                     {
-                        listingLanguage = await consoleReader.RequestStringAsync("\tEnter the language of the listing (e.g. 'en-US')", false, ct);
-                        if (string.IsNullOrEmpty(listingLanguage))
-                        {
-                            AnsiConsole.WriteLine("Invalid listing language.");
-                        }
+                        listingLanguage = "en-US";
                     }
-                    while (string.IsNullOrEmpty(listingLanguage));
+                    else
+                    {
+                        do
+                        {
+                            listingLanguage = await consoleReader.RequestStringAsync("\tEnter the language of the listing (e.g. 'en-US')", false, ct);
+                            if (string.IsNullOrEmpty(listingLanguage))
+                            {
+                                AnsiConsole.WriteLine("Invalid listing language.");
+                            }
+                        }
+                        while (string.IsNullOrEmpty(listingLanguage));
+                    }
 
                     var submissionData = await firstSubmissionDataCallback(listingLanguage, ct);
 
@@ -617,7 +642,7 @@ namespace MSStore.CLI.Helpers
                         BaseListing = new BaseListing
                         {
                             Title = app.PrimaryName,
-                            Description = submissionData.Description ?? await consoleReader.RequestStringAsync($"\tEnter the description of the listing ({listingLanguage}):", false, ct),
+                            Description = submissionData.Description,
                         }
                     };
 

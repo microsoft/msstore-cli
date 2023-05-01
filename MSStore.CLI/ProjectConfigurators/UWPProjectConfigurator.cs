@@ -24,8 +24,8 @@ namespace MSStore.CLI.ProjectConfigurators
         protected IAppXManifestManager AppXManifestManager { get; }
         protected INuGetPackageManager NuGetPackageManager { get; }
 
-        public UWPProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, INuGetPackageManager nuGetPackageManager, IAppXManifestManager appXManifestManager, ILogger<UWPProjectConfigurator> logger)
-            : base(browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, logger)
+        public UWPProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, INuGetPackageManager nuGetPackageManager, IAppXManifestManager appXManifestManager, IEnvironmentInformationService environmentInformationService, ILogger<UWPProjectConfigurator> logger)
+            : base(browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, environmentInformationService, logger)
         {
             ExternalCommandExecutor = externalCommandExecutor ?? throw new ArgumentNullException(nameof(externalCommandExecutor));
             NuGetPackageManager = nuGetPackageManager ?? throw new ArgumentNullException(nameof(nuGetPackageManager));

@@ -24,8 +24,8 @@ namespace MSStore.CLI.ProjectConfigurators
         private readonly IElectronManifestManager _electronManifestManager;
         private ElectronManifest? _electronManifest;
 
-        public ElectronProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IElectronManifestManager electronManifestManager, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, ILogger<ElectronProjectConfigurator> logger)
-            : base(externalCommandExecutor, browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, logger)
+        public ElectronProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IElectronManifestManager electronManifestManager, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, IEnvironmentInformationService environmentInformationService, ILogger<ElectronProjectConfigurator> logger)
+            : base(externalCommandExecutor, browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, environmentInformationService, logger)
         {
             _electronManifestManager = electronManifestManager ?? throw new ArgumentNullException(nameof(electronManifestManager));
         }

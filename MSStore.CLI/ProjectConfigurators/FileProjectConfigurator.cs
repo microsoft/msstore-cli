@@ -23,18 +23,20 @@ namespace MSStore.CLI.ProjectConfigurators
         private readonly IZipFileManager _zipFileManager;
         private readonly IFileDownloader _fileDownloader;
         private readonly IAzureBlobManager _azureBlobManager;
+        private readonly IEnvironmentInformationService _environmentInformationService;
 
         private readonly ILogger _logger;
 
         protected ILogger Logger => _logger;
 
-        public FileProjectConfigurator(IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, ILogger logger)
+        public FileProjectConfigurator(IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, IEnvironmentInformationService environmentInformationService, ILogger logger)
         {
             _browserLauncher = browserLauncher ?? throw new ArgumentNullException(nameof(browserLauncher));
             _consoleReader = consoleReader ?? throw new ArgumentNullException(nameof(consoleReader));
             _zipFileManager = zipFileManager ?? throw new ArgumentNullException(nameof(zipFileManager));
             _fileDownloader = fileDownloader ?? throw new ArgumentNullException(nameof(fileDownloader));
             _azureBlobManager = azureBlobManager ?? throw new ArgumentNullException(nameof(azureBlobManager));
+            _environmentInformationService = environmentInformationService ?? throw new ArgumentNullException(nameof(environmentInformationService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
@@ -135,11 +137,11 @@ namespace MSStore.CLI.ProjectConfigurators
 
         public abstract Task<string?> GetAppIdAsync(FileInfo? fileInfo, CancellationToken ct);
 
-        private Task<(string?, List<SubmissionImage>)> GetFirstSubmissionDataAsync(string listingLanguage, CancellationToken ct)
+        private Task<(string, List<SubmissionImage>)> GetFirstSubmissionDataAsync(string listingLanguage, CancellationToken ct)
         {
             var description = $"My {ConfiguratorProjectType} App";
             var images = new List<SubmissionImage>();
-            return Task.FromResult<(string?, List<SubmissionImage>)>((description, images));
+            return Task.FromResult<(string, List<SubmissionImage>)>((description, images));
         }
 
         public virtual async Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, DirectoryInfo? inputDirectory, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
@@ -185,7 +187,7 @@ namespace MSStore.CLI.ProjectConfigurators
 
             Logger.LogInformation("Trying to publish these {FileCount} files: {FileNames}", packageFiles.Count(), string.Join(", ", packageFiles.Select(f => $"'{f.FullName}'")));
 
-            return await storePackagedAPI.PublishAsync(app, GetFirstSubmissionDataAsync, AllowTargetFutureDeviceFamilies, output, packageFiles, _browserLauncher, _consoleReader, _zipFileManager, _fileDownloader, _azureBlobManager, _logger, ct);
+            return await storePackagedAPI.PublishAsync(app, GetFirstSubmissionDataAsync, AllowTargetFutureDeviceFamilies, output, packageFiles, _browserLauncher, _consoleReader, _zipFileManager, _fileDownloader, _azureBlobManager, _environmentInformationService, _logger, ct);
         }
 
         protected virtual DirectoryInfo GetInputDirectory(DirectoryInfo projectRootPath)

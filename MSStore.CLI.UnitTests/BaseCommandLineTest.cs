@@ -49,6 +49,7 @@ namespace MSStore.CLI.UnitTests
         internal Mock<AppXManifestManager> AppXManifestManager { get; private set; } = null!;
         internal Mock<INuGetPackageManager> NuGetPackageManager { get; private set; } = null!;
         internal Mock<IZipFileManager> ZipFileManager { get; private set; } = null!;
+        internal Mock<IEnvironmentInformationService> EnvironmentInformationService { get; private set; } = null!;
         internal List<string> UserNames { get; } = new List<string>();
         internal List<string> Secrets { get; } = new List<string>();
 
@@ -220,6 +221,11 @@ namespace MSStore.CLI.UnitTests
 
             ZipFileManager = new Mock<IZipFileManager>();
 
+            EnvironmentInformationService = new Mock<IEnvironmentInformationService>();
+            EnvironmentInformationService
+                .Setup(x => x.IsRunningOnCI)
+                .Returns(false);
+
             TokenManager = new Mock<ITokenManager>();
 
             var builder = new CommandLineBuilder(Cli);
@@ -251,6 +257,7 @@ namespace MSStore.CLI.UnitTests
                         .AddScoped(sp => GraphClient.Object)
                         .AddScoped(sp => PartnerCenterManager.Object)
                         .AddScoped(sp => ZipFileManager.Object)
+                        .AddScoped(sp => EnvironmentInformationService.Object)
                         .AddScoped(sp => TokenManager.Object)
                         .AddScoped(sp => fileDownloader.Object)
                         .AddScoped(sp => imageConverter.Object)

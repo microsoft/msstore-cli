@@ -28,6 +28,7 @@ namespace MSStore.CLI.ProjectConfigurators
         private readonly IAzureBlobManager _azureBlobManager;
         private readonly IFileDownloader _fileDownloader;
         private readonly IPWAAppInfoManager _pwaAppInfoManager;
+        private readonly IEnvironmentInformationService _environmentInformationService;
         private readonly ILogger _logger;
 
         public PWAProjectConfigurator(
@@ -38,6 +39,7 @@ namespace MSStore.CLI.ProjectConfigurators
             IAzureBlobManager azureBlobManager,
             IFileDownloader fileDownloader,
             IPWAAppInfoManager pwaAppInfoManager,
+            IEnvironmentInformationService environmentInformationService,
             ILogger<PWAProjectConfigurator> logger)
         {
             _consoleReader = consoleReader ?? throw new ArgumentNullException(nameof(consoleReader));
@@ -47,6 +49,7 @@ namespace MSStore.CLI.ProjectConfigurators
             _azureBlobManager = azureBlobManager ?? throw new ArgumentNullException(nameof(azureBlobManager));
             _fileDownloader = fileDownloader ?? throw new ArgumentNullException(nameof(fileDownloader));
             _pwaAppInfoManager = pwaAppInfoManager ?? throw new ArgumentNullException(nameof(pwaAppInfoManager));
+            _environmentInformationService = environmentInformationService ?? throw new ArgumentNullException(nameof(environmentInformationService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
@@ -393,11 +396,12 @@ namespace MSStore.CLI.ProjectConfigurators
                 _zipFileManager,
                 _fileDownloader,
                 _azureBlobManager,
+                _environmentInformationService,
                 _logger,
                 ct);
         }
 
-        private async Task<(string? description, List<SubmissionImage> images)> GetFirstSubmissionDataAsync(string listingLanguage, Uri uri, CancellationToken ct)
+        private async Task<(string description, List<SubmissionImage> images)> GetFirstSubmissionDataAsync(string listingLanguage, Uri uri, CancellationToken ct)
         {
             Debug.WriteLine(listingLanguage);
 
@@ -424,7 +428,7 @@ namespace MSStore.CLI.ProjectConfigurators
 
             if (_webManifest == null)
             {
-                return (null, images);
+                return ("Could not fetch webmanifest description.", images);
             }
 
             if (_webManifest.Screenshots?.Any() == true)
@@ -450,7 +454,13 @@ namespace MSStore.CLI.ProjectConfigurators
                 }
             }
 
-            return (_webManifest.Description, images);
+            var description = _webManifest.Description;
+            if (string.IsNullOrEmpty(description))
+            {
+                description = await _consoleReader.RequestStringAsync($"\tEnter the description of the listing ({listingLanguage}):", false, ct);
+            }
+
+            return (description, images);
         }
 
         private string? _appId;

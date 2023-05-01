@@ -24,8 +24,8 @@ namespace MSStore.CLI.ProjectConfigurators
         private readonly IExternalCommandExecutor _externalCommandExecutor;
         private readonly IAppXManifestManager _appXManifestManager;
 
-        public MauiProjectConfigurator(IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, INuGetPackageManager nuGetPackageManager, IExternalCommandExecutor externalCommandExecutor, IAppXManifestManager appXManifestManager, ILogger<MauiProjectConfigurator> logger)
-            : base(browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, logger)
+        public MauiProjectConfigurator(IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, INuGetPackageManager nuGetPackageManager, IExternalCommandExecutor externalCommandExecutor, IAppXManifestManager appXManifestManager, IEnvironmentInformationService environmentInformationService, ILogger<MauiProjectConfigurator> logger)
+            : base(browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, environmentInformationService, logger)
         {
             _nuGetPackageManager = nuGetPackageManager ?? throw new ArgumentNullException(nameof(nuGetPackageManager));
             _externalCommandExecutor = externalCommandExecutor ?? throw new ArgumentNullException(nameof(externalCommandExecutor));

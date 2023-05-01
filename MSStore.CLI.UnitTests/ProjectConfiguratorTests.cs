@@ -567,12 +567,21 @@ namespace MSStore.CLI.UnitTests
             csprojFileContents.Should().Contain("Fake App");
         }
 
-        private void SetupSuccessfullPWA()
+        private void SetupSuccessfullPWA(bool isRunningOnCI = false)
         {
-            FakeConsole
-                .SetupSequence(x => x.RequestStringAsync(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync("1")
-                .ReturnsAsync("en-US");
+            if (isRunningOnCI)
+            {
+                EnvironmentInformationService
+                    .Setup(x => x.IsRunningOnCI)
+                    .Returns(true);
+            }
+            else
+            {
+                FakeConsole
+                    .SetupSequence(x => x.RequestStringAsync(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+                    .ReturnsAsync("1")
+                    .ReturnsAsync("en-US");
+            }
 
             PWABuilderClient
                 .Setup(x => x.GenerateZipAsync(It.IsAny<GenerateZipRequest>(), It.IsAny<string>(), It.IsAny<IProgress<double>>(), It.IsAny<CancellationToken>()))
@@ -655,7 +664,31 @@ namespace MSStore.CLI.UnitTests
                 .Verify(x => x.SelectAccountAsync(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Once);
 
             result.Should().Contain("You've provided a URL, so we'll use");
+            FakeConsole.Verify(x => x.SelectionPromptAsync(It.Is<string>(s => s == "Please select the Application Category:"), It.IsAny<IEnumerable<string>>(), It.IsAny<int>(), It.IsAny<Func<string, string>>(), It.IsAny<CancellationToken>()), Times.Once);
             result.Should().Contain("Submission commit success!");
+        }
+
+        [TestMethod]
+        public async Task ProjectConfiguratorParsesPWASuccessfullyIfOnCIIfPublish()
+        {
+            SetupSuccessfullPWA(true);
+
+            var result = await ParseAndInvokeAsync(
+                new string[]
+                {
+                    "init",
+                    "https://microsoft.com",
+                    "--publish",
+                    "--verbose"
+                });
+
+            TokenManager
+                .Verify(x => x.SelectAccountAsync(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Once);
+
+            result.Should().Contain("You've provided a URL, so we'll use");
+            FakeConsole.Verify(x => x.SelectionPromptAsync(It.Is<string>(s => s == "Please select the Application Category:"), It.IsAny<IEnumerable<string>>(), It.IsAny<int>(), It.IsAny<Func<string, string>>(), It.IsAny<CancellationToken>()), Times.Never);
+            result.Should().Contain("Submission commit success!");
+            result.Should().Contain("Defaulting to DeveloperTools Category because this is running on CI. You MUST change this later!");
         }
 
         [TestMethod]

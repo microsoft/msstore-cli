@@ -23,8 +23,8 @@ namespace MSStore.CLI.ProjectConfigurators
         private readonly IExternalCommandExecutor _externalCommandExecutor;
         private readonly IImageConverter _imageConverter;
 
-        public FlutterProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IImageConverter imageConverter, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, ILogger<FlutterProjectConfigurator> logger)
-            : base(browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, logger)
+        public FlutterProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IImageConverter imageConverter, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, IEnvironmentInformationService environmentInformationService, ILogger<FlutterProjectConfigurator> logger)
+            : base(browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, environmentInformationService, logger)
         {
             _externalCommandExecutor = externalCommandExecutor ?? throw new ArgumentNullException(nameof(externalCommandExecutor));
             _imageConverter = imageConverter ?? throw new ArgumentNullException(nameof(imageConverter));

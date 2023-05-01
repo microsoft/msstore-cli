@@ -20,8 +20,8 @@ namespace MSStore.CLI.ProjectConfigurators
     {
         private readonly IAppXManifestManager _appXManifestManager;
 
-        public ReactNativeProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, IAppXManifestManager appXManifestManager, ILogger<ReactNativeProjectConfigurator> logger)
-            : base(externalCommandExecutor, browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, logger)
+        public ReactNativeProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, IAppXManifestManager appXManifestManager, IEnvironmentInformationService environmentInformationService, ILogger<ReactNativeProjectConfigurator> logger)
+            : base(externalCommandExecutor, browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, environmentInformationService, logger)
         {
             _appXManifestManager = appXManifestManager ?? throw new ArgumentNullException(nameof(appXManifestManager));
         }

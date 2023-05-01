@@ -99,6 +99,7 @@ namespace MSStore.CLI
                         .AddScoped<IElectronManifestManager, ElectronManifestManager>()
                         .AddScoped<INuGetPackageManager, NuGetPackageManager>()
                         .AddScoped<IAppXManifestManager, AppXManifestManager>()
+                        .AddSingleton<IEnvironmentInformationService, EnvironmentInformationService>()
                         .AddSingleton(telemetryClient);
 
                     services

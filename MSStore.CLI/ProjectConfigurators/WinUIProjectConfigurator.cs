@@ -21,8 +21,8 @@ namespace MSStore.CLI.ProjectConfigurators
 {
     internal class WinUIProjectConfigurator : UWPProjectConfigurator
     {
-        public WinUIProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, INuGetPackageManager nuGetPackageManager, IAppXManifestManager appXManifestManager, ILogger<WinUIProjectConfigurator> logger)
-            : base(externalCommandExecutor, browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, nuGetPackageManager, appXManifestManager, logger)
+        public WinUIProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, INuGetPackageManager nuGetPackageManager, IAppXManifestManager appXManifestManager, IEnvironmentInformationService environmentInformationService, ILogger<WinUIProjectConfigurator> logger)
+            : base(externalCommandExecutor, browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, nuGetPackageManager, appXManifestManager, environmentInformationService, logger)
         {
         }
 

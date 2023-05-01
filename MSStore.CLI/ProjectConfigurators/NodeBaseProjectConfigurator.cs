@@ -20,8 +20,8 @@ namespace MSStore.CLI.ProjectConfigurators
 
         protected IExternalCommandExecutor ExternalCommandExecutor { get; }
 
-        protected NodeBaseProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, ILogger logger)
-            : base(browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, logger)
+        protected NodeBaseProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, IEnvironmentInformationService environmentInformationService, ILogger<NodeBaseProjectConfigurator> logger)
+            : base(browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, environmentInformationService, logger)
         {
             ExternalCommandExecutor = externalCommandExecutor ?? throw new ArgumentNullException(nameof(externalCommandExecutor));
         }
