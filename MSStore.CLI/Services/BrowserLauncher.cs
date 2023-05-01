@@ -13,16 +13,25 @@ namespace MSStore.CLI.Services
     internal class BrowserLauncher : IBrowserLauncher
     {
         private readonly IConsoleReader _consoleReader;
+        private readonly IEnvironmentInformationService _environmentInformationService;
         private readonly ILogger<BrowserLauncher> _logger;
 
-        public BrowserLauncher(IConsoleReader consoleReader, ILogger<BrowserLauncher> logger)
+        public BrowserLauncher(IConsoleReader consoleReader, ILogger<BrowserLauncher> logger, IEnvironmentInformationService environmentInformationService)
         {
             _consoleReader = consoleReader;
             _logger = logger;
+            _environmentInformationService = environmentInformationService ?? throw new System.ArgumentNullException(nameof(environmentInformationService));
         }
 
         public async Task OpenBrowserAsync(string url, bool askConfirmation, CancellationToken ct)
         {
+            if (_environmentInformationService.IsRunningOnCI)
+            {
+                _logger.LogInformation("Skipping browser launch because we are running on CI. URL = {Url}", url);
+
+                return;
+            }
+
             if (askConfirmation)
             {
                 AnsiConsole.MarkupLine($"Press [b green]Enter[/] to open the browser at this page: [link]{url.EscapeMarkup()}[/]");
