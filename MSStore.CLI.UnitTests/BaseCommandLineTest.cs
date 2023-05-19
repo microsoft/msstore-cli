@@ -19,6 +19,7 @@ using MSStore.API;
 using MSStore.API.Packaged;
 using MSStore.API.Packaged.Models;
 using MSStore.CLI.Commands;
+using MSStore.CLI.Helpers;
 using MSStore.CLI.ProjectConfigurators;
 using MSStore.CLI.Services;
 using MSStore.CLI.Services.CredentialManager;
@@ -233,7 +234,6 @@ namespace MSStore.CLI.UnitTests
                 .UseEnvironment("CLI")
                 .ConfigureServices((hostContext, services) =>
                 {
-                    var configuration = hostContext.Configuration;
                     services
                         .AddSingleton(FakeConfigurationManager.Object)
                         .AddSingleton(FakeTelemetryConfigurationManager.Object)
@@ -266,17 +266,16 @@ namespace MSStore.CLI.UnitTests
                         .AddScoped(sp => NuGetPackageManager.Object)
                         .AddScoped<IAppXManifestManager>(sp => AppXManifestManager.Object)
                         .AddSingleton(Cli);
+
+                    services.AddLogging(builder =>
+                    {
+                        builder.ClearProviders();
+                        builder.AddProvider(new CustomSpectreConsoleLoggerProvider());
+                    });
                 })
                 .ConfigureStoreCLICommands()
                 .ConfigureLogging((hostContext, logging) =>
                 {
-                    var configuration = hostContext.Configuration;
-                    logging.AddSimpleConsole(options =>
-                    {
-                        options.IncludeScopes = true;
-                        options.SingleLine = true;
-                        options.TimestampFormat = "hh:mm:ss ";
-                    });
                     logging.SetMinimumLevel(LogLevel.Debug);
                 }))
                 .AddMiddleware(

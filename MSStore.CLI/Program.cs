@@ -195,17 +195,15 @@ namespace MSStore.CLI
                                 CheckCertificateRevocationList = true
                             };
                         });
+                    services.AddLogging(builder =>
+                    {
+                        builder.ClearProviders();
+                        builder.AddProvider(new CustomSpectreConsoleLoggerProvider());
+                    });
                 })
                 .ConfigureStoreCLICommands()
                 .ConfigureLogging((hostContext, logging) =>
                 {
-                    var configuration = hostContext.Configuration;
-                    logging.AddSimpleConsole(options =>
-                    {
-                        options.IncludeScopes = true;
-                        options.SingleLine = true;
-                        options.TimestampFormat = "hh:mm:ss ";
-                    });
                     logging.SetMinimumLevel(minimumLogLevel);
                 }))
                 .AddMiddleware(
