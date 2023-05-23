@@ -58,8 +58,6 @@ namespace MSStore.CLI.ProjectConfigurators
         public string[] PackageFilesExtensionInclude => new[] { ".appxbundle", ".msixbundle", ".msix", ".appx" };
         public string[]? PackageFilesExtensionExclude { get; } = new[] { ".sideload.msix" };
         public SearchOption PackageFilesSearchOption { get; } = SearchOption.AllDirectories;
-        public string OutputSubdirectory { get; } = string.Empty;
-        public string DefaultInputSubdirectory { get; } = string.Empty;
         public IEnumerable<BuildArch>? DefaultBuildArchs { get; }
 
         public bool PackageOnlyOnWindows => false;
