@@ -250,6 +250,7 @@ namespace MSStore.CLI.UnitTests
                         .AddScoped<IProjectConfigurator, ElectronProjectConfigurator>()
                         .AddScoped<IProjectConfigurator, ReactNativeProjectConfigurator>()
                         .AddScoped<IProjectConfigurator, MauiProjectConfigurator>()
+                        .AddScoped<IProjectPublisher, MSIXProjectPublisher>()
                         .AddScoped<ICLIConfigurator, CLIConfigurator>()
                         .AddSingleton(FakeStoreAPIFactory.Object)
                         .AddScoped(sp => PWABuilderClient.Object)

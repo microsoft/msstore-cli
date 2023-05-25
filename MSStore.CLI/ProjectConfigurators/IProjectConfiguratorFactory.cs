@@ -9,5 +9,6 @@ namespace MSStore.CLI.ProjectConfigurators
     internal interface IProjectConfiguratorFactory
     {
         Task<IProjectConfigurator?> FindProjectConfiguratorAsync(string pathOrUrl, CancellationToken ct);
+        Task<IProjectPublisher?> FindProjectPublisherAsync(string pathOrUrl, CancellationToken ct);
     }
 }

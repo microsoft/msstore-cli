@@ -30,7 +30,7 @@ namespace MSStore.CLI.ProjectConfigurators
             _electronManifestManager = electronManifestManager ?? throw new ArgumentNullException(nameof(electronManifestManager));
         }
 
-        public override string ConfiguratorProjectType { get; } = "Electron";
+        public override string ToString() => "Electron";
 
         public override string[] PackageFilesExtensionInclude => new[] { ".appx" };
         public override string[]? PackageFilesExtensionExclude { get; }

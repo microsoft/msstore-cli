@@ -26,7 +26,7 @@ namespace MSStore.CLI.ProjectConfigurators
         {
         }
 
-        public override string ConfiguratorProjectType { get; } = "Windows App SDK/WinUI";
+        public override string ToString() => "Windows App SDK/WinUI";
 
         public override string[] PackageFilesExtensionInclude => new[] { ".msixupload", ".appxupload", ".msix" };
         public override SearchOption PackageFilesSearchOption { get; } = SearchOption.AllDirectories;

@@ -26,7 +26,7 @@ namespace MSStore.CLI.UnitTests
                     "publish"
                 }, -1);
 
-            result.Should().Contain($"We could not find a project configurator for the project at '{Directory.GetCurrentDirectory()}'.");
+            result.Should().Contain($"We could not find a project publisher for the project at '{Directory.GetCurrentDirectory()}'.");
         }
 
         [TestMethod]
@@ -243,6 +243,32 @@ namespace MSStore.CLI.UnitTests
 
             result.Should().Contain("Submission commit success! Here is some data:");
             result.Should().Contain("test.appxupload");
+        }
+
+        [TestMethod]
+        public async Task PublishCommandForMSIXAppsShouldCallFlutter()
+        {
+            var path = CopyFilesRecursively("MSIXProject");
+
+            var msixPath = Path.Combine(path, "test.msix");
+
+            AddDefaultFakeSuccessfulSubmission();
+
+            var result = await ParseAndInvokeAsync(
+                new string[]
+                {
+                    "publish",
+                    msixPath,
+                    "--appId",
+                    FakeApps[0].Id!,
+                    "--verbose"
+                });
+
+            ZipFileManager
+                .Verify(x => x.ExtractZip(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+
+            result.Should().Contain("Submission commit success! Here is some data:");
+            result.Should().Contain("test.msix");
         }
     }
 }

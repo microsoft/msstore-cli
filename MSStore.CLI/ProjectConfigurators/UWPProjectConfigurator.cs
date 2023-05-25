@@ -32,7 +32,7 @@ namespace MSStore.CLI.ProjectConfigurators
             AppXManifestManager = appXManifestManager ?? throw new ArgumentNullException(nameof(appXManifestManager));
         }
 
-        public override string ConfiguratorProjectType { get; } = "UWP";
+        public override string ToString() => "UWP";
 
         public override string[] SupportedProjectPattern { get; } = new[] { "Package.appxmanifest" };
 
@@ -59,7 +59,7 @@ namespace MSStore.CLI.ProjectConfigurators
 
             AppXManifestManager.UpdateManifest(manifestFile.FullName, app, publisherDisplayName, version);
 
-            AnsiConsole.WriteLine($"{ConfiguratorProjectType} project at '{projectRootPath.FullName}' is now configured to build to the Microsoft Store!");
+            AnsiConsole.WriteLine($"{ToString()} project at '{projectRootPath.FullName}' is now configured to build to the Microsoft Store!");
             AnsiConsole.MarkupLine("For more information on building your UWP project to the Microsoft Store, see [link]https://learn.microsoft.com/windows/msix/package/packaging-uwp-apps[/]");
 
             return Task.FromResult((0, output));

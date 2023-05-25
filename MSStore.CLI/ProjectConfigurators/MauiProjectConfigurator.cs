@@ -32,7 +32,7 @@ namespace MSStore.CLI.ProjectConfigurators
             _appXManifestManager = appXManifestManager ?? throw new ArgumentNullException(nameof(appXManifestManager));
         }
 
-        public override string ConfiguratorProjectType => "Maui";
+        public override string ToString() => "Maui";
 
         public override string[] SupportedProjectPattern => new[] { "*.csproj" };
 

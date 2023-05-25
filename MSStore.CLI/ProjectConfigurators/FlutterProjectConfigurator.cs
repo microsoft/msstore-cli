@@ -30,7 +30,7 @@ namespace MSStore.CLI.ProjectConfigurators
             _imageConverter = imageConverter ?? throw new ArgumentNullException(nameof(imageConverter));
         }
 
-        public override string ConfiguratorProjectType { get; } = "Flutter";
+        public override string ToString() => "Flutter";
 
         public override string[] SupportedProjectPattern { get; } = new[] { "pubspec.yaml" };
 

@@ -80,11 +80,11 @@ namespace MSStore.CLI.Commands
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(-1, props, ct);
                 }
 
-                props["ProjType"] = configurator.ConfiguratorProjectType;
+                props["ProjType"] = configurator.ToString() ?? string.Empty;
 
                 var storePackagedAPI = await _storeAPIFactory.CreatePackagedAsync(ct: ct);
 
-                AnsiConsole.WriteLine($"This seems to be a {configurator.ConfiguratorProjectType} project.");
+                AnsiConsole.WriteLine($"This seems to be a {configurator} project.");
 
                 var projectPackager = configurator as IProjectPackager;
                 if (projectPackager == null)

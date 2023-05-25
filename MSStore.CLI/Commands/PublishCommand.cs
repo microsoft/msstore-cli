@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
+using Microsoft.Extensions.Logging;
 using MSStore.CLI.Helpers;
 using MSStore.CLI.ProjectConfigurators;
 using MSStore.CLI.Services;
@@ -47,6 +48,12 @@ namespace MSStore.CLI.Commands
                 });
 
             AddOption(inputDirectory);
+
+            var appIdOption = new Option<string>(
+                aliases: new string[] { "--appId", "-id" },
+                description: "Specifies the Application Id. Only needed if the project has not been initialized before with the 'init' command.");
+
+            AddOption(appIdOption);
         }
 
         public new class Handler : ICommandHandler
@@ -54,19 +61,24 @@ namespace MSStore.CLI.Commands
             private readonly IProjectConfiguratorFactory _projectConfiguratorFactory;
             private readonly IStoreAPIFactory _storeAPIFactory;
             private readonly TelemetryClient _telemetryClient;
+            private readonly ILogger _logger;
 
             public string PathOrUrl { get; set; } = null!;
+
+            public string? AppId { get; set; }
 
             public DirectoryInfo? InputDirectory { get; set; } = null!;
 
             public Handler(
                 IProjectConfiguratorFactory projectConfiguratorFactory,
                 IStoreAPIFactory storeAPIFactory,
-                TelemetryClient telemetryClient)
+                TelemetryClient telemetryClient,
+                ILogger<Handler> logger)
             {
                 _projectConfiguratorFactory = projectConfiguratorFactory ?? throw new ArgumentNullException(nameof(projectConfiguratorFactory));
                 _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
                 _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
+                _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             }
 
             public int Invoke(InvocationContext context)
@@ -78,32 +90,52 @@ namespace MSStore.CLI.Commands
             {
                 var ct = context.GetCancellationToken();
 
-                var configurator = await _projectConfiguratorFactory.FindProjectConfiguratorAsync(PathOrUrl, ct);
+                var projectPublisher = await _projectConfiguratorFactory.FindProjectPublisherAsync(PathOrUrl, ct);
 
                 var props = new Dictionary<string, string>();
 
-                if (configurator == null)
+                if (projectPublisher == null)
                 {
-                    AnsiConsole.WriteLine(CultureInfo.InvariantCulture, "We could not find a project configurator for the project at '{0}'.", PathOrUrl);
+                    AnsiConsole.WriteLine(CultureInfo.InvariantCulture, "We could not find a project publisher for the project at '{0}'.", PathOrUrl);
                     props["ProjType"] = "NF";
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(-1, props, ct);
                 }
 
-                props["ProjType"] = configurator.ConfiguratorProjectType;
+                props["ProjType"] = projectPublisher.ToString() ?? string.Empty;
 
                 var storePackagedAPI = await _storeAPIFactory.CreatePackagedAsync(ct: ct);
 
-                AnsiConsole.WriteLine($"This seems to be a {configurator.ConfiguratorProjectType} project.");
+                AnsiConsole.WriteLine($"This seems to be a {projectPublisher} project.");
 
-                var projectPublisher = configurator as IProjectPublisher;
-                if (projectPublisher == null)
+                API.Packaged.Models.DevCenterApplication? app = null;
+
+                if (!string.IsNullOrEmpty(AppId))
                 {
-                    AnsiConsole.WriteLine(CultureInfo.InvariantCulture, "We can't publish this type of project.");
-                    return await _telemetryClient.TrackCommandEventAsync<Handler>(-5, props, ct);
+                    app = await AnsiConsole.Status().StartAsync("Retrieving application...", async ctx =>
+                    {
+                        try
+                        {
+                            var app = await storePackagedAPI.GetApplicationAsync(AppId, ct);
+
+                            ctx.SuccessStatus("Ok! Found the app!");
+                            return app;
+                        }
+                        catch (Exception)
+                        {
+                            ctx.ErrorStatus("Could not retrieve your application. Please make sure you have the correct AppId.");
+                            _logger.LogError("Could not find application with id '{AppId}'.", AppId);
+                            return null;
+                        }
+                    });
+
+                    if (app == null)
+                    {
+                        return await _telemetryClient.TrackCommandEventAsync<Handler>(-2, props, ct);
+                    }
                 }
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(
-                    await projectPublisher.PublishAsync(PathOrUrl, null, InputDirectory, storePackagedAPI, ct), props, ct);
+                    await projectPublisher.PublishAsync(PathOrUrl, app, InputDirectory, storePackagedAPI, ct), props, ct);
             }
         }
     }

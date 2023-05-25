@@ -26,7 +26,7 @@ namespace MSStore.CLI.ProjectConfigurators
             _appXManifestManager = appXManifestManager ?? throw new ArgumentNullException(nameof(appXManifestManager));
         }
 
-        public override string ConfiguratorProjectType { get; } = "React Native";
+        public override string ToString() => "React Native";
 
         public override string[] PackageFilesExtensionInclude => new[] { ".msixupload", ".appxupload" };
         public override string[]? PackageFilesExtensionExclude { get; }

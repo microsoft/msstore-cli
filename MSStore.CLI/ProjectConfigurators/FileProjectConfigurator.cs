@@ -40,8 +40,6 @@ namespace MSStore.CLI.ProjectConfigurators
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public abstract string ConfiguratorProjectType { get; }
-
         public abstract string[] SupportedProjectPattern { get; }
 
         public abstract string[] PackageFilesExtensionInclude { get; }
@@ -139,7 +137,7 @@ namespace MSStore.CLI.ProjectConfigurators
 
         private Task<(string, List<SubmissionImage>)> GetFirstSubmissionDataAsync(string listingLanguage, CancellationToken ct)
         {
-            var description = $"My {ConfiguratorProjectType} App";
+            var description = $"My {ToString()} App";
             var images = new List<SubmissionImage>();
             return Task.FromResult<(string, List<SubmissionImage>)>((description, images));
         }
@@ -193,6 +191,11 @@ namespace MSStore.CLI.ProjectConfigurators
         protected virtual DirectoryInfo GetInputDirectory(DirectoryInfo projectRootPath)
         {
             return new DirectoryInfo(Path.Combine(projectRootPath.FullName, DefaultInputSubdirectory));
+        }
+
+        public Task<bool> CanPublishAsync(string pathOrUrl, CancellationToken ct)
+        {
+            return CanConfigureAsync(pathOrUrl, ct);
         }
     }
 }

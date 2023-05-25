@@ -57,7 +57,11 @@ namespace MSStore.CLI.Commands
                     DirectoryInfo? directoryPath = new DirectoryInfo(pathOrUrl);
                     if (!directoryPath.Exists)
                     {
-                        result.ErrorMessage = $"Directory does not exist: '{pathOrUrl}'.{Environment.NewLine}";
+                        FileInfo? filePath = new FileInfo(pathOrUrl);
+                        if (!filePath.Exists)
+                        {
+                            result.ErrorMessage = $"File or directory does not exist: '{pathOrUrl}'.{Environment.NewLine}";
+                        }
                     }
                 }
             });
@@ -195,7 +199,7 @@ namespace MSStore.CLI.Commands
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(-1, props, ct);
                 }
 
-                props["ProjType"] = configurator.ConfiguratorProjectType;
+                props["ProjType"] = configurator.ToString() ?? string.Empty;
 
                 var validationResult = configurator.ValidateCommand(PathOrUrl, Output, Package, Publish);
 
@@ -283,7 +287,7 @@ namespace MSStore.CLI.Commands
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(-1, props, ct);
                 }
 
-                AnsiConsole.WriteLine($"This seems to be a {configurator.ConfiguratorProjectType} project.");
+                AnsiConsole.WriteLine($"This seems to be a {configurator} project.");
 
                 bool verbose = context.ParseResult.IsVerbose();
                 if (verbose)

@@ -16,6 +16,7 @@ namespace MSStore.CLI.ProjectConfigurators
         string[]? PackageFilesExtensionExclude { get; }
         SearchOption PackageFilesSearchOption { get; }
         AllowTargetFutureDeviceFamily[] AllowTargetFutureDeviceFamilies { get; }
+        Task<bool> CanPublishAsync(string pathOrUrl, CancellationToken ct);
         Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, DirectoryInfo? inputDirectory, IStorePackagedAPI storePackagedAPI, CancellationToken ct);
     }
 }

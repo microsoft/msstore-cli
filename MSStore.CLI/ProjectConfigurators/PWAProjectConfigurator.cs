@@ -53,7 +53,7 @@ namespace MSStore.CLI.ProjectConfigurators
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public string ConfiguratorProjectType => "PWA";
+        public override string ToString() => "PWA";
 
         public string[] PackageFilesExtensionInclude => new[] { ".appxbundle", ".msixbundle", ".msix", ".appx" };
         public string[]? PackageFilesExtensionExclude { get; } = new[] { ".sideload.msix" };
@@ -465,6 +465,11 @@ namespace MSStore.CLI.ProjectConfigurators
         public Task<string?> GetAppIdAsync(FileInfo? fileInfo, CancellationToken ct)
         {
             return Task.FromResult(_appId);
+        }
+
+        public Task<bool> CanPublishAsync(string pathOrUrl, CancellationToken ct)
+        {
+            return CanConfigureAsync(pathOrUrl, ct);
         }
     }
 }
