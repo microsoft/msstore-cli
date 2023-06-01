@@ -246,7 +246,7 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
-        public async Task PublishCommandForMSIXAppsShouldCallFlutter()
+        public async Task PublishCommandForMSIXAppsShouldSucceed()
         {
             var path = CopyFilesRecursively("MSIXProject");
 
