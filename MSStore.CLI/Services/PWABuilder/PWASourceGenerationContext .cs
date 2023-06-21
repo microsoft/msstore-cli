@@ -13,7 +13,7 @@ namespace MSStore.CLI.Services.PWABuilder
     [JsonSerializable(typeof(JsonDocument))]
     [JsonSerializable(typeof(JsonElement))]
     [JsonSerializable(typeof(GenerateZipRequest))]
-    [JsonSerializable(typeof(WebManifestFetchResponse))]
+    [JsonSerializable(typeof(WebManifestFindResponse))]
     internal partial class PWASourceGenerationContext : JsonSerializerContext
     {
         private static PWASourceGenerationContext? _default;

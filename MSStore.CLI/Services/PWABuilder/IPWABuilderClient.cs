@@ -10,6 +10,6 @@ namespace MSStore.CLI.Services.PWABuilder
     internal interface IPWABuilderClient
     {
         Task GenerateZipAsync(GenerateZipRequest generateZipRequest, string outputZipPath, IProgress<double> progress, CancellationToken ct);
-        Task<WebManifestFetchResponse> FetchWebManifestAsync(Uri site, CancellationToken ct);
+        Task<WebManifestFindResponse> FindWebManifestAsync(Uri site, CancellationToken ct);
     }
 }

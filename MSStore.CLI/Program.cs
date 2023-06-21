@@ -186,7 +186,7 @@ namespace MSStore.CLI
                     services
                         .AddHttpClient($"{nameof(PWABuilderClient)}/API", client =>
                         {
-                            client.BaseAddress = new Uri("https://pwabuilder-tests.azurewebsites.net/api/");
+                            client.BaseAddress = new Uri("https://pwabuilder-apiv2-node.azurewebsites.net/api/");
                             AddPWABuilderDefaultHeaders(client.DefaultRequestHeaders);
                         })
                         .ConfigurePrimaryHttpMessageHandler(() =>

@@ -3,9 +3,8 @@
 
 namespace MSStore.CLI.Services.PWABuilder
 {
-    internal class WebManifestFetchContent
+    internal class WebManifestFindResponse
     {
-        public WebManifestJson? Json { get; set; }
-        public string? Url { get; set; }
+        public WebManifestFindContent? Content { get; set; }
     }
 }

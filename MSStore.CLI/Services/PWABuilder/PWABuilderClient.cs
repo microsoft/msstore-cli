@@ -114,13 +114,13 @@ namespace MSStore.CLI.Services.PWABuilder
             progress.Report(100);
         }
 
-        public async Task<WebManifestFetchResponse> FetchWebManifestAsync(Uri site, CancellationToken ct)
+        public async Task<WebManifestFindResponse> FindWebManifestAsync(Uri site, CancellationToken ct)
         {
             using var httpClient = _httpClientFactory.CreateClient($"{nameof(PWABuilderClient)}/API");
 
-            return await InvokeAsync<WebManifestFetchResponse>(
+            return await InvokeAsync<WebManifestFindResponse>(
                 HttpMethod.Get,
-                $"FetchWebManifest?site={site}",
+                $"FindWebManifest?site={site}",
                 null,
                 httpClient,
                 ct);

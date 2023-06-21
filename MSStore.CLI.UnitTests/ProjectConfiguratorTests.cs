@@ -593,10 +593,10 @@ namespace MSStore.CLI.UnitTests
                     return Task.CompletedTask;
                 });
             PWABuilderClient
-                .Setup(x => x.FetchWebManifestAsync(It.IsAny<Uri>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new WebManifestFetchResponse
+                .Setup(x => x.FindWebManifestAsync(It.IsAny<Uri>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new WebManifestFindResponse
                 {
-                    Content = new WebManifestFetchContent
+                    Content = new WebManifestFindContent
                     {
                         Json = new WebManifestJson
                         {

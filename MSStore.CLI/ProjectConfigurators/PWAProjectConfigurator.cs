@@ -409,7 +409,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 {
                     try
                     {
-                        return await _pwaBuilderClient.FetchWebManifestAsync(uri, ct);
+                        return await _pwaBuilderClient.FindWebManifestAsync(uri, ct);
                     }
                     catch (Exception err)
                     {
