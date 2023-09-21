@@ -34,7 +34,7 @@
     <PackageReference Include="Microsoft.Identity.Client" Version="4.56.0" />
     <PackageReference Include="Microsoft.Identity.Client.Broker" Version="4.56.0" />
     <PackageReference Include="Microsoft.Identity.Client.Extensions.Msal" Version="4.56.0" />
-    <PackageReference Include="SkiaSharp" Version="2.88.5" />
+    <PackageReference Include="SkiaSharp" Version="2.88.6" />
     <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
     <PackageReference Include="System.CommandLine.Hosting" Version="0.4.0-alpha.22272.1" />
     <PackageReference Include="Spectre.Console" Version="0.47.0" />
@@ -45,8 +45,8 @@
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net7.0'">
-    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="2.88.5" />
-    <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="2.88.5" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="2.88.6" />
+    <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="2.88.6" />
   </ItemGroup>
 
   <ItemGroup>
