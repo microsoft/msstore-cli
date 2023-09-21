@@ -19,11 +19,16 @@ namespace MSStore.CLI.Helpers
         [ThreadStatic]
         private static StringWriter? _stringWriter;
 
-        public CustomSpectreConsoleLogger(string name, ConsoleFormatter formatter, IExternalScopeProvider? scopeProvider)
+        private IAnsiConsole _stdOut;
+        private IAnsiConsole _stdErr;
+
+        public CustomSpectreConsoleLogger(string name, ConsoleFormatter formatter, IExternalScopeProvider? scopeProvider, IAnsiConsole stdOut, IAnsiConsole stdErr)
         {
             _name = name;
             Formatter = formatter;
             ScopeProvider = scopeProvider;
+            _stdOut = stdOut;
+            _stdErr = stdErr;
         }
 
         public IDisposable? BeginScope<TState>(TState state)
@@ -61,7 +66,14 @@ namespace MSStore.CLI.Helpers
                 sb.Capacity = 1024;
             }
 
-            AnsiConsole.Console.Markup(computedAnsiString);
+            if (logLevel == LogLevel.Error || logLevel == LogLevel.Critical)
+            {
+                _stdErr.Markup(computedAnsiString);
+            }
+            else
+            {
+                _stdOut.Markup(computedAnsiString);
+            }
         }
     }
 }

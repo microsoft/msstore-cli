@@ -32,6 +32,7 @@ using MSStore.CLI.Services.PartnerCenter;
 using MSStore.CLI.Services.PWABuilder;
 using MSStore.CLI.Services.Telemetry;
 using MSStore.CLI.Services.TokenManager;
+using Spectre.Console;
 
 namespace MSStore.CLI
 {
@@ -43,7 +44,20 @@ namespace MSStore.CLI
             Console.OutputEncoding = System.Text.Encoding.UTF8;
 #endif
 
-            var storeCLI = new MicrosoftStoreCLI();
+            var stdOut = AnsiConsole.Create(new AnsiConsoleSettings
+            {
+                Ansi = AnsiSupport.Detect,
+                ColorSystem = ColorSystemSupport.Detect,
+                Out = new AnsiConsoleOutput(Console.Out),
+            });
+            var stdErr = AnsiConsole.Create(new AnsiConsoleSettings
+            {
+                Ansi = AnsiSupport.Detect,
+                ColorSystem = ColorSystemSupport.Detect,
+                Out = new AnsiConsoleOutput(Console.Error),
+            });
+
+            var storeCLI = new MicrosoftStoreCLI(stdOut, stdErr);
 
             var minimumLogLevel = LogLevel.Critical;
 
@@ -199,7 +213,7 @@ namespace MSStore.CLI
                     services.AddLogging(builder =>
                     {
                         builder.ClearProviders();
-                        builder.AddProvider(new CustomSpectreConsoleLoggerProvider());
+                        builder.AddProvider(new CustomSpectreConsoleLoggerProvider(storeCLI.StdOut, storeCLI.StdErr));
                     });
                 })
                 .ConfigureStoreCLICommands()

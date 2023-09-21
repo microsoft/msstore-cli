@@ -59,6 +59,8 @@ namespace MSStore.CLI.UnitTests
         internal Mock<IStoreAPI> FakeStoreAPI { get; private set; } = null!;
         internal Mock<IStorePackagedAPI> FakeStorePackagedAPI { get; private set; } = null!;
 
+        private OutputCapture _outputCapture = null!;
+
         protected List<DevCenterApplication> FakeApps { get; } = new List<DevCenterApplication>
             {
                 new DevCenterApplication
@@ -191,7 +193,21 @@ namespace MSStore.CLI.UnitTests
                 .Setup(fac => fac.CreatePackagedAsync(It.IsAny<Configurations>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(FakeStorePackagedAPI.Object);
 
-            Cli = new MicrosoftStoreCLI();
+            _outputCapture = new OutputCapture();
+
+            var stdOut = AnsiConsole.Create(new AnsiConsoleSettings
+            {
+                Ansi = AnsiSupport.Yes,
+                ColorSystem = ColorSystemSupport.TrueColor,
+                Interactive = InteractionSupport.No,
+                Out = new CustomAnsiConsoleOutput(_outputCapture),
+                Enrichment = new ProfileEnrichment
+                {
+                    UseDefaultEnrichers = false
+                }
+            });
+
+            Cli = new MicrosoftStoreCLI(stdOut, stdOut);
 
             StorePackagedAPI.DefaultSubmissionPollDelay = TimeSpan.Zero;
 
@@ -271,7 +287,7 @@ namespace MSStore.CLI.UnitTests
                     services.AddLogging(builder =>
                     {
                         builder.ClearProviders();
-                        builder.AddProvider(new CustomSpectreConsoleLoggerProvider());
+                        builder.AddProvider(new CustomSpectreConsoleLoggerProvider(stdOut, stdOut));
                     });
                 })
                 .ConfigureStoreCLICommands()
@@ -675,19 +691,7 @@ namespace MSStore.CLI.UnitTests
 
         protected async Task<string> ParseAndInvokeAsync(string[] args, int? expectedResult = 0)
         {
-            var outputCapture = new OutputCapture();
-
-            AnsiConsole.Console = AnsiConsole.Create(new AnsiConsoleSettings
-            {
-                Ansi = AnsiSupport.Yes,
-                ColorSystem = ColorSystemSupport.TrueColor,
-                Interactive = InteractionSupport.No,
-                Out = new CustomAnsiConsoleOutput(outputCapture),
-                Enrichment = new ProfileEnrichment
-                {
-                    UseDefaultEnrichers = false
-                }
-            });
+            AnsiConsole.Console = Cli.StdOut;
             AnsiConsole.Profile.Capabilities.Ansi = true;
             AnsiConsole.Profile.Capabilities.Unicode = true;
 
@@ -698,7 +702,7 @@ namespace MSStore.CLI.UnitTests
                 throw new ArgumentException(string.Join(Environment.NewLine, parseResult.Errors.Select(e => e.Message)));
             }
 
-            var testConsole = new TestConsole(outputCapture);
+            var testConsole = new TestConsole(_outputCapture);
 
             var invokeTask = parseResult.InvokeAsync(testConsole);
 
@@ -710,10 +714,10 @@ namespace MSStore.CLI.UnitTests
             }
             else
             {
-                outputCapture.Captured.ToString().Should().NotContain("💥");
+                _outputCapture.Captured.ToString().Should().NotContain("💥");
             }
 
-            return outputCapture.Captured.ToString() ?? string.Empty;
+            return _outputCapture.Captured.ToString() ?? string.Empty;
         }
 
         private Func<InvocationContext, Task>? _testCallback;

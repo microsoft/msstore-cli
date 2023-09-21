@@ -101,12 +101,12 @@ namespace MSStore.CLI.Commands.Apps
                 {
                     if (app?.Id == null)
                     {
-                        AnsiConsole.MarkupLine($"Could not find application with ID '{ProductId}'");
+                        context.ParseResult.StdErr().MarkupLine($"Could not find application with ID '{ProductId}'");
                         return await _telemetryClient.TrackCommandEventAsync<Handler>(-1, ct);
                     }
                     else
                     {
-                        AnsiConsole.WriteLine(JsonSerializer.Serialize(app, app.GetType(), SourceGenerationContext.GetCustom(true)));
+                        context.ParseResult.StdOut().WriteLine(JsonSerializer.Serialize(app, app.GetType(), SourceGenerationContext.GetCustom(true)));
                         return await _telemetryClient.TrackCommandEventAsync<Handler>(0, ct);
                     }
                 }

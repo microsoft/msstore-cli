@@ -28,9 +28,12 @@ namespace MSStore.CLI
             AnsiConsole.WriteLine();
         }
 
+        internal IAnsiConsole StdOut { get; private set; } = null!;
+        internal IAnsiConsole StdErr { get; private set; } = null!;
+
         internal Option<bool> VerboseOption { get; }
 
-        public MicrosoftStoreCLI()
+        public MicrosoftStoreCLI(IAnsiConsole stdOut, IAnsiConsole stdErr)
             : base(description: "CLI tool to automate Microsoft Store Developer tasks.")
         {
             VerboseOption = new Option<bool>(
@@ -38,6 +41,11 @@ namespace MSStore.CLI
                 getDefaultValue: () => false,
                 description: "Verbose output");
             AddGlobalOption(VerboseOption);
+
+            StdOut = stdOut ?? throw new ArgumentNullException(nameof(stdOut));
+            StdErr = stdErr ?? throw new ArgumentNullException(nameof(stdErr));
+
+            AnsiConsole.Console = StdErr;
 
             AddCommand(new InfoCommand());
             AddCommand(new ReconfigureCommand());

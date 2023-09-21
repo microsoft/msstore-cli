@@ -4,6 +4,7 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
+using Spectre.Console;
 
 namespace MSStore.CLI.Helpers
 {
@@ -13,8 +14,10 @@ namespace MSStore.CLI.Helpers
         private ConsoleFormatter _formatter;
         private IExternalScopeProvider? _scopeProvider;
 
-        public CustomSpectreConsoleLoggerProvider()
+        public CustomSpectreConsoleLoggerProvider(IAnsiConsole stdOut, IAnsiConsole stdErr)
         {
+            StdOut = stdOut;
+            StdErr = stdErr;
             _formatter = new CustomSpectreConsoleFormatter
             {
                 FormatterOptions = new SimpleConsoleFormatterOptions
@@ -27,9 +30,12 @@ namespace MSStore.CLI.Helpers
             };
         }
 
+        public IAnsiConsole StdOut { get; }
+        public IAnsiConsole StdErr { get; }
+
         public ILogger CreateLogger(string name)
         {
-            return _loggers.GetOrAdd(name, (name) => new CustomSpectreConsoleLogger(name, _formatter, _scopeProvider));
+            return _loggers.GetOrAdd(name, (name) => new CustomSpectreConsoleLogger(name, _formatter, _scopeProvider, StdOut, StdErr));
         }
 
         public void Dispose()
