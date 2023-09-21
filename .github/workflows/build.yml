@@ -41,10 +41,17 @@ jobs:
     - name: Build
       run: dotnet build MSStore.CLI.sln --no-restore /p:Configuration=Release
     - name: Test
+      if: ${{ matrix.os != 'macos-latest' }}
       env:
         CollectCoverage: true
         CoverletOutputFormat: cobertura
       run: dotnet test MSStore.CLI.sln --no-restore /p:Configuration=Release --logger trx
+    - name: Test
+      if: ${{ matrix.os == 'macos-latest' }}
+      env:
+        CollectCoverage: true
+        CoverletOutputFormat: cobertura
+      run: dotnet test MSStore.CLI.sln --no-restore /p:Configuration=Release --logger trx & wait
     - name: Display test results
       uses: dorny/test-reporter@v1
       if: always()
