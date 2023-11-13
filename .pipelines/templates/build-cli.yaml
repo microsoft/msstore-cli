@@ -128,9 +128,11 @@ steps:
     Contents: |
       **
       !*.md
-- publish: '$(Build.ArtifactStagingDirectory)/CLI'
+- task: 1ES.PublishPipelineArtifact@1
   displayName: Upload Artifact - CLI
-  artifact: CLI-${{ parameters.dotnet_runtime }}-${{ parameters.dotnet_arch }}
+  inputs:
+    path: '$(Build.ArtifactStagingDirectory)/CLI'
+    artifactName: CLI-${{ parameters.dotnet_runtime }}-${{ parameters.dotnet_arch }}
 - task: CopyFiles@2
   displayName: 'Copy MSIX Artifacts'
   condition: startsWith(variables.AgentOS, 'Windows_NT')
@@ -138,7 +140,9 @@ steps:
     sourceFolder: '$(System.DefaultWorkingDirectory)/MSStore.CLI.MSIX/AppPackages/${{ parameters.dotnet_arch }}/'
     contents: 'MSStore.CLI.MSIX_*_${{ parameters.dotnet_arch }}.msix'
     targetFolder: '$(Build.ArtifactStagingDirectory)/MSIX'
-- publish: '$(Build.ArtifactStagingDirectory)/MSIX'
+- task: 1ES.PublishPipelineArtifact@1
   condition: startsWith(variables.AgentOS, 'Windows_NT')
   displayName: Upload Artifact - MSIX
-  artifact: MSIX-${{ parameters.dotnet_arch }}
+  inputs:
+    path: '$(Build.ArtifactStagingDirectory)/MSIX'
+    artifactName: MSIX-${{ parameters.dotnet_arch }}

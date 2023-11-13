@@ -53,13 +53,13 @@ steps:
     contents: '$(System.DefaultWorkingDirectory)/MSStore.API/bin/${{ parameters.dotnet_configuration }}/net8.0/*'
     flattenFolders: true
     targetFolder: '$(Build.ArtifactStagingDirectory)/NuGetDLLs'
-- task: PublishPipelineArtifact@1
+- task: 1ES.PublishPipelineArtifact@1
   displayName: Upload Artifact - NuGet
   condition: startsWith(variables.AgentOS, 'Linux')
   inputs:
     path: '$(Build.ArtifactStagingDirectory)/NuGet'
     artifactName: NuGet
-- task: PublishPipelineArtifact@1
+- task: 1ES.PublishPipelineArtifact@1
   displayName: Upload Artifact - NuGet DLLs
   condition: startsWith(variables.AgentOS, 'Linux')
   inputs:

@@ -1,3 +1,12 @@
+name: $(BuildDefinitionName)_$(date:yyMM).$(date:dd)$(rev:rrr)
+
+resources:
+  repositories:
+  - repository: 1ESPipelineTemplates
+    type: git
+    name: 1ESPipelineTemplates/1ESPipelineTemplates
+    ref: refs/tags/release
+
 schedules:
 - cron: "0 0 1 * *"
   displayName: Monthly check
@@ -7,16 +16,37 @@ schedules:
 
 pr: none
 
-jobs:
-- job: CodeInspector
-  displayName: Code Inspector
-  pool:
-    vmImage: windows-latest
-  steps:
-  - checkout: self
-  - task: CodeInspector@2
-    inputs:
-      ProductId: $(STPID)
-  - task: ComponentGovernanceComponentDetection@0
-    inputs:
-      ignoreDirectories: '.\MSStore.CLI.UnitTests\TestData'
+extends:
+  template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
+  parameters:
+    customBuildTags:
+    - ES365AIMigrationTooling
+    pool:
+      name: Azure-Pipelines-1ESPT-ExDShared
+      image: windows-2022
+      os: windows
+    sdl:
+      sourceAnalysisPool:
+        name: Azure-Pipelines-1ESPT-ExDShared
+        image: windows-2022
+        os: windows
+      componentgorvernance:
+        ignoreDirectories: $(Build.SourcesDirectory)/MSStore.CLI.UnitTests
+      credscan:
+        suppressionsFile: '$(System.DefaultWorkingDirectory)/.pipelines/CredScanSuppressions.json'
+      binSkim:
+        AnalyzeTargetGlob: '$(System.DefaultWorkingDirectory)\MSStore.API\bin\**\net8.0\MSStore.API.dll'
+    stages:
+    - stage: codeInspector
+      displayName: Code Inspector
+      jobs:
+      - job: CodeInspector
+        displayName: Code Inspector
+        steps:
+        - checkout: self
+        - task: CodeInspector@2
+          inputs:
+            ProductId: $(STPID)
+        - task: ComponentGovernanceComponentDetection@0
+          inputs:
+            ignoreDirectories: '.\MSStore.CLI.UnitTests\TestData'

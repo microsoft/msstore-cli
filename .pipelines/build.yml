@@ -1,3 +1,10 @@
+resources:
+  repositories:
+  - repository: 1ESPipelineTemplates
+    type: git
+    name: 1ESPipelineTemplates/1ESPipelineTemplates
+    ref: refs/tags/release
+
 trigger:
   branches:
     include:
@@ -14,43 +21,60 @@ parameters:
     default:
       - x64
       - arm64
+  - name: pools
+    type: object
+    default:
+    - name: Azure-Pipelines-1ESPT-ExDShared
+      image: windows-latest
+      os: windows
+    - name: Azure-Pipelines-1ESPT-ExDShared
+      image: ubuntu-latest
+      os: linux
+    - name: Azure Pipelines
+      image: macos-latest
+      os: macOS
 
 name: 0.0.$(Date:yyMM).$(Date:dd)$(Rev:rr)
 
-jobs:
-  - job: Build_And_Run_CodeQL
-    displayName: Build and Run CodeQL
-    strategy:
-      matrix:
-        ${{ each dotnet_config in parameters.dotnet_configurations }}:
-          Windows_${{ dotnet_config }}:
-            os: windows-latest
-            dotnet_configuration: ${{ dotnet_config }}
-          Linux_${{ dotnet_config }}:
-            os: ubuntu-latest
-            dotnet_configuration: ${{ dotnet_config }}
-          Mac_${{ dotnet_config }}:
-            os: macos-latest
-            dotnet_configuration: ${{ dotnet_config }}
-    pool:
-      vmImage: $(os)
-    steps:
-    - checkout: self
-    - task: UseDotNet@2
-      displayName: Setup .NET 7
-      inputs:
-        version: 8.0.x
-    - script: mv -f ./.pipelines/release-nuget.config ./nuget.config
-      displayName: Add release package source
-    - task: NuGetAuthenticate@0
-    - script: dotnet restore MSStore.CLI.sln /p:Configuration=$(dotnet_configuration)
-      displayName: Restore dependencies
-    - template: ./templates/build-nuget.yaml
-      parameters:
-        dotnet_configuration: $(dotnet_configuration)
-        AgentOS: $(Agent.OS)
-        DoEsrp: false
-    - template: ./templates/after-build.yaml
-      parameters:
-        dotnet_configuration: $(dotnet_configuration)
-        AgentOS: $(Agent.OS)
+extends:
+  template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
+  parameters:
+    customBuildTags:
+    - ES365AIMigrationTooling
+    sdl:
+      sourceAnalysisPool:
+        name: Azure-Pipelines-1ESPT-ExDShared
+        image: windows-2022
+        os: windows
+      componentgorvernance:
+        ignoreDirectories: $(Build.SourcesDirectory)/MSStore.CLI.UnitTests
+      credscan:
+        suppressionsFile: '$(System.DefaultWorkingDirectory)/.pipelines/CredScanSuppressions.json'
+      binSkim:
+        AnalyzeTargetGlob: '$(System.DefaultWorkingDirectory)\MSStore.API\bin\**\net8.0\MSStore.API.dll'
+    stages:
+      - stage: Build_And_Run_CodeQL
+        jobs:
+        - ${{ each pool in parameters.pools }}:
+          - ${{ each dotnet_config in parameters.dotnet_configurations }}:
+            - job: Build_And_Run_CodeQL_${{ pool.os }}_${{ dotnet_config }}
+              pool:
+                name: ${{ pool.name }}
+                image: ${{ pool.image }}
+                os: ${{ pool.os }}
+              steps:
+              - checkout: self
+              - task: UseDotNet@2
+                displayName: Setup .NET 8
+                inputs:
+                  version: 8.0.x
+              - script: mv -f $(Build.SourcesDirectory)/.pipelines/release-nuget.config ./nuget.config
+                displayName: Add release package source
+              - task: NuGetAuthenticate@0
+              - script: dotnet restore MSStore.CLI.sln /p:Configuration=${{ dotnet_config }}
+                displayName: Restore dependencies
+              - template: ./.pipelines/templates/build-nuget.yaml@self
+                parameters:
+                  dotnet_configuration: ${{ dotnet_config }}
+                  AgentOS: $(Agent.OS)
+                  DoEsrp: false

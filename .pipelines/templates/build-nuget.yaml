@@ -14,12 +14,15 @@ steps:
 - bash: |
     echo "##vso[task.setvariable variable=AgentOS;]${{ parameters.AgentOS }}"
 - script: |
-    sudo apt-get install -y gnome-keyring
-    export $(dbus-launch --sh-syntax)
+    sudo apt-get install -y gnome-keyring dbus-x11
+    eval "$(dbus-launch --sh-syntax)"
+    echo "##vso[task.setvariable variable=DBUS_SESSION_BUS_ADDRESS;]$DBUS_SESSION_BUS_ADDRESS"
     export $(echo 'anypass_just_to_unlock' | gnome-keyring-daemon --unlock)
     export $(echo 'anypass_just_to_unlock' | gnome-keyring-daemon --start --components=gpg,pkcs11,secrets,ssh)
   condition: startsWith(variables.AgentOS, 'Linux')
   displayName: Install and Configure Keyring
+  env:
+    DISPLAY: :0.0
 - task: DotNetCoreCLI@2
   inputs:
     command: custom
@@ -39,6 +42,7 @@ steps:
   env:
     CollectCoverage: true
     CoverletOutputFormat: cobertura
+    DISPLAY: :0.0
   inputs:
     command: 'test'
     projects: '**/*[Tt]est*/*.csproj'

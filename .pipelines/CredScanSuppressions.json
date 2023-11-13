@@ -4,6 +4,10 @@
     {
       "hash": "ncVbunIptO+qkjV7bm9zYiMK0qP3bLPcjgmpEnuZdWw=",
       "_justification": "False positive, not a secret"
+    },
+    {
+      "file": "\\MSStore.CLI.MSIX\\MSStore.CLI.MSIX_TemporaryKey.pfx",
+      "_justification": "Only for testing, not an issue"
     }
   ]
 }

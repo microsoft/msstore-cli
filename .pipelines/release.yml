@@ -1,3 +1,10 @@
+resources:
+  repositories:
+  - repository: 1ESPipelineTemplates
+    type: git
+    name: 1ESPipelineTemplates/1ESPipelineTemplates
+    ref: refs/tags/release
+
 trigger:
   branches:
     include:
@@ -17,166 +24,128 @@ parameters:
   - name: DoEsrp
     type: boolean
     default: true
+  - name: pools
+    type: object
+    default:
+    - name: Azure-Pipelines-1ESPT-ExDShared
+      image: windows-latest
+      os: windows
+      dotnet_runtime: win
+      dotnet_framework: net8.0-windows10.0.17763.0
+    - name: Azure-Pipelines-1ESPT-ExDShared
+      image: ubuntu-latest
+      os: linux
+      dotnet_runtime: linux
+      dotnet_framework: net8.0
+    - name: Azure Pipelines
+      image: macos-latest
+      os: macOS
+      dotnet_runtime: osx
+      dotnet_framework: net8.0
 
 name: 0.0.$(Date:yyMM).$(Date:dd)$(Rev:rr)
 
-stages:
-  - stage: NuGet
-    jobs:
-    - job: Build_Nuget_And_Tests
-      displayName: Build Nuget and Run Tests
-      strategy:
-        matrix:
-          ${{ each dotnet_config in parameters.dotnet_configurations }}:
-            Windows_${{ dotnet_config }}:
-              os: windows-latest
-              dotnet_configuration: ${{ dotnet_config }}
-            Linux_${{ dotnet_config }}:
-              os: ubuntu-latest
-              dotnet_configuration: ${{ dotnet_config }}
-            Mac_${{ dotnet_config }}:
-              os: macos-latest
-              dotnet_configuration: ${{ dotnet_config }}
-      pool:
-        vmImage: $(os)
-      steps:
-      - checkout: self
-      - task: UseDotNet@2
-        displayName: Setup .NET 7
-        inputs:
-          version: 8.0.x
-      - ${{ if eq(parameters.DoEsrp, 'true') }}:
-        - task: UseDotNet@2
-          displayName: Setup .NET 6.0 (For ESRP Task)
-          condition: startsWith(variables['Agent.OS'], 'Linux')
-          inputs:
-            packageType: runtime
-            version: 6.0.x
-      - script: mv -f ./.pipelines/release-nuget.config ./nuget.config
-        displayName: Add release package source
-      - task: NuGetAuthenticate@0
-      - script: dotnet restore MSStore.CLI.sln /p:Configuration=$(dotnet_configuration)
-        displayName: Restore dependencies
-      - template: ./templates/build-nuget.yaml
-        parameters:
-          dotnet_configuration: $(dotnet_configuration)
-          AgentOS: $(Agent.OS)
-          DoEsrp: ${{ parameters.DoEsrp }}
-      - template: ./templates/pack-nuget.yaml
-        parameters:
-          dotnet_configuration: $(dotnet_configuration)
-          AgentOS: $(Agent.OS)
-          DoEsrp: ${{ parameters.DoEsrp }}
-      - task: ms.vss-governance-buildtask.governance-build-task-component-detection.ComponentGovernanceComponentDetection@0
-        displayName: 'Component Detection'
-        condition: and(succeededOrFailed(), not(eq(variables['Build.Reason'], 'PullRequest')))
-        inputs:
-          ignoreDirectories: 'MSStore.CLI.UnitTests'
-      - task: CredScan@3
-        condition: startsWith(variables['Agent.OS'], 'Windows_NT')
-        inputs:
-          suppressionsFile: '$(System.DefaultWorkingDirectory)\.pipelines\CredScanSuppressions.json'
-      - task: BinSkim@4
-        displayName: Run Binskim Analysis
-        condition: and(succeeded(), startsWith(variables['dotnet_configuration'], 'Release'), startsWith(variables['Agent.OS'], 'Windows_NT'))
-        inputs:
-          InputType: 'Basic'
-          Function: 'analyze'
-          TargetPattern: guardianGlob
-          AnalyzeTargetGlob: 'MSStore.API\bin\$(dotnet_configuration)\net8.0\MSStore.API.dll'
-          AnalyzeVerbose: true
-          toolVersion: 'Latest'
-      - task: PoliCheck@2
-        displayName: 'Run PoliCheck'
-        condition: and(succeeded(), startsWith(variables['dotnet_configuration'], 'Release'), startsWith(variables['Agent.OS'], 'Windows_NT'))
-        inputs:
-          targetType: F
-          targetArgument: $(Build.SourcesDirectory)
-          termTypeT: 0029a9
-          toolVersion: Latest
-        continueOnError: true
-      - task: SdtReport@2
-        condition: and(startsWith(variables['dotnet_configuration'], 'Release'), startsWith(variables['Agent.OS'], 'Windows_NT'))
-        inputs:
-          GdnExportAllTools: true
-      - task: PublishSecurityAnalysisLogs@3
-        displayName: 'Publish Guardian Artifacts'
-        condition: and(succeededOrFailed(), startsWith(variables['dotnet_configuration'], 'Release'), startsWith(variables['Agent.OS'], 'Windows_NT'))
-      - task: securedevelopmentteam.vss-secure-development-tools.build-task-postanalysis.PostAnalysis@2
-        displayName: 'Post Analysis'
-        condition: and(startsWith(variables['dotnet_configuration'], 'Release'), startsWith(variables['Agent.OS'], 'Windows_NT'))
-        inputs:
-          GdnBreakAllTools: false
-          GdnBreakGdnToolBinSkim: true
+extends:
+  template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
+  parameters:
+    customBuildTags:
+    - ES365AIMigrationTooling
+    sdl:
+      sourceAnalysisPool:
+        name: Azure-Pipelines-1ESPT-ExDShared
+        image: windows-2022
+        os: windows
+      componentgorvernance:
+        ignoreDirectories: $(Build.SourcesDirectory)/MSStore.CLI.UnitTests
+      credscan:
+        suppressionsFile: '$(System.DefaultWorkingDirectory)/.pipelines/CredScanSuppressions.json'
+      binSkim:
+        AnalyzeTargetGlob: '$(System.DefaultWorkingDirectory)\MSStore.API\bin\**\net8.0\MSStore.API.dll'
+    stages:
+      - stage: NuGet
+        jobs:
+        - ${{ each pool in parameters.pools }}:
+          - ${{ each dotnet_config in parameters.dotnet_configurations }}:
+            - job: Build_Nuget_And_Tests_${{ pool.os }}_${{ dotnet_config }}
+              displayName: Build Nuget and Run Tests (${{ pool.os }}_${{ dotnet_config }})
+              pool:
+                name: ${{ pool.name }}
+                image: ${{ pool.image }}
+                os: ${{ pool.os }}
+              steps:
+              - checkout: self
+              - task: UseDotNet@2
+                displayName: Setup .NET 8
+                inputs:
+                  version: 8.0.x
+              - ${{ if eq(parameters.DoEsrp, 'true') }}:
+                - task: UseDotNet@2
+                  displayName: Setup .NET 6.0 (For ESRP Task)
+                  condition: startsWith(variables['Agent.OS'], 'Linux')
+                  inputs:
+                    packageType: runtime
+                    version: 6.0.x
+              - script: mv -f $(Build.SourcesDirectory)/.pipelines/release-nuget.config ./nuget.config
+                displayName: Add release package source
+              - task: NuGetAuthenticate@0
+              - script: dotnet restore MSStore.CLI.sln /p:Configuration=${{ dotnet_config }}
+                displayName: Restore dependencies
+              - template: ./.pipelines/templates/build-nuget.yaml@self
+                parameters:
+                  dotnet_configuration: ${{ dotnet_config }}
+                  AgentOS: $(Agent.OS)
+                  DoEsrp: ${{ parameters.DoEsrp }}
+              - template: ./.pipelines/templates/pack-nuget.yaml@self
+                parameters:
+                  dotnet_configuration: ${{ dotnet_config }}
+                  AgentOS: $(Agent.OS)
+                  DoEsrp: ${{ parameters.DoEsrp }}
 
-  - stage: CLI
-    dependsOn: NuGet
-    jobs:
-    - job: Build_CLI
-      strategy:
-        matrix:
-          ${{ each dotnet_config in parameters.dotnet_configurations }}:
-            ${{ each platform in parameters.buildPlatforms }}:
-              ${{ dotnet_config }}_windows_${{ platform }}:
-                os: windows-latest
-                dotnet_runtime: win
-                dotnet_framework: net8.0-windows10.0.17763.0
-                dotnet_arch: ${{ platform }}
-                dotnet_configuration: ${{ dotnet_config }}
-              ${{ dotnet_config }}_linux_${{ platform }}:
-                os: ubuntu-latest
-                dotnet_runtime: linux
-                dotnet_framework: net8.0
-                dotnet_arch: ${{ platform }}
-                dotnet_configuration: ${{ dotnet_config }}
-              ${{ dotnet_config }}_macos_${{ platform }}:
-                os: macos-latest
-                dotnet_runtime: osx
-                dotnet_framework: net8.0
-                dotnet_arch: ${{ platform }}
-                dotnet_configuration: ${{ dotnet_config }}
-      pool:
-        vmImage: $(os)
-    
-      displayName: Build CLI
-    
-      steps:
-      - checkout: self
-        persistCredentials: true
-      - task: UseDotNet@2
-        displayName: Setup .NET 7
-        inputs:
-          version: 8.0.x
-      - ${{ if eq(parameters.DoEsrp, 'true') }}:
-        - task: UseDotNet@2
-          displayName: Setup .NET 6.0 (For ESRP Task)
-          condition: startsWith(variables['Agent.OS'], 'Windows_NT')
-          inputs:
-            packageType: runtime
-            version: 6.0.x
-      - script: mv -f ./.pipelines/release-nuget.config ./nuget.config
-        displayName: Add release package source
-      - task: FileTransform@2
-        displayName: Replace AIConnectionString
-        env:
-          AIConnectionString: $(AIConnectionString)
-        inputs:
-          folderPath: ./
-          jsonTargetFiles: MSStore.CLI/config.json
-          xmlTargetFiles: ''
-          xmlTransformationRules: ''
-      - task: NuGetAuthenticate@0
-      - script: dotnet restore MSStore.CLI -r $(dotnet_runtime)-$(dotnet_arch) /p:Configuration=$(dotnet_configuration) /p:PublishReadyToRun=true
-        displayName: Restore CLI
-      - template: ./templates/build-cli.yaml
-        parameters:
-          dotnet_runtime: $(dotnet_runtime)
-          dotnet_framework: $(dotnet_framework)
-          dotnet_arch: $(dotnet_arch)
-          dotnet_configuration: $(dotnet_configuration)
-          AgentOS: $(Agent.OS)
-          DoEsrp: ${{ parameters.DoEsrp }}
-      - template: ./templates/after-build.yaml
-        parameters:
-          dotnet_configuration: $(dotnet_configuration)
-          AgentOS: $(Agent.OS)
+      - stage: CLI
+        dependsOn: NuGet
+        jobs:
+        - ${{ each pool in parameters.pools }}:
+          - ${{ each dotnet_config in parameters.dotnet_configurations }}:
+            - ${{ each platform in parameters.buildPlatforms }}:
+              - job: Build_CLI_${{ pool.os }}_${{ platform }}_${{ dotnet_config }}
+                displayName: Build CLI (${{ pool.os }}_${{ platform }})_${{ dotnet_config }}
+                pool:
+                  name: ${{ pool.name }}
+                  image: ${{ pool.image }}
+                  os: ${{ pool.os }}
+                steps:
+                - checkout: self
+                  persistCredentials: true
+                - task: UseDotNet@2
+                  displayName: Setup .NET 8
+                  inputs:
+                    version: 8.0.x
+                - ${{ if eq(parameters.DoEsrp, 'true') }}:
+                  - task: UseDotNet@2
+                    displayName: Setup .NET 6.0 (For ESRP Task)
+                    condition: startsWith(variables['Agent.OS'], 'Windows_NT')
+                    inputs:
+                      packageType: runtime
+                      version: 6.0.x
+                - script: mv -f ./.pipelines/release-nuget.config ./nuget.config
+                  displayName: Add release package source
+                - task: FileTransform@2
+                  displayName: Replace AIConnectionString
+                  env:
+                    AIConnectionString: $(AIConnectionString)
+                  inputs:
+                    folderPath: ./
+                    jsonTargetFiles: MSStore.CLI/config.json
+                    xmlTargetFiles: ''
+                    xmlTransformationRules: ''
+                - task: NuGetAuthenticate@0
+                - script: dotnet restore MSStore.CLI -r ${{ pool.dotnet_runtime }}-${{ platform }} /p:Configuration=${{ dotnet_config }} /p:PublishReadyToRun=true
+                  displayName: Restore CLI
+                - template: ./.pipelines/templates/build-cli.yaml@self
+                  parameters:
+                    dotnet_runtime: ${{ pool.dotnet_runtime }}
+                    dotnet_framework: ${{ pool.dotnet_framework }}
+                    dotnet_arch: ${{ platform }}
+                    dotnet_configuration: ${{ dotnet_config }}
+                    AgentOS: $(Agent.OS)
+                    DoEsrp: ${{ parameters.DoEsrp }}
