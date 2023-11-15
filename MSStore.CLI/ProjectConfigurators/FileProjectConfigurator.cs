@@ -73,7 +73,7 @@ namespace MSStore.CLI.ProjectConfigurators
             try
             {
                 DirectoryInfo directoryPath = new DirectoryInfo(pathOrUrl);
-                return Task.FromResult(SupportedProjectPattern.Any(y => directoryPath.GetFiles(y).Any()));
+                return Task.FromResult(SupportedProjectPattern.Any(y => directoryPath.GetFiles(y).Length != 0));
             }
             catch
             {
@@ -116,7 +116,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 }
             }
 
-            if (!files.Any())
+            if (files.Count == 0)
             {
                 throw new InvalidOperationException($"No '{searchPattern}' file found.");
             }

@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Linq;
 using MSStore.API.Packaged.Models;
 
 namespace MSStore.CLI.Helpers
@@ -16,7 +15,7 @@ namespace MSStore.CLI.Helpers
             message += $"Error Target: {error.Target}{System.Environment.NewLine}";
 
             message += $"Error Data:{System.Environment.NewLine}";
-            if (error.Data?.Any() == true)
+            if (error.Data?.Count > 0)
             {
                 foreach (var data in error.Data)
                 {
@@ -30,7 +29,7 @@ namespace MSStore.CLI.Helpers
 
             message += $"Error Details:{System.Environment.NewLine}";
 
-            if (error.Details?.Any() == true)
+            if (error.Details?.Count > 0)
             {
                 foreach (var detail in error.Details)
                 {

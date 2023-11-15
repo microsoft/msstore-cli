@@ -110,8 +110,8 @@ namespace MSStore.CLI.Helpers
                 yield return submissionStatus;
             }
             while ("CommitStarted".Equals(submissionStatus.Status, StringComparison.Ordinal)
-                    && submissionStatus.StatusDetails?.Errors?.Any() != true
-                    && submissionStatus.StatusDetails?.CertificationReports?.Any() != true);
+                    && submissionStatus.StatusDetails?.Errors.IsNullOrEmpty() == true
+                    && submissionStatus.StatusDetails?.CertificationReports.IsNullOrEmpty() == true);
         }
 
         public static async Task<DevCenterSubmissionStatusResponse?> PollSubmissionStatusAsync(this IStorePackagedAPI storePackagedAPI, string productId, string submissionId, bool waitFirst, ILogger? logger, CancellationToken ct = default)
@@ -489,7 +489,7 @@ namespace MSStore.CLI.Helpers
                             var tasks = new List<Task<bool>>();
                             foreach (var listing in submission.Listings)
                             {
-                                if (listing.Value?.BaseListing?.Images?.Any() == true)
+                                if (listing.Value?.BaseListing?.Images?.Count > 0)
                                 {
                                     var imagesToDownload = listing.Value.BaseListing.Images.Where(i =>
                                             i.FileStatus == FileStatus.PendingUpload &&
@@ -589,7 +589,7 @@ namespace MSStore.CLI.Helpers
                 }
             }
 
-            if (submission.Listings?.Any() != true)
+            if (submission.Listings.IsNullOrEmpty())
             {
                 submission.Listings = new Dictionary<string, DevCenterListing>();
 
@@ -646,7 +646,7 @@ namespace MSStore.CLI.Helpers
                         }
                     };
 
-                    if (listing.BaseListing.Images?.Any() != true)
+                    if (listing.BaseListing.Images.IsNullOrEmpty())
                     {
                         listing.BaseListing.Images = new List<Image>();
 

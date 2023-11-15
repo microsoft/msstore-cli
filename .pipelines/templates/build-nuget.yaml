@@ -63,7 +63,7 @@ steps:
     condition: startsWith(variables.AgentOS, 'Linux')
     inputs:
       ConnectedServiceName: 'MSStoreCLI - ESRP Code Signing'
-      FolderPath: '$(System.DefaultWorkingDirectory)/MSStore.API/bin/${{ parameters.dotnet_configuration }}/net7.0'
+      FolderPath: '$(System.DefaultWorkingDirectory)/MSStore.API/bin/${{ parameters.dotnet_configuration }}/net8.0'
       Pattern: 'MSStore.API.dll'
       signConfigType: inlineSignParams
       inlineOperation: |

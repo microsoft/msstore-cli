@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Net.Http;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,14 +19,14 @@ namespace MSStore.API.Packaged
     public class StorePackagedAPI : IStorePackagedAPI, IDisposable
     {
         private static readonly string DevCenterVersion = "1.0";
-        private static readonly string DevCenterApplicationsTemplate = "/v{0}/my/applications?skip={1}&top={2}";
-        private static readonly string DevCenterApplicationTemplate = "/v{0}/my/applications/{1}";
-        private static readonly string DevCenterGetSubmissionTemplate = "/v{0}/my/applications/{1}/submissions/{2}";
-        private static readonly string DevCenterPutSubmissionTemplate = "/v{0}/my/applications/{1}/submissions/{2}";
-        private static readonly string DevCenterCreateSubmissionTemplate = "/v{0}/my/applications/{1}/submissions?isMinimalResponse=true";
-        private static readonly string DevCenterDeleteSubmissionTemplate = "/v{0}/my/applications/{1}/submissions/{2}";
-        private static readonly string DevCenterCommitSubmissionTemplate = "/v{0}/my/applications/{1}/submissions/{2}/Commit";
-        private static readonly string DevCenterSubmissionStatusTemplate = "/v{0}/my/applications/{1}/submissions/{2}/status";
+        private static readonly CompositeFormat DevCenterApplicationsTemplate = CompositeFormat.Parse("/v{0}/my/applications?skip={1}&top={2}");
+        private static readonly CompositeFormat DevCenterApplicationTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}");
+        private static readonly CompositeFormat DevCenterGetSubmissionTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}/submissions/{2}");
+        private static readonly CompositeFormat DevCenterPutSubmissionTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}/submissions/{2}");
+        private static readonly CompositeFormat DevCenterCreateSubmissionTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}/submissions?isMinimalResponse=true");
+        private static readonly CompositeFormat DevCenterDeleteSubmissionTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}/submissions/{2}");
+        private static readonly CompositeFormat DevCenterCommitSubmissionTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}/submissions/{2}/Commit");
+        private static readonly CompositeFormat DevCenterSubmissionStatusTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}/submissions/{2}/status");
 
         private SubmissionClient? _devCenterClient;
 

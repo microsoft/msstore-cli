@@ -44,7 +44,7 @@ stages:
       - task: UseDotNet@2
         displayName: Setup .NET 7
         inputs:
-          version: 7.0.x
+          version: 8.0.x
       - ${{ if eq(parameters.DoEsrp, 'true') }}:
         - task: UseDotNet@2
           displayName: Setup .NET 6.0 (For ESRP Task)
@@ -83,7 +83,7 @@ stages:
           InputType: 'Basic'
           Function: 'analyze'
           TargetPattern: guardianGlob
-          AnalyzeTargetGlob: 'MSStore.API\bin\$(dotnet_configuration)\net7.0\MSStore.API.dll'
+          AnalyzeTargetGlob: 'MSStore.API\bin\$(dotnet_configuration)\net8.0\MSStore.API.dll'
           AnalyzeVerbose: true
           toolVersion: 'Latest'
       - task: PoliCheck@2
@@ -120,19 +120,19 @@ stages:
               ${{ dotnet_config }}_windows_${{ platform }}:
                 os: windows-latest
                 dotnet_runtime: win
-                dotnet_framework: net7.0-windows10.0.17763.0
+                dotnet_framework: net8.0-windows10.0.17763.0
                 dotnet_arch: ${{ platform }}
                 dotnet_configuration: ${{ dotnet_config }}
               ${{ dotnet_config }}_linux_${{ platform }}:
                 os: ubuntu-latest
                 dotnet_runtime: linux
-                dotnet_framework: net7.0
+                dotnet_framework: net8.0
                 dotnet_arch: ${{ platform }}
                 dotnet_configuration: ${{ dotnet_config }}
               ${{ dotnet_config }}_macos_${{ platform }}:
                 os: macos-latest
                 dotnet_runtime: osx.12
-                dotnet_framework: net7.0
+                dotnet_framework: net8.0
                 dotnet_arch: ${{ platform }}
                 dotnet_configuration: ${{ dotnet_config }}
       pool:
@@ -146,7 +146,7 @@ stages:
       - task: UseDotNet@2
         displayName: Setup .NET 7
         inputs:
-          version: 7.0.x
+          version: 8.0.x
       - ${{ if eq(parameters.DoEsrp, 'true') }}:
         - task: UseDotNet@2
           displayName: Setup .NET 6.0 (For ESRP Task)

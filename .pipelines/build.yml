@@ -39,7 +39,7 @@ jobs:
     - task: UseDotNet@2
       displayName: Setup .NET 7
       inputs:
-        version: 7.0.x
+        version: 8.0.x
     - script: mv -f ./.pipelines/release-nuget.config ./nuget.config
       displayName: Add release package source
     - task: NuGetAuthenticate@0

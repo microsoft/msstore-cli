@@ -371,7 +371,7 @@ namespace MSStore.CLI.Commands
                     return null;
                 }
 
-                if (appList.Any() != true)
+                if (appList.Count == 0)
                 {
                     AnsiConsole.WriteLine("Your account has no registered apps yet.");
                     AnsiConsole.MarkupLine("[b]Let's create one![/]");

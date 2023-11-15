@@ -24,7 +24,7 @@ namespace MSStore.CLI.UnitTests
         public async Task ProjectConfiguratorFactoryFindsURLProperly(string pathOrUrl, Type expectedProjectConfiguratorType, params string[] testDataProjectSubPath)
         {
             string? path = null;
-            if (testDataProjectSubPath != null && testDataProjectSubPath.Any())
+            if (testDataProjectSubPath != null && testDataProjectSubPath.Length != 0)
             {
                 path = CopyFilesRecursively(Path.Combine(testDataProjectSubPath));
 
@@ -40,7 +40,7 @@ namespace MSStore.CLI.UnitTests
                 var host = context.GetHost();
                 var projectConfiguratorFactory = host.Services.GetService<IProjectConfiguratorFactory>()!;
 
-                if (testDataProjectSubPath != null && testDataProjectSubPath.Any() && path != null)
+                if (testDataProjectSubPath != null && testDataProjectSubPath.Length != 0 && path != null)
                 {
                     SetupBasedOnTestDataProjectSubPath(new DirectoryInfo(path), testDataProjectSubPath);
                 }

@@ -467,7 +467,7 @@ namespace MSStore.CLI.Services
                 AnsiConsole.WriteLine(ex.ToString());
             }
 
-            if (!imagePaths.Any())
+            if (imagePaths.Count == 0)
             {
                 string imageFile = Path.Combine(appxManifest.Directory?.FullName ?? string.Empty, imageNodeText);
                 if (File.Exists(imageFile))

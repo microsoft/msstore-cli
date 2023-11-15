@@ -8,6 +8,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
 using System.Net.Http;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,17 +20,17 @@ namespace MSStore.API
     public class StoreAPI : IStoreAPI, IDisposable
     {
         private static readonly string Version = "1";
-        private static readonly string PackagesUrlTemplate = "/submission/v{0}/product/{1}/packages";
+        private static readonly CompositeFormat PackagesUrlTemplate = CompositeFormat.Parse("/submission/v{0}/product/{1}/packages");
         /* private static readonly string PackageByIdUrlTemplate = "/submission/v{0}/product/{1}/packages/{2}"; */
-        private static readonly string PackagesCommitUrlTemplate = "/submission/v{0}/product/{1}/packages/commit";
-        private static readonly string AppMetadataUrlTemplate = "/submission/v{0}/product/{1}/metadata";
-        private static readonly string AppModuleFetchMetadataUrlTemplate = "/submission/v{0}/product/{1}/metadata/{2}?languages={3}";
-        private static readonly string ListingAssetsUrlTemplate = "/submission/v{0}/product/{1}/listings/assets?languages={2}";
+        private static readonly CompositeFormat PackagesCommitUrlTemplate = CompositeFormat.Parse("/submission/v{0}/product/{1}/packages/commit");
+        private static readonly CompositeFormat AppMetadataUrlTemplate = CompositeFormat.Parse("/submission/v{0}/product/{1}/metadata");
+        private static readonly CompositeFormat AppModuleFetchMetadataUrlTemplate = CompositeFormat.Parse("/submission/v{0}/product/{1}/metadata/{2}?languages={3}");
+        private static readonly CompositeFormat ListingAssetsUrlTemplate = CompositeFormat.Parse("/submission/v{0}/product/{1}/listings/assets?languages={2}");
         /* private static readonly string ListingAssetsCreateUrlTemplate = "/submission/v{0}/product/{1}/listings/assets/create";
         private static readonly string ListingAssetsCommitUrlTemplate = "/submission/v{0}/product/{1}/listings/assets/commit"; */
-        private static readonly string ProductDraftStatusPollingUrlTemplate = "/submission/v{0}/product/{1}/status";
-        private static readonly string CreateSubmissionUrlTemplate = "/submission/v{0}/product/{1}/submit";
-        private static readonly string SubmissionStatusPollingUrlTemplate = "/submission/v{0}/product/{1}/submission/{2}/status";
+        private static readonly CompositeFormat ProductDraftStatusPollingUrlTemplate = CompositeFormat.Parse("/submission/v{0}/product/{1}/status");
+        private static readonly CompositeFormat CreateSubmissionUrlTemplate = CompositeFormat.Parse("/submission/v{0}/product/{1}/submit");
+        private static readonly CompositeFormat SubmissionStatusPollingUrlTemplate = CompositeFormat.Parse("/submission/v{0}/product/{1}/submission/{2}/status");
 
         private SubmissionClient? _client;
 

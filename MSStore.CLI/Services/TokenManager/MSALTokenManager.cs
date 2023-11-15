@@ -184,7 +184,7 @@ namespace MSStore.CLI.Services.TokenManager
             accounts = (await app.GetAccountsAsync()).ToList();
 
             // clear the cache
-            while (accounts.Any())
+            while (accounts.Count != 0)
             {
                 await app.RemoveAsync(accounts.First());
                 accounts = (await app.GetAccountsAsync()).ToList();

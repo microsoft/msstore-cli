@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System;
-using System.Runtime.Serialization;
 
 namespace MSStore.API
 {
@@ -19,11 +18,6 @@ namespace MSStore.API
 
         public MSStoreException(string? message, Exception? innerException)
             : base(message, innerException)
-        {
-        }
-
-        protected MSStoreException(SerializationInfo info, StreamingContext context)
-            : base(info, context)
         {
         }
     }

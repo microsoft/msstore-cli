@@ -27,7 +27,7 @@ steps:
     InputType: 'Basic'
     Function: 'analyze'
     TargetPattern: guardianGlob
-    AnalyzeTargetGlob: '$(System.DefaultWorkingDirectory)\MSStore.API\bin\${{ parameters.dotnet_configuration }}\net7.0\MSStore.API.dll'
+    AnalyzeTargetGlob: '$(System.DefaultWorkingDirectory)\MSStore.API\bin\${{ parameters.dotnet_configuration }}\net8.0\MSStore.API.dll'
     AnalyzeVerbose: true
     toolVersion: 'Latest'
 - task: PoliCheck@2

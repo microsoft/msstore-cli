@@ -82,7 +82,7 @@ namespace MSStore.CLI.ProjectConfigurators
             try
             {
                 DirectoryInfo directoryPath = new DirectoryInfo(pathOrUrl);
-                return directoryPath.GetFiles("pwaAppInfo.json").Any();
+                return directoryPath.GetFiles("pwaAppInfo.json").Length != 0;
             }
             catch
             {
@@ -429,7 +429,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 return ("Could not fetch webmanifest description.", images);
             }
 
-            if (_webManifest.Screenshots?.Any() == true)
+            if (_webManifest.Screenshots?.Count > 0)
             {
                 foreach (var screenShot in _webManifest.Screenshots)
                 {
@@ -440,7 +440,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 }
             }
 
-            if (_webManifest.Icons?.Any() == true)
+            if (_webManifest.Icons?.Count > 0)
             {
                 // Order by size
                 _webManifest.Icons.Sort((a, b) => a.GetSize().LengthSquared().CompareTo(b.GetSize().LengthSquared()));

@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -66,7 +65,7 @@ namespace MSStore.API
             }
 
             this.accessToken = accessToken;
-            if(httpClient != null)
+            if (httpClient != null)
             {
                 this.httpClient = httpClient;
                 httpClientIsInternal = false;
@@ -237,7 +236,7 @@ namespace MSStore.API
                     {
                         var errors = (List<ResponseError>?)errorsProp.GetValue(resource);
                         var isSuccess = (bool?)isSuccessProp.GetValue(resource);
-                        if (errors?.Any() == true
+                        if (errors?.Count > 0
                             && isSuccess == false)
                         {
                             if (resource is T t)

@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -28,7 +27,7 @@ namespace MSStore.CLI.ProjectConfigurators
 
         protected static bool IsYarn(DirectoryInfo projectRootPath)
         {
-            return projectRootPath.GetFiles("yarn.lock", SearchOption.TopDirectoryOnly).Any();
+            return projectRootPath.GetFiles("yarn.lock", SearchOption.TopDirectoryOnly).Length != 0;
         }
 
         private static Dictionary<string, bool> _npmInstallExecuted = new Dictionary<string, bool>();

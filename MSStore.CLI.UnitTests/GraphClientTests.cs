@@ -13,7 +13,7 @@ namespace MSStore.CLI.UnitTests
     public class GraphClientTests
     {
         private Mock<ITokenManager> mockTokenManager = null!;
-        private IGraphClient _graphClient = null!;
+        private GraphClient _graphClient = null!;
         private Mock<HttpMessageHandler> _httpMessageHandler = null!;
 
         [TestInitialize]

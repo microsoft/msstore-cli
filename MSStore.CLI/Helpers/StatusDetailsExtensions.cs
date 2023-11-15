@@ -23,7 +23,7 @@ namespace MSStore.CLI.Helpers
                 PrintErrorsTable(statusDetails.Errors);
             }
 
-            if (statusDetails.Warnings?.Any() == true)
+            if (statusDetails.Warnings?.Count > 0)
             {
                 var onlyLogCodes = new List<string>()
                 {
@@ -52,7 +52,7 @@ namespace MSStore.CLI.Helpers
                 }
             }
 
-            if (statusDetails.CertificationReports?.Any() == true)
+            if (statusDetails.CertificationReports?.Count > 0)
             {
                 var table = new Table
                 {
