@@ -95,7 +95,7 @@ jobs:
             dotnet-os: linux
             dotnet-framework: net8.0
           - os: macos-latest
-            dotnet-os: osx.12
+            dotnet-os: osx
             dotnet-framework: net8.0
     runs-on: ${{ matrix.os }}
 

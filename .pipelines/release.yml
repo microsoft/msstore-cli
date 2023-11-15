@@ -131,7 +131,7 @@ stages:
                 dotnet_configuration: ${{ dotnet_config }}
               ${{ dotnet_config }}_macos_${{ platform }}:
                 os: macos-latest
-                dotnet_runtime: osx.12
+                dotnet_runtime: osx
                 dotnet_framework: net8.0
                 dotnet_arch: ${{ platform }}
                 dotnet_configuration: ${{ dotnet_config }}
