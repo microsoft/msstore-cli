@@ -53,7 +53,7 @@ steps:
   inputs:
     command: custom
     custom: tool
-    arguments: 'install --global dotnet-reportgenerator-globaltool --version 5.1.21'
+    arguments: 'install --global dotnet-reportgenerator-globaltool --version 5.2.0'
 - script: reportgenerator "-reports:$(Build.SourcesDirectory)/**/*coverage.*.cobertura.xml" "-targetdir:$(Build.SourcesDirectory)/report" "-reporttypes:Cobertura" "-filefilters:-*GenerationContext*.g.cs"
   displayName: Merge code coverage files
 - task: PublishCodeCoverageResults@1
