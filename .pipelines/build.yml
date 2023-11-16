@@ -46,7 +46,7 @@ extends:
         name: Azure-Pipelines-1ESPT-ExDShared
         image: windows-2022
         os: windows
-      componentgorvernance:
+      componentgovernance:
         ignoreDirectories: $(Build.SourcesDirectory)/MSStore.CLI.UnitTests
       credscan:
         suppressionsFile: '$(System.DefaultWorkingDirectory)/.pipelines/CredScanSuppressions.json'
