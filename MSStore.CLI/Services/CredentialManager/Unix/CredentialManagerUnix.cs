@@ -229,10 +229,8 @@ namespace MSStore.CLI.Services.CredentialManager.Unix
             {
                 try
                 {
-                    if (Marshal.PtrToStructure(error, typeof(NativeMethods.GError)) is NativeMethods.GError err)
-                    {
-                        throw new MSStoreException($"Failed to read credential: Domain: '{err.Domain}' - Code: '{err.Code}' - Message: '{err.Message}'");
-                    }
+                    NativeMethods.GError err = Marshal.PtrToStructure<NativeMethods.GError>(error);
+                    throw new MSStoreException($"Failed to read credential: Domain: '{err.Domain}' - Code: '{err.Code}' - Message: '{err.Message}'");
                 }
                 catch (Exception e)
                 {
@@ -287,10 +285,8 @@ namespace MSStore.CLI.Services.CredentialManager.Unix
             {
                 try
                 {
-                    if (Marshal.PtrToStructure(error, typeof(NativeMethods.GError)) is NativeMethods.GError err)
-                    {
-                        throw new MSStoreException($"Failed to write credential: Domain: '{err.Domain}' - Code: '{err.Code}' - Message: '{err.Message}'");
-                    }
+                    NativeMethods.GError err = Marshal.PtrToStructure<NativeMethods.GError>(error);
+                    throw new MSStoreException($"Failed to write credential: Domain: '{err.Domain}' - Code: '{err.Code}' - Message: '{err.Message}'");
                 }
                 catch (Exception e)
                 {

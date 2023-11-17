@@ -7,10 +7,13 @@
     <IsPackable>false</IsPackable>
     <AssemblyName>msstore</AssemblyName>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!--<IsAotCompatible>true</IsAotCompatible>-->
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
-    <!--<PublishTrimmed>true</PublishTrimmed>-->
+    <!--<PublishTrimmed>true</PublishTrimmed>
+    <PublishAot Condition="'$(PublishAot)' == ''">true</PublishAot>-->
     <PublishSingleFile Condition="'$(PublishSingleFile)' == ''">true</PublishSingleFile>
   </PropertyGroup>
 

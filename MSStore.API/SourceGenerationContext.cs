@@ -75,10 +75,7 @@ namespace MSStore.API.Models
                     IgnoreReadOnlyProperties = false,
                     IncludeFields = false,
                     WriteIndented = writeIndented,
-                    Converters =
-                    {
-                        new CustomJsonStringEnumConverter()
-                    }
+                    PropertyNamingPolicy = new UpperCaseNamingPolicy(),
                 });
             }
         }

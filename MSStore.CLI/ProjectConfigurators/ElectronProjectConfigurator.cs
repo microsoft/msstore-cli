@@ -213,19 +213,19 @@ namespace MSStore.CLI.ProjectConfigurators
             {
                 if (targets.All(t => t?.ToString() != "appx"))
                 {
-                    targets.Add("appx");
+                    targets.Add(JsonNode.Parse("\"appx\""));
                 }
             }
             else if (electronManifest.Build.Windows.Targets is JsonValue jsonValue)
             {
                 if (jsonValue.TryGetValue(out string? existingTarget))
                 {
-                    electronManifest.Build.Windows.Targets = new JsonArray { "appx", existingTarget };
+                    electronManifest.Build.Windows.Targets = new JsonArray { JsonNode.Parse("\"appx\""), JsonNode.Parse($"\"{existingTarget}\"") };
                 }
             }
             else
             {
-                electronManifest.Build.Windows.Targets = new JsonArray { "appx" };
+                electronManifest.Build.Windows.Targets = new JsonArray { JsonNode.Parse("\"appx\"") };
             }
 
             electronManifest.Build.Appx ??= new ElectronManifestBuildAppX();
