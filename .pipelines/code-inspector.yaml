@@ -30,8 +30,8 @@ extends:
         name: Azure-Pipelines-1ESPT-ExDShared
         image: windows-2022
         os: windows
-      componentgorvernance:
-        ignoreDirectories: $(Build.SourcesDirectory)/MSStore.CLI.UnitTests
+      componentgovernance:
+        ignoreDirectories: $(Build.SourcesDirectory)/MSStore.CLI.UnitTests/TestData,$(Build.SourcesDirectory)/MSStore.CLI.UnitTests/bin
       credscan:
         suppressionsFile: '$(System.DefaultWorkingDirectory)/.pipelines/CredScanSuppressions.json'
       binSkim:
@@ -49,4 +49,4 @@ extends:
             ProductId: $(STPID)
         - task: ComponentGovernanceComponentDetection@0
           inputs:
-            ignoreDirectories: '.\MSStore.CLI.UnitTests\TestData'
+            ignoreDirectories: $(Build.SourcesDirectory)/MSStore.CLI.UnitTests/TestData,$(Build.SourcesDirectory)/MSStore.CLI.UnitTests/bin

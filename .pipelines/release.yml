@@ -56,7 +56,7 @@ extends:
         image: windows-2022
         os: windows
       componentgovernance:
-        ignoreDirectories: $(Build.SourcesDirectory)/MSStore.CLI.UnitTests
+        ignoreDirectories: $(Build.SourcesDirectory)/MSStore.CLI.UnitTests/TestData,$(Build.SourcesDirectory)/MSStore.CLI.UnitTests/bin
       credscan:
         suppressionsFile: '$(System.DefaultWorkingDirectory)/.pipelines/CredScanSuppressions.json'
       binSkim:
