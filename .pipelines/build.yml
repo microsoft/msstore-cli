@@ -76,7 +76,3 @@ extends:
                   dotnet_configuration: ${{ dotnet_config }}
                   AgentOS: $(Agent.OS)
                   DoEsrp: false
-              - task: ms.vss-governance-buildtask.governance-build-task-component-detection.ComponentGovernanceComponentDetection@0
-                displayName: 'Component Governance Detection'
-                inputs:
-                  ignoreDirectories: $(Build.SourcesDirectory)/MSStore.CLI.UnitTests/TestData,$(Build.SourcesDirectory)/MSStore.CLI.UnitTests/bin

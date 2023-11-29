@@ -48,5 +48,6 @@ extends:
           inputs:
             ProductId: $(STPID)
         - task: ComponentGovernanceComponentDetection@0
+          displayName: 'Component Governance Detection'
           inputs:
             ignoreDirectories: $(Build.SourcesDirectory)/MSStore.CLI.UnitTests/TestData,$(Build.SourcesDirectory)/MSStore.CLI.UnitTests/bin
