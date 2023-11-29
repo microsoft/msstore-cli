@@ -142,7 +142,7 @@ namespace MSStore.API
                 try
                 {
                     authenticationResult = await app.AcquireTokenForClient(new[] { scope })
-                                           .WithAuthority(AzureCloudInstance.AzurePublic, tenantId, false)
+                                           .WithTenantId(tenantId)
                                            .ExecuteAsync(ct);
                 }
                 catch (Exception e)
