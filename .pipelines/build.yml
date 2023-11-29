@@ -37,7 +37,7 @@ parameters:
 name: 0.0.$(Date:yyMM).$(Date:dd)$(Rev:rr)
 
 extends:
-  template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
+  template: v1/1ES.Unofficial.PipelineTemplate.yml@1ESPipelineTemplates
   parameters:
     customBuildTags:
     - ES365AIMigrationTooling
