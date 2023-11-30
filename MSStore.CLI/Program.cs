@@ -250,13 +250,19 @@ namespace MSStore.CLI
 
             if (Console.IsInputRedirected && !Debugger.IsAttached)
             {
-                using var stream = Console.OpenStandardInput();
-
-                using StreamReader reader = new StreamReader(stream);
-                var x = reader.ReadToEnd();
-                if (!string.IsNullOrWhiteSpace(x))
+                try
                 {
-                    argList.Add(x);
+                    using var stream = Console.OpenStandardInput();
+                    using StreamReader reader = new StreamReader(stream);
+                    var x = await reader.ReadToEndAsync().WaitAsync(new CancellationTokenSource(1000).Token);
+                    if (!string.IsNullOrWhiteSpace(x))
+                    {
+                        argList.Add(x);
+                    }
+                }
+                catch (TaskCanceledException)
+                {
+                    // If there is no input, we don't want to wait forever
                 }
             }
 
