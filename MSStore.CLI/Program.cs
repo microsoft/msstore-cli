@@ -172,7 +172,7 @@ namespace MSStore.CLI
                     services
                         .AddHttpClient($"{nameof(PWABuilderClient)}/MSIX", client =>
                         {
-                            client.BaseAddress = new Uri("https://pwabuilder-winserver.centralus.cloudapp.azure.com/msix/");
+                            client.BaseAddress = new Uri("https://pwabuilder-windows-docker.azurewebsites.net/msix/");
                             AddPWABuilderDefaultHeaders(client.DefaultRequestHeaders);
                         })
                         .ConfigurePrimaryHttpMessageHandler(() =>
