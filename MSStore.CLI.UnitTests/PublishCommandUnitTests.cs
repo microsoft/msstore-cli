@@ -147,7 +147,7 @@ namespace MSStore.CLI.UnitTests
                 null,
                 null,
                 CancellationToken.None);
-            var appPackagesFolder = Directory.CreateDirectory(Path.Combine(path, "build", "windows", "runner", "Release"));
+            var appPackagesFolder = Directory.CreateDirectory(Path.Combine(path, "build", "windows", "x64", "runner", "Release"));
             await File.WriteAllTextAsync(Path.Combine(appPackagesFolder.FullName, "test.msix"), string.Empty);
 
             AddDefaultFakeSuccessfulSubmission();
