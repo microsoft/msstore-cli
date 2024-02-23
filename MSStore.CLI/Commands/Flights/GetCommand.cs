@@ -4,7 +4,6 @@
 using System;
 using System.CommandLine;
 using System.CommandLine.Invocation;
-using System.Globalization;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
