@@ -19,5 +19,6 @@ namespace MSStore.API.Packaged
         Task<DevCenterCommitResponse?> CommitSubmissionAsync(string productId, string submissionId, CancellationToken ct = default);
         Task<DevCenterSubmissionStatusResponse> GetSubmissionStatusAsync(string productId, string submissionId, CancellationToken ct = default);
         Task<List<DevCenterFlight>> GetFlightsAsync(string productId, CancellationToken ct = default);
+        Task<DevCenterFlight> GetFlightAsync(string productId, string flightId, CancellationToken ct = default);
     }
 }

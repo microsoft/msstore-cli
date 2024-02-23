@@ -28,6 +28,7 @@ namespace MSStore.API.Packaged
         private static readonly CompositeFormat DevCenterCommitSubmissionTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}/submissions/{2}/Commit");
         private static readonly CompositeFormat DevCenterSubmissionStatusTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}/submissions/{2}/status");
         private static readonly CompositeFormat DevCenterListFlightsTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}/listflights?skip={2}&top={3}");
+        private static readonly CompositeFormat DevCenterGetFlightTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}/flights/{2}");
 
         private SubmissionClient? _devCenterClient;
 
@@ -298,6 +299,22 @@ namespace MSStore.API.Packaged
                     productId,
                     skip,
                     top),
+                null,
+                ct);
+        }
+
+        public async Task<DevCenterFlight> GetFlightAsync(string productId, string flightId, CancellationToken ct = default)
+        {
+            AssertClientInitialized();
+
+            return await _devCenterClient.InvokeAsync<DevCenterFlight>(
+                HttpMethod.Get,
+                string.Format(
+                    CultureInfo.InvariantCulture,
+                    DevCenterGetFlightTemplate,
+                    DevCenterVersion,
+                    productId,
+                    flightId),
                 null,
                 ct);
         }

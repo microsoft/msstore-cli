@@ -12,6 +12,7 @@ namespace MSStore.CLI.Commands
             : base("flights", "Execute flights related tasks.")
         {
             AddCommand(new ListCommand());
+            AddCommand(new GetCommand());
             this.SetDefaultHelpHandler();
         }
     }
