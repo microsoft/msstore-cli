@@ -26,6 +26,7 @@ namespace MSStore.CLI
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Commands.Submission.PollCommand.Handler))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Commands.Submission.PublishCommand.Handler))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Commands.Submission.DeleteCommand.Handler))]
+        [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Commands.Flights.ListCommand.Handler))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(PackageCommand.Handler))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(PublishCommand.Handler))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(MicrosoftStoreCLI.Handler))]
@@ -49,6 +50,7 @@ namespace MSStore.CLI
                   .UseCommandHandler<Commands.Submission.PollCommand, Commands.Submission.PollCommand.Handler>()
                   .UseCommandHandler<Commands.Submission.PublishCommand, Commands.Submission.PublishCommand.Handler>()
                   .UseCommandHandler<Commands.Submission.DeleteCommand, Commands.Submission.DeleteCommand.Handler>()
+                  .UseCommandHandler<Commands.Flights.ListCommand, Commands.Flights.ListCommand.Handler>()
                   .UseCommandHandler<MicrosoftStoreCLI, MicrosoftStoreCLI.Handler>();
         }
     }

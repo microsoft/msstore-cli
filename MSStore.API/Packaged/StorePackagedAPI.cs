@@ -27,6 +27,7 @@ namespace MSStore.API.Packaged
         private static readonly CompositeFormat DevCenterDeleteSubmissionTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}/submissions/{2}");
         private static readonly CompositeFormat DevCenterCommitSubmissionTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}/submissions/{2}/Commit");
         private static readonly CompositeFormat DevCenterSubmissionStatusTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}/submissions/{2}/status");
+        private static readonly CompositeFormat DevCenterListFlightsTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}/listflights?skip={2}&top={3}");
 
         private SubmissionClient? _devCenterClient;
 
@@ -267,6 +268,36 @@ namespace MSStore.API.Packaged
                     DevCenterVersion,
                     productId,
                     submissionId),
+                null,
+                ct);
+        }
+
+        public async Task<List<DevCenterFlight>> GetFlightsAsync(string productId, CancellationToken ct = default)
+        {
+            try
+            {
+                var devCenterFlightsResponse = await GetFlightsAsync(productId, 0, 100, ct); // TODO: pagination
+                return devCenterFlightsResponse.Value ?? new();
+            }
+            catch (Exception error)
+            {
+                throw new MSStoreException($"Failed to get the flights - {error.Message}", error);
+            }
+        }
+
+        private async Task<PagedResponse<DevCenterFlight>> GetFlightsAsync(string productId, int skip = 0, int top = 10, CancellationToken ct = default)
+        {
+            AssertClientInitialized();
+
+            return await _devCenterClient.InvokeAsync<PagedResponse<DevCenterFlight>>(
+                HttpMethod.Get,
+                string.Format(
+                    CultureInfo.InvariantCulture,
+                    DevCenterListFlightsTemplate,
+                    DevCenterVersion,
+                    productId,
+                    skip,
+                    top),
                 null,
                 ct);
         }

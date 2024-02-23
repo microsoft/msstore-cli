@@ -78,6 +78,20 @@ namespace MSStore.CLI.UnitTests
                 }
             };
 
+        protected List<DevCenterFlight> FakeFlights { get; } = new List<DevCenterFlight>
+            {
+                new DevCenterFlight
+                {
+                    FlightId = "632B6A77-0E18-4B41-9033-3614D2174F2C",
+                    FriendlyName = "FakeFlight1"
+                },
+                new DevCenterFlight
+                {
+                    FlightId = "632B6A77-0E18-4B41-9033-3614D2174F2D",
+                    FriendlyName = "FakeFlight2"
+                }
+            };
+
         internal static Organization DefaultOrganization { get; } = new Organization
         {
             Id = new Guid("F3C1CCB6-09C0-4BAB-BABA-C034BFB60EF9")
@@ -442,6 +456,13 @@ namespace MSStore.CLI.UnitTests
             FakeStorePackagedAPI
                 .Setup(x => x.GetApplicationAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((string productId, CancellationToken ct) => FakeApps.First(a => a.Id == productId));
+        }
+
+        protected void AddFakeFlights()
+        {
+            FakeStorePackagedAPI
+                .Setup(x => x.GetFlightsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(FakeFlights);
         }
 
         internal void InitDefaultSubmissionStatusResponseQueue()

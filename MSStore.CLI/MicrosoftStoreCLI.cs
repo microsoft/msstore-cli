@@ -44,6 +44,7 @@ namespace MSStore.CLI
             AddCommand(new SettingsCommand());
             AddCommand(new AppsCommand());
             AddCommand(new SubmissionCommand());
+            AddCommand(new FlightsCommand());
             AddCommand(new InitCommand());
             AddCommand(new PackageCommand());
             AddCommand(new PublishCommand());
