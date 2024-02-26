@@ -6,7 +6,7 @@ using System.Collections.Generic;
 
 namespace MSStore.API.Packaged.Models
 {
-    public class DevCenterSubmission
+    public class DevCenterSubmission : IDevCenterSubmission
     {
         public string? Id { get; set; }
         public DevCenterApplicationCategory? ApplicationCategory { get; set; }
@@ -22,6 +22,7 @@ namespace MSStore.API.Packaged.Models
         public List<GamingOption>? GamingOptions { get; set; }
         public bool HasExternalInAppProducts { get; set; }
         public bool MeetAccessibilityGuidelines { get; set; }
+        public string? NotesForCertification { get; set; }
         public string? Status { get; set; }
         public StatusDetails? StatusDetails { get; set; }
         public string? FileUploadUrl { get; set; }

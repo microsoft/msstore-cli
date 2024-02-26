@@ -70,6 +70,28 @@ namespace MSStore.CLI.Helpers
             });
         }
 
+        public static async Task<DevCenterFlightSubmission?> CreateNewFlightSubmissionAsync(this IStorePackagedAPI storePackagedAPI, string productId, string flightId, ILogger logger, CancellationToken ct)
+        {
+            return await AnsiConsole.Status().StartAsync("Creating new Flight Submission", async ctx =>
+            {
+                try
+                {
+                    var flightSubmission = await storePackagedAPI.CreateFlightSubmissionAsync(productId, flightId, ct);
+
+                    ctx.SuccessStatus($"Flight Submission created.");
+                    logger.LogInformation("Flight Submission created. Id={FlightSubmissionId}", flightSubmission.Id);
+
+                    return flightSubmission;
+                }
+                catch (Exception err)
+                {
+                    logger.LogError(err, "Error while creating flight submission.");
+                    ctx.ErrorStatus("Error while creating flight submission. Please try again.");
+                    return null;
+                }
+            });
+        }
+
         public static async Task<DevCenterSubmission?> GetExistingSubmission(this IStorePackagedAPI storePackagedAPI, string appId, string submissionId, ILogger logger, CancellationToken ct)
         {
             return await AnsiConsole.Status().StartAsync("Retrieving existing Submission", async ctx =>

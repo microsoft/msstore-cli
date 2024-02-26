@@ -12,6 +12,8 @@ namespace MSStore.CLI.Commands.Flights
         {
             AddCommand(new Submission.GetCommand());
             AddCommand(new Submission.DeleteCommand());
+            AddCommand(new Submission.UpdateCommand());
+            AddCommand(new Submission.PublishCommand());
             this.SetDefaultHelpHandler();
         }
     }

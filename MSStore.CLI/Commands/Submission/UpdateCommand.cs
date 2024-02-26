@@ -92,7 +92,7 @@ namespace MSStore.CLI.Commands.Submission
 
                     if (submissionId == null)
                     {
-                        throw new MSStoreException($"Could not find submission with ID '{productId}'");
+                        throw new MSStoreException("Could not create new submission.");
                     }
                 }
 
