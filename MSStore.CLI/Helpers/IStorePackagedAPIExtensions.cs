@@ -182,13 +182,22 @@ namespace MSStore.CLI.Helpers
             return 0;
         }
 
-        public static async Task<bool> DeleteSubmissionAsync(this IStorePackagedAPI storePackagedAPI, string appId, string pendingSubmissionId, IBrowserLauncher browserLauncher, ILogger logger, CancellationToken ct)
+        public static async Task<bool> DeleteSubmissionAsync(this IStorePackagedAPI storePackagedAPI, string appId, string? flightId, string pendingSubmissionId, IBrowserLauncher browserLauncher, ILogger logger, CancellationToken ct)
         {
             return await AnsiConsole.Status().StartAsync("Deleting existing Submission", async ctx =>
             {
                 try
                 {
-                    var devCenterError = await storePackagedAPI.DeleteSubmissionAsync(appId, pendingSubmissionId, ct);
+                    DevCenterError? devCenterError;
+                    if (string.IsNullOrEmpty(flightId))
+                    {
+                        devCenterError = await storePackagedAPI.DeleteSubmissionAsync(appId, pendingSubmissionId, ct);
+                    }
+                    else
+                    {
+                        devCenterError = await storePackagedAPI.DeleteFlightSubmissionAsync(appId, flightId, pendingSubmissionId, ct);
+                    }
+
                     if (devCenterError != null)
                     {
                         AnsiConsole.WriteLine(devCenterError.Message ?? string.Empty);
@@ -273,7 +282,8 @@ namespace MSStore.CLI.Helpers
             // Do not delete if first submission
             if (pendingSubmissionId != null && app.LastPublishedApplicationSubmission != null)
             {
-                success = await storePackagedAPI.DeleteSubmissionAsync(app.Id, pendingSubmissionId, _browserLauncher, logger, ct);
+                // TODO: pass the flightId
+                success = await storePackagedAPI.DeleteSubmissionAsync(app.Id, null, pendingSubmissionId, _browserLauncher, logger, ct);
 
                 if (!success)
                 {
@@ -314,7 +324,8 @@ namespace MSStore.CLI.Helpers
                         AnsiConsole.MarkupLine("[yellow]The submission was in a failed state. We will delete it and create a new one.[/]");
                     }
 
-                    success = await storePackagedAPI.DeleteSubmissionAsync(app.Id, submission.Id, _browserLauncher, logger, ct);
+                    // TODO: pass the flightId
+                    success = await storePackagedAPI.DeleteSubmissionAsync(app.Id, null, submission.Id, _browserLauncher, logger, ct);
 
                     if (!success)
                     {

@@ -13,6 +13,7 @@ namespace MSStore.CLI.Commands
         {
             AddCommand(new ListCommand());
             AddCommand(new GetCommand());
+            AddCommand(new FlightSubmissionCommand());
             this.SetDefaultHelpHandler();
         }
     }

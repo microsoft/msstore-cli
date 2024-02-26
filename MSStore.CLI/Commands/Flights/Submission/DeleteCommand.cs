@@ -8,30 +8,22 @@ using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Logging;
 using MSStore.API;
+using MSStore.API.Packaged;
 using MSStore.CLI.Helpers;
 using MSStore.CLI.Services;
 using Spectre.Console;
 
-namespace MSStore.CLI.Commands.Submission
+namespace MSStore.CLI.Commands.Flights.Submission
 {
     internal class DeleteCommand : Command
     {
-        internal static readonly Option<bool> NoConfirmOption;
-
-        static DeleteCommand()
-        {
-            NoConfirmOption = new Option<bool>(
-                "--no-confirm",
-                () => false,
-                "Do not prompt for confirmation.");
-        }
-
         public DeleteCommand()
-            : base("delete", "Deletes the pending submission from the store.")
+            : base("delete", "Deletes the package flight submission.")
         {
             AddArgument(SubmissionCommand.ProductIdArgument);
-
-            AddOption(NoConfirmOption);
+            AddArgument(Flights.GetCommand.FlightIdArgument);
+            AddArgument(GetCommand.SubmissionIdArgument);
+            AddOption(Commands.Submission.DeleteCommand.NoConfirmOption);
         }
 
         public new class Handler : ICommandHandler
@@ -43,7 +35,8 @@ namespace MSStore.CLI.Commands.Submission
             private readonly TelemetryClient _telemetryClient;
 
             public string ProductId { get; set; } = null!;
-
+            public string FlightId { get; set; } = null!;
+            public string SubmissionId { get; set; } = null!;
             public bool? NoConfirm { get; set; }
 
             public Handler(ILogger<Handler> logger, IStoreAPIFactory storeAPIFactory, IConsoleReader consoleReader, IBrowserLauncher browserLauncher, TelemetryClient telemetryClient)
@@ -70,66 +63,52 @@ namespace MSStore.CLI.Commands.Submission
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
                 }
 
-                API.Packaged.IStorePackagedAPI storePackagedAPI = null!;
+                IStorePackagedAPI storePackagedAPI = null!;
 
-                var submissionId = await AnsiConsole.Status().StartAsync("Retrieving Application and Submission", async ctx =>
+                var flightSubmission = await AnsiConsole.Status().StartAsync("Retrieving Flight Submission", async ctx =>
                 {
                     try
                     {
                         storePackagedAPI = await _storeAPIFactory.CreatePackagedAsync(ct: ct);
 
-                        var application = await storePackagedAPI.GetApplicationAsync(ProductId, ct);
-
-                        if (application?.Id == null)
-                        {
-                            ctx.ErrorStatus($"Could not find application with ID '{ProductId}'");
-                            return null;
-                        }
-
-                        if (application.PendingApplicationSubmission?.Id != null)
-                        {
-                            ctx.SuccessStatus($"Found [green]Pending Submission[/].");
-                            return application.PendingApplicationSubmission.Id;
-                        }
-
-                        return null;
+                        return await storePackagedAPI.GetFlightSubmissionAsync(ProductId, FlightId, SubmissionId, ct);
                     }
                     catch (MSStoreHttpException err)
                     {
                         if (err.Response.StatusCode == System.Net.HttpStatusCode.Forbidden)
                         {
-                            ctx.ErrorStatus("Could not delete the submission. Please check the ProductId.");
-                            _logger.LogError(err, "Could not delete the submission. Please check the ProductId.");
+                            ctx.ErrorStatus("Could not find the flight submission. Please check the ProductId/FlightId/SubmissionId.");
+                            _logger.LogError(err, "Could not find the flight submission. Please check the ProductId/FlightId/SubmissionId.");
                         }
                         else
                         {
-                            ctx.ErrorStatus("Error while deleting submission.");
-                            _logger.LogError(err, "Error while deleting application's submission.");
+                            ctx.ErrorStatus("Error while retrieving flight submission.");
+                            _logger.LogError(err, "Error while retrieving flight submission for Application.");
                         }
 
                         return null;
                     }
                     catch (Exception err)
                     {
-                        _logger.LogError(err, "Error while retrieving submission.");
+                        _logger.LogError(err, "Error while retrieving flight submission.");
                         ctx.ErrorStatus(err);
                         return null;
                     }
                 });
 
-                if (submissionId == null)
+                if (flightSubmission == null)
                 {
-                    AnsiConsole.WriteLine("No pending submission found.");
+                    AnsiConsole.WriteLine("Could not find flight submission.");
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
                 }
 
-                AnsiConsole.WriteLine($"Found Pending Submission with Id '{submissionId}'");
-                if (NoConfirm == false && !await _consoleReader.YesNoConfirmationAsync("Do you want to delete the pending submission?", ct))
+                AnsiConsole.WriteLine($"Found Flight Submission with Id '{flightSubmission.Id}'");
+                if (NoConfirm == false && !await _consoleReader.YesNoConfirmationAsync("Do you want to delete the pending flight submission?", ct))
                 {
                     return -2;
                 }
 
-                var success = await storePackagedAPI.DeleteSubmissionAsync(ProductId, null, submissionId, _browserLauncher, _logger, ct);
+                var success = await storePackagedAPI.DeleteSubmissionAsync(ProductId, FlightId, SubmissionId, _browserLauncher, _logger, ct);
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, success ? 0 : -1, ct);
             }

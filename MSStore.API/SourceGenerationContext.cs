@@ -48,6 +48,8 @@ namespace MSStore.API.Models
     [JsonSerializable(typeof(DevCenterCommitResponse))]
     [JsonSerializable(typeof(DevCenterSubmissionStatusResponse))]
     [JsonSerializable(typeof(PagedResponse<DevCenterFlight>))]
+    [JsonSerializable(typeof(DevCenterFlightSubmission))]
+    [JsonSerializable(typeof(DevCenterFlightSubmissionUpdate))]
     public partial class SourceGenerationContext : JsonSerializerContext
     {
         private static SourceGenerationContext? _default;
