@@ -34,6 +34,7 @@ namespace MSStore.API.Packaged
         private static readonly CompositeFormat DevCenterGetFlightSubmissionTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}/flights/{2}/submissions/{3}");
         private static readonly CompositeFormat DevCenterDeleteFlightSubmissionTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}/flights/{2}/submissions/{3}");
         private static readonly CompositeFormat DevCenterCommitFlightSubmissionTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}/flights/{2}/submissions/{3}/commit");
+        private static readonly CompositeFormat DevCenterFlightSubmissionStatusTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}/flights/{2}/submissions/{3}/status");
 
         private SubmissionClient? _devCenterClient;
 
@@ -415,6 +416,23 @@ namespace MSStore.API.Packaged
                     ct);
 
             return JsonSerializer.Deserialize(ret, typeof(DevCenterCommitResponse), SourceGenerationContext.GetCustom()) as DevCenterCommitResponse;
+        }
+
+        public async Task<DevCenterSubmissionStatusResponse> GetFlightSubmissionStatusAsync(string productId, string flightId, string submissionId, CancellationToken ct = default)
+        {
+            AssertClientInitialized();
+
+            return await _devCenterClient.InvokeAsync<DevCenterSubmissionStatusResponse>(
+                HttpMethod.Get,
+                string.Format(
+                    CultureInfo.InvariantCulture,
+                    DevCenterFlightSubmissionStatusTemplate,
+                    DevCenterVersion,
+                    productId,
+                    flightId,
+                    submissionId),
+                null,
+                ct);
         }
     }
 }

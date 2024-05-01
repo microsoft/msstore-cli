@@ -12,7 +12,7 @@ namespace MSStore.API.Packaged.Models
         public string? FlightId { get; set; }
         public string? Status { get; set; }
         public StatusDetails? StatusDetails { get; set; }
-        public List<FlightPackage>? FlightPackages { get; set; }
+        public List<ApplicationPackage>? FlightPackages { get; set; }
         public PackageDeliveryOptions? PackageDeliveryOptions { get; set; }
         public string? FileUploadUrl { get; set; }
         public string? TargetPublishMode { get; set; }

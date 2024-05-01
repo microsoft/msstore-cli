@@ -20,6 +20,15 @@ namespace MSStore.CLI.Commands
 {
     internal class PublishCommand : Command
     {
+        internal static readonly Option<string> FlightIdOption;
+
+        static PublishCommand()
+        {
+            FlightIdOption = new Option<string>(
+                aliases: new string[] { "--flightId", "-f" },
+                description: "Specifies the Flight Id where the package will be published.");
+        }
+
         public PublishCommand()
             : base("publish", "Publishes your Application to the Microsoft Store.")
         {
@@ -54,6 +63,8 @@ namespace MSStore.CLI.Commands
                 description: "Specifies the Application Id. Only needed if the project has not been initialized before with the 'init' command.");
 
             AddOption(appIdOption);
+
+            AddOption(FlightIdOption);
         }
 
         public new class Handler : ICommandHandler
@@ -66,6 +77,8 @@ namespace MSStore.CLI.Commands
             public string PathOrUrl { get; set; } = null!;
 
             public string? AppId { get; set; }
+
+            public string? FlightId { get; set; }
 
             public DirectoryInfo? InputDirectory { get; set; } = null!;
 
@@ -135,7 +148,7 @@ namespace MSStore.CLI.Commands
                 }
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(
-                    await projectPublisher.PublishAsync(PathOrUrl, app, InputDirectory, storePackagedAPI, ct), props, ct);
+                    await projectPublisher.PublishAsync(PathOrUrl, app, FlightId, InputDirectory, storePackagedAPI, ct), props, ct);
             }
         }
     }

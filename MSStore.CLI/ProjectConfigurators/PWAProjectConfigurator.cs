@@ -319,7 +319,7 @@ namespace MSStore.CLI.ProjectConfigurators
             return Task.FromResult((0, (DirectoryInfo?)new DirectoryInfo(pathOrUrl)));
         }
 
-        public async Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, DirectoryInfo? inputDirectory, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public async Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, string? flightId, DirectoryInfo? inputDirectory, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             Uri? uri = GetUri(pathOrUrl);
 
@@ -385,6 +385,7 @@ namespace MSStore.CLI.ProjectConfigurators
 
             return await storePackagedAPI.PublishAsync(
                 app,
+                flightId,
                 (listingLanguage, ct) => GetFirstSubmissionDataAsync(listingLanguage, uri, ct),
                 AllowTargetFutureDeviceFamilies,
                 output,

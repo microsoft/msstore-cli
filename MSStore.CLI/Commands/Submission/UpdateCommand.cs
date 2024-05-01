@@ -87,7 +87,7 @@ namespace MSStore.CLI.Commands.Submission
                 {
                     AnsiConsole.MarkupLine("Could not find an existing submission. [b green]Creating new submission[/].");
 
-                    var submission = await storePackagedAPI.CreateNewSubmissionAsync(application.Id, logger, ct);
+                    var submission = await storePackagedAPI.CreateNewSubmissionAsync(application.Id, null, logger, ct);
                     submissionId = submission?.Id;
 
                     if (submissionId == null)

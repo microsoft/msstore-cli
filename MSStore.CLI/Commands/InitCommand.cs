@@ -116,6 +116,8 @@ namespace MSStore.CLI.Commands
 
             AddOption(publish);
 
+            AddOption(PublishCommand.FlightIdOption);
+
             AddOption(Output);
 
             AddOption(Arch);
@@ -143,6 +145,8 @@ namespace MSStore.CLI.Commands
             public bool? Package { get; set; }
 
             public bool? Publish { get; set; }
+
+            public string? FlightId { get; set; }
 
             public Version? Version { get; set; } = null!;
 
@@ -356,7 +360,7 @@ namespace MSStore.CLI.Commands
                         return await _telemetryClient.TrackCommandEventAsync<Handler>(-5, props, ct);
                     }
 
-                    result = await projectPublisher.PublishAsync(PathOrUrl, app, outputDirectory, storePackagedAPI, ct);
+                    result = await projectPublisher.PublishAsync(PathOrUrl, app, FlightId, outputDirectory, storePackagedAPI, ct);
                 }
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(result, props, ct);
