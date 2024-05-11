@@ -54,13 +54,12 @@ jobs:
         CollectCoverage: true
         CoverletOutputFormat: cobertura
       run: dotnet test MSStore.CLI.sln --no-restore /p:Configuration=Release --logger trx & wait
-    - name: Display test results
-      uses: dorny/test-reporter@v1
-      if: always()
+    - name: Publish test results
+      if: ${{ !env.ACT }} && (success() || failure())
+      uses: actions/upload-artifact@v3
       with:
-        name: Test - Results - ${{ matrix.os }}
+        name: test-results-${{ matrix.os }}
         path: MSStore.CLI.UnitTests/TestResults/*.trx
-        reporter: dotnet-trx
     - name: Install ReportGenerator
       run: dotnet tool install --global dotnet-reportgenerator-globaltool --version 5.2.2
     - name: Merge code coverage files
