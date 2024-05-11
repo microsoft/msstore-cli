@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Net.Http;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -53,6 +54,44 @@ namespace MSStore.API.Packaged
             string? devCenterUrl,
             string? devCenterScope,
             ILogger? logger = null)
+            : this(configurations, devCenterUrl, devCenterScope, logger)
+        {
+            ClientSecret = clientSecret;
+            Certificate = null;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="StorePackagedAPI"/> class.
+        /// </summary>
+        /// <param name="configurations">An instance of ClientConfiguration that contains all parameters populated</param>
+        /// <param name="certificate">The client certificate of the Azure AD Application that is registered to call Store APIs</param>
+        /// <param name="devCenterUrl">The DevCenter URL used to make the API calls.</param>
+        /// <param name="devCenterScope">The Scope from DevCenter that will be used to request the access token.</param>
+        /// <param name="logger">ILogger for logs.</param>
+        public StorePackagedAPI(
+            StoreConfigurations configurations,
+            X509Certificate2 certificate,
+            string? devCenterUrl,
+            string? devCenterScope,
+            ILogger? logger = null)
+            : this(configurations, devCenterUrl, devCenterScope, logger)
+        {
+            ClientSecret = null;
+            Certificate = certificate;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="StorePackagedAPI"/> class.
+        /// </summary>
+        /// <param name="configurations">An instance of ClientConfiguration that contains all parameters populated</param>
+        /// <param name="devCenterUrl">The DevCenter URL used to make the API calls.</param>
+        /// <param name="devCenterScope">The Scope from DevCenter that will be used to request the access token.</param>
+        /// <param name="logger">ILogger for logs.</param>
+        private StorePackagedAPI(
+            StoreConfigurations configurations,
+            string? devCenterUrl,
+            string? devCenterScope,
+            ILogger? logger = null)
         {
             if (configurations.ClientId == null)
             {
@@ -65,7 +104,6 @@ namespace MSStore.API.Packaged
             }
 
             Config = configurations;
-            ClientSecret = clientSecret;
             DevCenterUrl = string.IsNullOrEmpty(devCenterUrl) ? "https://manage.devcenter.microsoft.com" : devCenterUrl;
             DevCenterScope = string.IsNullOrEmpty(devCenterScope) ? "https://manage.devcenter.microsoft.com/.default" : devCenterScope;
             Logger = logger;
@@ -73,7 +111,8 @@ namespace MSStore.API.Packaged
 
         private ILogger? Logger { get; }
 
-        public string ClientSecret { get; }
+        public string? ClientSecret { get; }
+        public X509Certificate2? Certificate { get; }
         public string DevCenterUrl { get; set; }
         public string DevCenterScope { get; set; }
 
@@ -98,15 +137,29 @@ namespace MSStore.API.Packaged
         {
             // Get authorization token.
             Logger?.LogInformation("Getting DevCenter authorization token");
-            var devCenterAccessToken = await SubmissionClient.GetClientCredentialAccessTokenAsync(
-                Config.TenantId!.Value.ToString(),
-                Config.ClientId!.Value.ToString(),
-                ClientSecret,
-                DevCenterScope,
-                Logger,
-                ct);
+            Microsoft.Identity.Client.AuthenticationResult? devCenterAccessToken = null;
+            if (Certificate != null)
+            {
+                devCenterAccessToken = await SubmissionClient.GetClientCredentialAccessTokenAsync(
+                    Config.TenantId!.Value.ToString(),
+                    Config.ClientId!.Value.ToString(),
+                    Certificate,
+                    DevCenterScope,
+                    Logger,
+                    ct);
+            }
+            else if (ClientSecret != null)
+            {
+                devCenterAccessToken = await SubmissionClient.GetClientCredentialAccessTokenAsync(
+                    Config.TenantId!.Value.ToString(),
+                    Config.ClientId!.Value.ToString(),
+                    ClientSecret,
+                    DevCenterScope,
+                    Logger,
+                    ct);
+            }
 
-            if (string.IsNullOrEmpty(devCenterAccessToken.AccessToken))
+            if (string.IsNullOrEmpty(devCenterAccessToken?.AccessToken))
             {
                 Logger?.LogError("DevCenter Access Token should not be null");
                 return;
