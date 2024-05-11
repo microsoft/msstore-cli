@@ -52,7 +52,7 @@ namespace MSStore.CLI.Services
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public async Task<bool> ConfigureAsync(bool askConfirmation, Guid? tenantId = null, string? sellerId = null, Guid? clientId = null, string? clientSecret = null, CancellationToken ct = default)
+        public async Task<bool> ConfigureAsync(bool askConfirmation, Guid? tenantId = null, string? sellerId = null, Guid? clientId = null, string? clientSecret = null, string? certificateThumbprint = null, string? certificateFilePath = null, string? certificatePassword = null, CancellationToken ct = default)
         {
             if (askConfirmation &&
                 !await _consoleReader.YesNoConfirmationAsync(
@@ -94,7 +94,19 @@ namespace MSStore.CLI.Services
                 config.ClientId = clientId;
             }
 
-            if (config.ClientId == null || clientSecret == null)
+            if (certificateThumbprint != null)
+            {
+                config.CertificateThumbprint = certificateThumbprint;
+            }
+
+            if (certificateFilePath != null)
+            {
+                config.CertificateFilePath = certificateFilePath;
+            }
+
+            if (config.ClientId == null || (clientSecret == null &&
+                                        config.CertificateThumbprint == null &&
+                                        config.CertificateFilePath == null))
             {
                 string GetDisplayName(string sufix) => $"MSStoreCLIAccess - {sufix}";
                 string RandomString() => Path.GetFileNameWithoutExtension(Path.GetRandomFileName());
@@ -275,7 +287,18 @@ namespace MSStore.CLI.Services
                 return false;
             }
 
-            _credentialManager.WriteCredential(config.ClientId.Value.ToString(), clientSecret);
+            if (clientSecret != null)
+            {
+                _credentialManager.WriteCredential(config.ClientId.Value.ToString(), clientSecret);
+            }
+            else if (certificatePassword != null)
+            {
+                _credentialManager.WriteCredential(config.ClientId.Value.ToString(), certificatePassword);
+            }
+            else
+            {
+                _credentialManager.ClearCredentials(config.ClientId.Value.ToString());
+            }
 
             config.SellerId = await RetrieveSellerId(sellerId, ct);
             if (config.SellerId == null)

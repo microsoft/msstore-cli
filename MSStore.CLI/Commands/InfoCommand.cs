@@ -53,6 +53,16 @@ namespace MSStore.CLI.Commands
                 table.AddRow($"[bold u]Tenant Id[/]", $"[bold u]{config.TenantId}[/]");
                 table.AddRow($"[bold u]Client Id[/]", $"[bold u]{config.ClientId}[/]");
 
+                if (!string.IsNullOrEmpty(config.CertificateThumbprint))
+                {
+                    table.AddRow($"[bold u]Certificate Thumbprint[/]", $"[bold u]{config.CertificateThumbprint}[/]");
+                }
+
+                if (!string.IsNullOrEmpty(config.CertificateFilePath))
+                {
+                    table.AddRow($"[bold u]Certificate Path[/]", $"[bold u]{config.CertificateFilePath}[/]");
+                }
+
                 bool verbose = context.ParseResult.IsVerbose();
 
                 if (verbose && !string.IsNullOrEmpty(config.StoreApiServiceUrl))

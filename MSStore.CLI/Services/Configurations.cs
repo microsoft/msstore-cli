@@ -13,6 +13,10 @@ namespace MSStore.CLI.Services
         public Guid? TenantId { get; set; }
         public Guid? ClientId { get; set; }
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? CertificateThumbprint { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? CertificateFilePath { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? StoreApiServiceUrl { get; set; }
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? StoreApiScope { get; set; }
