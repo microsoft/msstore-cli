@@ -8,6 +8,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
 using System.Net.Http;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -48,6 +49,37 @@ namespace MSStore.API
             string? serviceUrl,
             string? scope,
             ILogger? logger = null)
+            : this(configurations, serviceUrl, scope, logger)
+        {
+            ClientSecret = clientSecret;
+            Certificate = null;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="StoreAPI"/> class.
+        /// </summary>
+        /// <param name="configurations">An instance of ClientConfiguration that contains all parameters populated</param>
+        /// <param name="certificate">The client certificate of the Azure AD Application that is registered to call Store APIs</param>
+        /// <param name="serviceUrl">The Store API URL used to make the API calls.</param>
+        /// <param name="scope">The Scope from the Store APIs that will be used to request the access token.</param>
+        /// <param name="logger">ILogger for logs.</param>
+        public StoreAPI(
+            StoreConfigurations configurations,
+            X509Certificate2 certificate,
+            string? serviceUrl,
+            string? scope,
+            ILogger? logger = null)
+            : this(configurations, serviceUrl, scope, logger)
+        {
+            ClientSecret = null;
+            Certificate = certificate;
+        }
+
+        private StoreAPI(
+            StoreConfigurations configurations,
+            string? serviceUrl,
+            string? scope,
+            ILogger? logger = null)
         {
             if (configurations.SellerId == null)
             {
@@ -65,7 +97,6 @@ namespace MSStore.API
             }
 
             Config = configurations;
-            ClientSecret = clientSecret;
             ServiceUrl = string.IsNullOrEmpty(serviceUrl) ? "https://api.store.microsoft.com" : serviceUrl;
             Scope = string.IsNullOrEmpty(scope) ? "https://api.store.microsoft.com/.default" : scope;
             Logger = logger;
@@ -73,7 +104,8 @@ namespace MSStore.API
 
         private ILogger? Logger { get; }
 
-        public string ClientSecret { get; }
+        public string? ClientSecret { get; }
+        public X509Certificate2? Certificate { get; }
         public string ServiceUrl { get; set; }
         public string Scope { get; set; }
 
@@ -98,15 +130,29 @@ namespace MSStore.API
         {
             // Get authorization token.
             Logger?.LogInformation("Getting authorization token");
-            var accessToken = await SubmissionClient.GetClientCredentialAccessTokenAsync(
-                Config.TenantId!.Value.ToString(),
-                Config.ClientId!.Value.ToString(),
-                ClientSecret,
-                Scope,
-                Logger,
-                ct);
+            Microsoft.Identity.Client.AuthenticationResult? accessToken = null;
+            if (Certificate != null)
+            {
+                accessToken = await SubmissionClient.GetClientCredentialAccessTokenAsync(
+                    Config.TenantId!.Value.ToString(),
+                    Config.ClientId!.Value.ToString(),
+                    Certificate,
+                    Scope,
+                    Logger,
+                    ct);
+            }
+            else if (!string.IsNullOrEmpty(ClientSecret))
+            {
+                accessToken = await SubmissionClient.GetClientCredentialAccessTokenAsync(
+                    Config.TenantId!.Value.ToString(),
+                    Config.ClientId!.Value.ToString(),
+                    ClientSecret,
+                    Scope,
+                    Logger,
+                    ct);
+            }
 
-            if (string.IsNullOrEmpty(accessToken.AccessToken))
+            if (string.IsNullOrEmpty(accessToken?.AccessToken))
             {
                 Logger?.LogError("Access Token should not be null");
                 return;

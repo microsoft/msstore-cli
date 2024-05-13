@@ -173,5 +173,55 @@ namespace MSStore.CLI.UnitTests
 
             result.Should().Contain("Awesome! It seems to be working!");
         }
+
+        [TestMethod]
+        public async Task ReconfigureCommandWithAllInfoAndCertPathShouldReturnZero()
+        {
+            var result = await ParseAndInvokeAsync(
+                new string[]
+                {
+                    "reconfigure",
+                    "--tenantId",
+                    DefaultOrganization.Id!.Value.ToString(),
+                    "--sellerId",
+                    "12345",
+                    "--clientId",
+                    "3F0BCAEF-6334-48CF-837F-81CB0F1F2C45",
+                    "--certificateFilePath",
+                    "C:\\x.pfx"
+                });
+
+            TokenManager
+                .Verify(x => x.SelectAccountAsync(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
+            TokenManager
+                .Verify(x => x.GetTokenAsync(It.IsAny<string[]>(), It.IsAny<CancellationToken>()), Times.Never);
+
+            result.Should().Contain("Awesome! It seems to be working!");
+        }
+
+        [TestMethod]
+        public async Task ReconfigureCommandWithAllInfoAndCertThumbprintShouldReturnZero()
+        {
+            var result = await ParseAndInvokeAsync(
+                new string[]
+                {
+                    "reconfigure",
+                    "--tenantId",
+                    DefaultOrganization.Id!.Value.ToString(),
+                    "--sellerId",
+                    "12345",
+                    "--clientId",
+                    "3F0BCAEF-6334-48CF-837F-81CB0F1F2C45",
+                    "--certificateThumbprint",
+                    "abc"
+                });
+
+            TokenManager
+                .Verify(x => x.SelectAccountAsync(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
+            TokenManager
+                .Verify(x => x.GetTokenAsync(It.IsAny<string[]>(), It.IsAny<CancellationToken>()), Times.Never);
+
+            result.Should().Contain("Awesome! It seems to be working!");
+        }
     }
 }
