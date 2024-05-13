@@ -55,8 +55,17 @@ namespace MSStore.CLI.ProjectConfigurators
 
         public override string ToString() => "PWA";
 
-        public string[] PackageFilesExtensionInclude => new[] { ".appxbundle", ".msixbundle", ".msix", ".appx" };
-        public string[]? PackageFilesExtensionExclude { get; } = new[] { ".sideload.msix" };
+        public string[] PackageFilesExtensionInclude => new[]
+        {
+            ".appxbundle",
+            ".msixbundle",
+            ".msix",
+            ".appx"
+        };
+        public string[]? PackageFilesExtensionExclude { get; } = new[]
+        {
+            ".sideload.msix"
+        };
         public SearchOption PackageFilesSearchOption { get; } = SearchOption.AllDirectories;
         public IEnumerable<BuildArch>? DefaultBuildArchs { get; }
 
@@ -229,13 +238,11 @@ namespace MSStore.CLI.ProjectConfigurators
                                 AllowSigning = true,
                                 ClassicPackage = new ClassicPackage
                                 {
-                                    Generate = true,
-                                    Version = classicVersion.ToString()
+                                    Generate = true, Version = classicVersion.ToString()
                                 },
                                 Publisher = new Publisher
                                 {
-                                    DisplayName = publisherDisplayName,
-                                    CommonName = app.PublisherName
+                                    DisplayName = publisherDisplayName, CommonName = app.PublisherName
                                 },
                                 ResourceLanguage = "en-us", // TODO: parametrize this
                             },
@@ -284,8 +291,7 @@ namespace MSStore.CLI.ProjectConfigurators
             await _pwaAppInfoManager.SaveAsync(
                 new PWAAppInfo
                 {
-                    AppId = app.Id,
-                    Uri = uri,
+                    AppId = app.Id, Uri = uri,
                 },
                 zipDir,
                 ct);
@@ -319,7 +325,7 @@ namespace MSStore.CLI.ProjectConfigurators
             return Task.FromResult((0, (DirectoryInfo?)new DirectoryInfo(pathOrUrl)));
         }
 
-        public async Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, DirectoryInfo? inputDirectory, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public async Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, DirectoryInfo? inputDirectory, bool noCommit, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             Uri? uri = GetUri(pathOrUrl);
 
@@ -374,8 +380,8 @@ namespace MSStore.CLI.ProjectConfigurators
             }
 
             var packageFiles = pwaBuilderExtractedBundle.GetFiles("*.*", PackageFilesSearchOption)
-                                     .Where(f => PackageFilesExtensionInclude.Contains(f.Extension, StringComparer.OrdinalIgnoreCase)
-                                             && PackageFilesExtensionExclude?.All(e => !f.Name.EndsWith(e, StringComparison.OrdinalIgnoreCase)) != false);
+                .Where(f => PackageFilesExtensionInclude.Contains(f.Extension, StringComparer.OrdinalIgnoreCase)
+                    && PackageFilesExtensionExclude?.All(e => !f.Name.EndsWith(e, StringComparison.OrdinalIgnoreCase)) != false);
 
             if (packageFiles?.Any() != true)
             {
@@ -389,6 +395,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 AllowTargetFutureDeviceFamilies,
                 output,
                 packageFiles,
+                noCommit,
                 _browserLauncher,
                 _consoleReader,
                 _zipFileManager,

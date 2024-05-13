@@ -132,8 +132,8 @@ namespace MSStore.CLI.Helpers
                 yield return submissionStatus;
             }
             while ("CommitStarted".Equals(submissionStatus.Status, StringComparison.Ordinal)
-                    && submissionStatus.StatusDetails?.Errors.IsNullOrEmpty() == true
-                    && submissionStatus.StatusDetails?.CertificationReports.IsNullOrEmpty() == true);
+                   && submissionStatus.StatusDetails?.Errors.IsNullOrEmpty() == true
+                   && submissionStatus.StatusDetails?.CertificationReports.IsNullOrEmpty() == true);
         }
 
         public static async Task<DevCenterSubmissionStatusResponse?> PollSubmissionStatusAsync(this IStorePackagedAPI storePackagedAPI, string productId, string submissionId, bool waitFirst, ILogger? logger, CancellationToken ct = default)
@@ -165,7 +165,7 @@ namespace MSStore.CLI.Helpers
                     await browserLauncher.OpenBrowserAsync($"https://partner.microsoft.com/dashboard/products/{productId}/submissions/{submissionId}/ageratings", true, ct);
                 }
                 else if (lastSubmissionStatus.StatusDetails?.Errors?.Count == 1 &&
-                    error?.Code == "InvalidState")
+                         error?.Code == "InvalidState")
                 {
                     AnsiConsole.WriteLine("Submission has failed. Submission has active validation errors which cannot be exposed via API.");
 
@@ -291,7 +291,22 @@ namespace MSStore.CLI.Helpers
             return application;
         }
 
-        public static async Task<int> PublishAsync(this IStorePackagedAPI storePackagedAPI, DevCenterApplication app, FirstSubmissionDataCallback firstSubmissionDataCallback, AllowTargetFutureDeviceFamily[] allowTargetFutureDeviceFamilies, DirectoryInfo output, IEnumerable<FileInfo> input, IBrowserLauncher _browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, IEnvironmentInformationService environmentInformationService, ILogger logger, CancellationToken ct)
+        public static async Task<int> PublishAsync(
+            this IStorePackagedAPI storePackagedAPI,
+            DevCenterApplication app,
+            FirstSubmissionDataCallback firstSubmissionDataCallback,
+            AllowTargetFutureDeviceFamily[] allowTargetFutureDeviceFamilies,
+            DirectoryInfo output,
+            IEnumerable<FileInfo> input,
+            bool noCommit,
+            IBrowserLauncher _browserLauncher,
+            IConsoleReader consoleReader,
+            IZipFileManager zipFileManager,
+            IFileDownloader fileDownloader,
+            IAzureBlobManager azureBlobManager,
+            IEnvironmentInformationService environmentInformationService,
+            ILogger logger,
+            CancellationToken ct)
         {
             if (app?.Id == null)
             {
@@ -440,6 +455,12 @@ namespace MSStore.CLI.Helpers
                 return -1;
             }
 
+            if (noCommit)
+            {
+                AnsiConsole.WriteLine("Skipping submission commit.");
+                return 0;
+            }
+
             var submissionCommit = await storePackagedAPI.CommitSubmissionAsync(app.Id, submission.Id, ct);
 
             if (submissionCommit == null)
@@ -506,8 +527,7 @@ namespace MSStore.CLI.Helpers
 
                             var newApplicationPackage = new ApplicationPackage
                             {
-                                FileStatus = FileStatus.PendingUpload,
-                                FileName = file.Name
+                                FileStatus = FileStatus.PendingUpload, FileName = file.Name
                             };
 
                             submission.ApplicationPackages.Add(newApplicationPackage);
@@ -525,9 +545,9 @@ namespace MSStore.CLI.Helpers
                                 if (listing.Value?.BaseListing?.Images?.Count > 0)
                                 {
                                     var imagesToDownload = listing.Value.BaseListing.Images.Where(i =>
-                                            i.FileStatus == FileStatus.PendingUpload &&
-                                            i.FileName != null &&
-                                            i.FileName.StartsWith("http", StringComparison.OrdinalIgnoreCase));
+                                        i.FileStatus == FileStatus.PendingUpload &&
+                                        i.FileName != null &&
+                                        i.FileName.StartsWith("http", StringComparison.OrdinalIgnoreCase));
 
                                     if (imagesToDownload.Any())
                                     {
@@ -674,8 +694,7 @@ namespace MSStore.CLI.Helpers
                     {
                         BaseListing = new BaseListing
                         {
-                            Title = app.PrimaryName,
-                            Description = submissionData.Description,
+                            Title = app.PrimaryName, Description = submissionData.Description,
                         }
                     };
 
@@ -687,9 +706,7 @@ namespace MSStore.CLI.Helpers
                         {
                             listing.BaseListing.Images.Add(new Image
                             {
-                                FileName = image.FileName,
-                                FileStatus = FileStatus.PendingUpload,
-                                ImageType = image.ImageType.ToString()
+                                FileName = image.FileName, FileStatus = FileStatus.PendingUpload, ImageType = image.ImageType.ToString()
                             });
                         }
                     }
