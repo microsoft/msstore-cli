@@ -122,7 +122,9 @@ namespace MSStore.CLI
             }
 
             var secret = credentialManager.ReadCredential(config.ClientId.Value.ToString());
-            if (string.IsNullOrEmpty(secret))
+            if (string.IsNullOrEmpty(config.CertificateFilePath)
+                && string.IsNullOrEmpty(config.CertificateThumbprint)
+                && string.IsNullOrEmpty(secret))
             {
                 AnsiConsole.MarkupLine("We could not find credentials that match your configurations.");
                 logger.LogCritical("Secret is empty");
