@@ -87,7 +87,7 @@ extends:
                     version: 6.0.x
               - script: mv -f $(Build.SourcesDirectory)/.pipelines/release-nuget.config ./nuget.config
                 displayName: Add release package source
-              - task: NuGetAuthenticate@0
+              - task: NuGetAuthenticate@1
               - script: dotnet restore MSStore.CLI.sln /p:Configuration=${{ dotnet_config }}
                 displayName: Restore dependencies
               - template: ./.pipelines/templates/build-nuget.yaml@self
@@ -138,7 +138,7 @@ extends:
                     jsonTargetFiles: MSStore.CLI/config.json
                     xmlTargetFiles: ''
                     xmlTransformationRules: ''
-                - task: NuGetAuthenticate@0
+                - task: NuGetAuthenticate@1
                 - script: dotnet restore MSStore.CLI -r ${{ pool.dotnet_runtime }}-${{ platform }} /p:Configuration=${{ dotnet_config }} /p:PublishReadyToRun=true
                   displayName: Restore CLI
                 - template: ./.pipelines/templates/build-cli.yaml@self
