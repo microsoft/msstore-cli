@@ -49,5 +49,15 @@ namespace MSStore.CLI.UnitTests
 
             result.Should().Contain("Current Config");
         }
+
+        [TestMethod]
+        public async Task InfoCommandShouldReturnZeroWithCert()
+        {
+            FakeLoginWithCert();
+
+            var result = await ParseAndInvokeAsync(new[] { "info" });
+
+            result.Should().Contain("Current Config");
+        }
     }
 }

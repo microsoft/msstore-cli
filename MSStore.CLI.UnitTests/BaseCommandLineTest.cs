@@ -342,6 +342,22 @@ namespace MSStore.CLI.UnitTests
             Secrets.Add("testSecret");
         }
 
+        protected void FakeLoginWithCert(string? publisherDisplayName = null)
+        {
+            FakeConfigurationManager
+                .Setup(x => x.LoadAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Configurations
+                {
+                    SellerId = 1,
+                    TenantId = new Guid("41261775-DB6D-4B44-9A36-7EB8565C7D22"),
+                    ClientId = new Guid("3F0BCAEF-6334-48CF-837F-81CB0F1F2C45"),
+                    CertificateThumbprint = "abc",
+                    PublisherDisplayName = publisherDisplayName
+                });
+            UserNames.Add("3F0BCAEF-6334-48CF-837F-81CB0F1F2C45");
+            Secrets.Add(string.Empty);
+        }
+
         internal void AddDefaultFakeAccount()
         {
             AddFakeAccount(new AccountEnrollment
