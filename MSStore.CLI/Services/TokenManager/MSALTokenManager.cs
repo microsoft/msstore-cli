@@ -9,6 +9,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Identity.Client;
+#if WINDOWS
+using Microsoft.Identity.Client.Broker;
+#endif
 using Microsoft.Identity.Client.Extensions.Msal;
 using Spectre.Console;
 
@@ -73,7 +76,10 @@ namespace MSStore.CLI.Services.TokenManager
                 .Create(ClientId)
                 .WithDefaultRedirectUri()
 #if WINDOWS
-                .WithBroker()
+                .WithBroker(new BrokerOptions(BrokerOptions.OperatingSystems.Windows)
+                {
+                    Title = "Microsoft Store Developer CLI"
+                })
                 .WithParentActivityOrWindow(Helpers.NativeMethods.GetConsoleOrTerminalWindow)
 #endif
                 .Build();
