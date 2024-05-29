@@ -38,23 +38,33 @@ steps:
 - script: dotnet build MSStore.CLI.sln --no-restore /p:Configuration=${{ parameters.dotnet_configuration }}
   displayName: Build
 - task: DotNetCoreCLI@2
-  displayName: 'Tests'
+  displayName: 'Tests net8.0'
   env:
-    CollectCoverage: true
-    CoverletOutputFormat: cobertura
     DISPLAY: :0.0
   inputs:
-    command: 'test'
+    command: 'run'
     projects: '**/*[Tt]est*/*.csproj'
-    publishTestResults: true
-    arguments: '--configuration ${{ parameters.dotnet_configuration }}'
+    arguments: '-f net8.0 --no-build -c ${{ parameters.dotnet_configuration }} --coverage --coverage-output-format cobertura --report-trx'
+- task: DotNetCoreCLI@2
+  displayName: 'Tests net8.0-windows10.0.17763.0'
+  condition: startsWith(variables.AgentOS, 'Windows_NT')
+  env:
+    DISPLAY: :0.0
+  inputs:
+    command: 'run'
+    projects: '**/*[Tt]est*/*.csproj'
+    arguments: '-f net8.0-windows10.0.17763.0 --no-build -c ${{ parameters.dotnet_configuration }} --coverage --coverage-output-format cobertura --report-trx'
+- task: PublishTestResults@2
+  inputs:
+    testResultsFormat: 'VSTest'
+    testResultsFiles: '$(Build.SourcesDirectory)/MSStore.CLI.UnitTests/**/TestResults/*.trx'
 - task: DotNetCoreCLI@2
   displayName: 'Install ReportGenerator'
   inputs:
     command: custom
     custom: tool
-    arguments: 'install --global dotnet-reportgenerator-globaltool --version 5.2.2'
-- script: reportgenerator "-reports:$(Build.SourcesDirectory)/**/*coverage.*.cobertura.xml" "-targetdir:$(Build.SourcesDirectory)/report" "-reporttypes:Cobertura" "-filefilters:-*GenerationContext*.g.cs"
+    arguments: 'install --global dotnet-reportgenerator-globaltool --version 5.3.4'
+- script: reportgenerator "-reports:$(Build.SourcesDirectory)/**/*.cobertura.xml" "-targetdir:$(Build.SourcesDirectory)/report" "-reporttypes:Cobertura" "-filefilters:-*GenerationContext*.g.cs"
   displayName: Merge code coverage files
 - task: PublishCodeCoverageResults@1
   displayName: 'Publish code coverage results'
