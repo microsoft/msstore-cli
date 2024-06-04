@@ -39,7 +39,7 @@ namespace MSStore.API
         /// Initializes a new instance of the <see cref="StoreAPI"/> class.
         /// </summary>
         /// <param name="configurations">An instance of ClientConfiguration that contains all parameters populated</param>
-        /// <param name="clientSecret">The client secret of the Azure AD Application that is registered to call Store APIs</param>
+        /// <param name="clientSecret">The client secret of the Microsoft Entra Application that is registered to call Store APIs</param>
         /// <param name="serviceUrl">The Store API URL used to make the API calls.</param>
         /// <param name="scope">The Scope from the Store APIs that will be used to request the access token.</param>
         /// <param name="logger">ILogger for logs.</param>
@@ -59,7 +59,7 @@ namespace MSStore.API
         /// Initializes a new instance of the <see cref="StoreAPI"/> class.
         /// </summary>
         /// <param name="configurations">An instance of ClientConfiguration that contains all parameters populated</param>
-        /// <param name="certificate">The client certificate of the Azure AD Application that is registered to call Store APIs</param>
+        /// <param name="certificate">The client certificate of the Microsoft Entra Application that is registered to call Store APIs</param>
         /// <param name="serviceUrl">The Store API URL used to make the API calls.</param>
         /// <param name="scope">The Scope from the Store APIs that will be used to request the access token.</param>
         /// <param name="logger">ILogger for logs.</param>

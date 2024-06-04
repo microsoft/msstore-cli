@@ -158,11 +158,11 @@ namespace MSStore.CLI.Services
 
                             var randomString = RandomString();
 
-                            AnsiConsole.MarkupLine("1) At [b green]Account settings[/]/[b green]User management[/]/[b green]Azure AD applications[/] page...");
+                            AnsiConsole.MarkupLine("1) At [b green]Account settings[/]/[b green]User management[/]/[b green]Microsoft Entra applications[/] page...");
                             AnsiConsole.MarkupLine($"2) Make sure you are signed-in with your administrator account from this domain: [b green]{domainsString}[/].");
-                            AnsiConsole.MarkupLine("3) Click on [b green]Azure AD applications[/].");
-                            AnsiConsole.MarkupLine("4) Click on [b green]Add Azure AD Application[/].");
-                            AnsiConsole.MarkupLine("5) Select [b green]Create Azure AD Application[/] and click on [b green]Continue[/].");
+                            AnsiConsole.MarkupLine("3) Click on [b green]Microsoft Entra applications[/].");
+                            AnsiConsole.MarkupLine("4) Click on [b green]Add Microsoft Entra Application[/].");
+                            AnsiConsole.MarkupLine("5) Select [b green]Create Microsoft Entra Application[/] and click on [b green]Continue[/].");
                             AnsiConsole.MarkupLine("6) Fill the form. Here are some values that can help you with the setup:");
                             AnsiConsole.MarkupLine($"   - Name: [b green]{displayName}[/]");
                             AnsiConsole.MarkupLine($"   - Reply URI: [b green]https://{organization.Domain}/MSStoreCLIAccess_{randomString}[/]");
@@ -256,7 +256,7 @@ namespace MSStore.CLI.Services
 
                     clientSecret = newClientSecret;
 
-                    AnsiConsole.MarkupLine("At the Partner Center website, at the [b green]Account settings[/]/[b green]User management[/]/[b green]Azure AD applications[/] page:");
+                    AnsiConsole.MarkupLine("At the Partner Center website, at the [b green]Account settings[/]/[b green]User management[/]/[b green]Microsoft Entra applications[/] page:");
                     var domainsString = string.Empty;
                     if (organization.Domain != null)
                     {
@@ -264,8 +264,8 @@ namespace MSStore.CLI.Services
                     }
 
                     AnsiConsole.MarkupLine($"1) Signin with your administrator account from this domain: [b green]{domainsString}[/].");
-                    AnsiConsole.MarkupLine("2) Click on [b green]Add Azure AD Application[/].");
-                    AnsiConsole.MarkupLine("3) Select [b green]Add Azure AD Application[/] and click on [b green]Continue[/].");
+                    AnsiConsole.MarkupLine("2) Click on [b green]Add Microsoft Entra Application[/].");
+                    AnsiConsole.MarkupLine("3) Select [b green]Add Microsoft Entra Application[/] and click on [b green]Continue[/].");
                     AnsiConsole.MarkupLine($"4) Select the app that we just created for you: [bold green]{displayName}[/] and click on [b green]Next[/].");
                     AnsiConsole.MarkupLine("5) Select [b green]Manager(Windows)[/] and click on [b green]Add[/].");
                     AnsiConsole.MarkupLine("6) Return here.");
@@ -400,17 +400,17 @@ namespace MSStore.CLI.Services
             {
                 AnsiConsole.MarkupLine("[yellow]This account is either:[/]");
                 AnsiConsole.MarkupLine("[b]1) [/][yellow]Not registered as a [green]Microsoft Store Developer[/][/]; and/or");
-                AnsiConsole.MarkupLine("[b]2) [/][yellow]Not associated with an [green]Azure AD Tenant[/].[/]");
+                AnsiConsole.MarkupLine("[b]2) [/][yellow]Not associated with an [green]Microsoft Entra Tenant[/].[/]");
 
                 if (await _consoleReader.YesNoConfirmationAsync("Do you know if you are already registed?", ct))
                 {
-                    AnsiConsole.MarkupLine("Let's then associate your account with an [green]Azure AD Tenant[/].");
+                    AnsiConsole.MarkupLine("Let's then associate your account with an [green]Microsoft Entra Tenant[/].");
 
                     AnsiConsole.WriteLine();
 
                     AnsiConsole.MarkupLine("We can't automatically do this...");
                     AnsiConsole.MarkupLine("At the Partner Center website, at the [b green]Account settings[/]/[b green]Organization profile[/]/[b green]Tenants[/] page:");
-                    AnsiConsole.MarkupLine("1) Either associate an Azure AD with your Partner Center account, or Create a new Azure Ad.");
+                    AnsiConsole.MarkupLine("1) Either associate a Microsoft Entra ID with your Partner Center account, or Create a new Microsoft Entra ID.");
                     AnsiConsole.MarkupLine("2) Then close the browser and return here.");
                     AnsiConsole.WriteLine();
 
