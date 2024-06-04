@@ -3,45 +3,69 @@
 
 using System;
 using System.IO;
-using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.Core;
+using Azure.Core.Pipeline;
+using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
+using Microsoft.ApplicationInsights;
 using MSStore.API;
-using MSStore.CLI.Services.Graph;
 
 namespace MSStore.CLI.Services
 {
     internal class AzureBlobManager : IAzureBlobManager
     {
-        private readonly IHttpClientFactory _httpClientFactory = null!;
+        private readonly TelemetryClient _telemetryClient = null!;
 
-        public AzureBlobManager(IHttpClientFactory httpClientFactory)
+        public AzureBlobManager(TelemetryClient telemetryClient)
         {
-            _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
+            _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
         }
 
         public async Task<string> UploadFileAsync(string blobUri, string localFilePath, IProgress<double> progress, CancellationToken ct)
         {
-            using var httpClient = _httpClientFactory.CreateClient("DefaultLargeUploader");
-            using var request = new HttpRequestMessage(HttpMethod.Put, blobUri.Replace("+", "%2B"));
-
             using var fileStream = new FileStream(localFilePath, FileMode.Open, FileAccess.Read);
 
-            request.Headers.Add("x-ms-blob-type", "BlockBlob");
-            request.Content = new ProgressableStreamContent(new StreamContent(fileStream), progress);
-
-            request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/zip");
-
-            using HttpResponseMessage response = await httpClient.SendAsync(request, ct);
-
-            if (response.IsSuccessStatusCode)
+            var blobClientOptions = new BlobClientOptions();
+            blobClientOptions.AddPolicy(new AddCorrelationIdHeaderPolicy(_telemetryClient), HttpPipelinePosition.PerCall);
+            var blobClient = new BlobClient(new Uri(blobUri.Replace("+", "%2B")), blobClientOptions);
+            var blobUploadOptions = new BlobUploadOptions
             {
-                return await response.Content.ReadAsStringAsync(ct);
+                HttpHeaders = new BlobHttpHeaders
+                {
+                    ContentType = "application/zip"
+                },
+                ProgressHandler = new Progress<long>(bytesTransferred =>
+                {
+                    progress.Report((double)bytesTransferred * 100 / fileStream.Length);
+                }),
+            };
+
+            var response = await blobClient.UploadAsync(fileStream, blobUploadOptions, ct);
+            if (response.Value != null)
+            {
+                return response.Value.ETag.ToString();
             }
             else
             {
-                throw new MSStoreException(await response.Content.ReadAsStringAsync(ct));
+                throw new MSStoreException(response.GetRawResponse().ReasonPhrase);
+            }
+        }
+
+        public class AddCorrelationIdHeaderPolicy : HttpPipelineSynchronousPolicy
+        {
+            private readonly TelemetryClient _telemetryClient;
+
+            public AddCorrelationIdHeaderPolicy(TelemetryClient telemetryClient)
+            {
+                _telemetryClient = telemetryClient;
+            }
+
+            public override void OnSendingRequest(HttpMessage message)
+            {
+                message.Request.Headers.Add("ms-correlationid", _telemetryClient.Context.Session.Id);
+                base.OnSendingRequest(message);
             }
         }
     }
