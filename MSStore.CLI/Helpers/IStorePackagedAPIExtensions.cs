@@ -673,13 +673,13 @@ namespace MSStore.CLI.Helpers
                     string? listingLanguage;
                     if (environmentInformationService.IsRunningOnCI)
                     {
-                        listingLanguage = "en-US";
+                        listingLanguage = "en-us";
                     }
                     else
                     {
                         do
                         {
-                            listingLanguage = await consoleReader.RequestStringAsync("\tEnter the language of the listing (e.g. 'en-US')", false, ct);
+                            listingLanguage = await consoleReader.RequestStringAsync("\tEnter the language of the listing (e.g. 'en-us')", false, ct);
                             if (string.IsNullOrEmpty(listingLanguage))
                             {
                                 AnsiConsole.WriteLine("Invalid listing language.");
@@ -687,6 +687,8 @@ namespace MSStore.CLI.Helpers
                         }
                         while (string.IsNullOrEmpty(listingLanguage));
                     }
+
+                    listingLanguage = listingLanguage.ToLowerInvariant();
 
                     var submissionData = await firstSubmissionDataCallback(listingLanguage, ct);
 
