@@ -64,9 +64,9 @@ namespace MSStore.CLI.Commands.Apps
                             {
                                 table.AddRow(
                                     i.ToString(CultureInfo.InvariantCulture),
-                                    $"[bold u]{p.Id}[/]",
-                                    $"[bold u]{p.PrimaryName}[/]",
-                                    $"[bold u]{p.PackageIdentityName}[/]");
+                                    $"[bold u]{p.Id.EscapeMarkup()}[/]",
+                                    $"[bold u]{p.PrimaryName.EscapeMarkup()}[/]",
+                                    $"[bold u]{p.PackageIdentityName.EscapeMarkup()}[/]");
                                 i++;
                             }
 
