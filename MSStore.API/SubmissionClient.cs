@@ -184,7 +184,7 @@ namespace MSStore.API
                 }
                 catch (Exception e)
                 {
-                    logger?.LogError("Failed to get access token. Response: {Message}", e.Message);
+                    logger?.LogError(e, "Failed to get access token.");
                     throw new MSStoreException("Could not retrieve access token", e);
                 }
 
