@@ -5,6 +5,13 @@ parameters:
   dotnet_configuration: ''
   AgentOS: ''
   DoEsrp: false
+  signingIdentity:
+    serviceName: ''
+    appId: ''
+    tenantId: ''
+    akvName: ''
+    authCertName: ''
+    signCertName: ''
 
 steps:
 - task: DotNetCoreCLI@2
@@ -31,11 +38,16 @@ steps:
 - script: dotnet publish MSStore.CLI --no-build --no-self-contained -r ${{ parameters.dotnet_runtime }}-${{ parameters.dotnet_arch }} -f ${{ parameters.dotnet_framework }} /p:Configuration=${{ parameters.dotnet_configuration }} /p:PublishProfile=${{ parameters.dotnet_runtime }}-${{ parameters.dotnet_arch }}
   displayName: Publish NoSelfContained CLI
 - ${{ if eq(parameters['DoEsrp'], 'true') }}:
-  - task: EsrpCodeSigning@2
+  - task: EsrpCodeSigning@5
     displayName: Code Sign ESRP - CLI - 3rd Party Dependencies
     condition: startsWith(variables.AgentOS, 'Windows_NT')
     inputs:
-      ConnectedServiceName: 'MSStoreCLI - ESRP Code Signing'
+      ConnectedServiceName: ${{ parameters.signingIdentity.serviceName }}
+      AppRegistrationClientId: ${{ parameters.signingIdentity.appId }}
+      AppRegistrationTenantId: ${{ parameters.signingIdentity.tenantId }}
+      AuthAKVName: ${{ parameters.signingIdentity.akvName }}
+      AuthCertName: ${{ parameters.signingIdentity.authCertName }}
+      AuthSignCertName: ${{ parameters.signingIdentity.signCertName }}
       FolderPath: '$(System.DefaultWorkingDirectory)/MSStore.CLI/bin/${{ parameters.dotnet_configuration }}/${{ parameters.dotnet_framework }}/${{ parameters.dotnet_runtime }}-${{ parameters.dotnet_arch }}/publish'
       Pattern: |
         Meziantou.Framework.Win32.CredentialManager.dll,
@@ -66,11 +78,16 @@ steps:
                 "ToolVersion": "1.0"
             }
         ]
-  - task: EsrpCodeSigning@2
+  - task: EsrpCodeSigning@5
     displayName: Code Sign ESRP - CLI Windows + Existing DLLs & Authenticode
     condition: startsWith(variables.AgentOS, 'Windows_NT')
     inputs:
-      ConnectedServiceName: 'MSStoreCLI - ESRP Code Signing'
+      ConnectedServiceName: ${{ parameters.signingIdentity.serviceName }}
+      AppRegistrationClientId: ${{ parameters.signingIdentity.appId }}
+      AppRegistrationTenantId: ${{ parameters.signingIdentity.tenantId }}
+      AuthAKVName: ${{ parameters.signingIdentity.akvName }}
+      AuthCertName: ${{ parameters.signingIdentity.authCertName }}
+      AuthSignCertName: ${{ parameters.signingIdentity.signCertName }}
       FolderPath: '$(System.DefaultWorkingDirectory)/MSStore.CLI/bin/${{ parameters.dotnet_configuration }}/${{ parameters.dotnet_framework }}/${{ parameters.dotnet_runtime }}-${{ parameters.dotnet_arch }}/publish'
       Pattern: |
         msstore.exe
