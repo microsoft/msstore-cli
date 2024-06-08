@@ -105,7 +105,7 @@ jobs:
         dotnet-version: 8.0.x
     - name: Add msbuild to PATH
       if: ${{ matrix.os == 'windows-latest' }}
-      uses: microsoft/setup-msbuild@v1.3
+      uses: microsoft/setup-msbuild@v2
     - name: Install NBGV tool
       run: dotnet tool install --tool-path . nbgv
     - name: Set Version
