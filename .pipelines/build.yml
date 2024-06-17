@@ -76,3 +76,4 @@ extends:
                   dotnet_configuration: ${{ dotnet_config }}
                   AgentOS: $(Agent.OS)
                   DoEsrp: false
+                  signingIdentity: {}

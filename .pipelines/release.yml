@@ -24,6 +24,15 @@ parameters:
   - name: DoEsrp
     type: boolean
     default: true
+  - name: signingIdentity
+    type: object
+    default:
+      serviceName: $(SigningServiceName)
+      appId: $(SigningAppId)
+      tenantId: $(SigningTenantId)
+      akvName: $(SigningAKVName)
+      authCertName: $(SigningAuthCertName)
+      signCertName: $(SigningSignCertName)
   - name: pools
     type: object
     default:
@@ -95,11 +104,13 @@ extends:
                   dotnet_configuration: ${{ dotnet_config }}
                   AgentOS: $(Agent.OS)
                   DoEsrp: ${{ parameters.DoEsrp }}
+                  signingIdentity: ${{ parameters.signingIdentity }}
               - template: ./.pipelines/templates/pack-nuget.yaml@self
                 parameters:
                   dotnet_configuration: ${{ dotnet_config }}
                   AgentOS: $(Agent.OS)
                   DoEsrp: ${{ parameters.DoEsrp }}
+                  signingIdentity: ${{ parameters.signingIdentity }}
 
       - stage: CLI
         dependsOn: NuGet
@@ -149,3 +160,4 @@ extends:
                     dotnet_configuration: ${{ dotnet_config }}
                     AgentOS: $(Agent.OS)
                     DoEsrp: ${{ parameters.DoEsrp }}
+                    signingIdentity: ${{ parameters.signingIdentity }}
