@@ -159,7 +159,7 @@ namespace MSStore.API
             ILogger? logger = null,
             CancellationToken ct = default)
         {
-            return GetClientCredentialAccessTokenAsync(tenantId, clientId, (builder) => builder.WithCertificate(certificate), scope, logger, ct);
+            return GetClientCredentialAccessTokenAsync(tenantId, clientId, (builder) => builder.WithCertificate(certificate, true), scope, logger, ct);
         }
 
         private static async Task<AuthenticationResult> GetClientCredentialAccessTokenAsync(
