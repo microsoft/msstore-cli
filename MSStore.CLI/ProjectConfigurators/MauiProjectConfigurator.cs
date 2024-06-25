@@ -250,7 +250,7 @@ namespace MSStore.CLI.ProjectConfigurators
                     {
                         var runtime = $"win10-{appxBundlePlatform.ToLowerInvariant()}";
 
-                        msBuildParamsList.Add($"publish -f {properties.WindowsTargetFramework} --self-contained -c Release -p:AppxBundle=Always -p:AppxBundlePlatforms={appxBundlePlatform} -p:AppxPackageDir={escapedOutput}\\ -p:UapAppxPackageBuildMode=StoreUpload -p:AppxPackageTestDir={escapedOutput}\\{projectName}_{version.ToVersionString()}_{appxBundlePlatform}_Test\\ -p:RuntimeIdentifierOverride={runtime}");
+                        msBuildParamsList.Add($"publish -f {properties.WindowsTargetFramework} -p:RuntimeIdentifierOverride={runtime} --self-contained -c Release -p:AppxBundle=Always -p:AppxBundlePlatforms={appxBundlePlatform} -p:AppxPackageDir={escapedOutput}\\ -p:UapAppxPackageBuildMode=StoreUpload -p:AppxPackageTestDir={escapedOutput}\\{projectName}_{version.ToVersionString()}_{appxBundlePlatform}_Test\\");
                     }
 
                     ExternalCommandExecutionResult? result = null;
