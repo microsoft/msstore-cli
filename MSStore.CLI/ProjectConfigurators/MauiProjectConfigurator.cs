@@ -250,8 +250,7 @@ namespace MSStore.CLI.ProjectConfigurators
                     {
                         var runtime = $"win10-{appxBundlePlatform.ToLowerInvariant()}";
 
-                        // Maybe switch AppxPackageTestDir to bin\Release\{targetFramework}\{runtime}\AppPackages\?
-                        msBuildParamsList.Add($"publish -f {properties.WindowsTargetFramework} -r {runtime} --self-contained /p:Configuration=Release;AppxBundle=Always;Platform={appxBundlePlatform};AppxBundlePlatforms={appxBundlePlatform};AppxPackageDir={escapedOutput}\\;UapAppxPackageBuildMode=StoreUpload;GenerateAppxPackageOnBuild=true;AppxPackageTestDir={escapedOutput}\\{projectName}_{version.ToVersionString()}_{appxBundlePlatform}_Test\\");
+                        msBuildParamsList.Add($"publish -f {properties.WindowsTargetFramework} -p:RuntimeIdentifierOverride={runtime} --self-contained -c Release -p:AppxBundle=Always -p:AppxBundlePlatforms={appxBundlePlatform} -p:AppxPackageDir={escapedOutput}\\ -p:UapAppxPackageBuildMode=StoreUpload -p:AppxPackageTestDir={escapedOutput}\\{projectName}_{version.ToVersionString()}_{appxBundlePlatform}_Test\\");
                     }
 
                     ExternalCommandExecutionResult? result = null;
