@@ -67,18 +67,30 @@ namespace MSStore.CLI.Commands
             });
 
             Output = new Option<DirectoryInfo?>(
-                aliases: new string[] { "--output", "-o" },
+                aliases: new string[]
+                {
+                    "--output",
+                    "-o"
+                },
                 description: "The output directory where the packaged app will be stored. If not provided, the default directory for each different type of app will be used.");
 
             Arch = new Option<IEnumerable<BuildArch>>(
-                aliases: new string[] { "--arch", "-a" },
+                aliases: new string[]
+                {
+                    "--arch",
+                    "-a"
+                },
                 description: "The architecture(s) to build for. If not provided, the default architecture for the current OS, and project type, will be used.")
             {
                 AllowMultipleArgumentsPerToken = true,
             };
 
             Version = new Option<Version?>(
-                aliases: new string[] { "--version", "-ver" },
+                aliases: new string[]
+                {
+                    "--version",
+                    "-ver"
+                },
                 parseArgument: result =>
                 {
                     var version = result.Tokens.Single().Value;
@@ -99,19 +111,29 @@ namespace MSStore.CLI.Commands
             AddArgument(PathOrUrl);
 
             var publisherDisplayName = new Option<string>(
-                aliases: new string[] { "--publisherDisplayName", "-n" },
+                aliases: new string[]
+                {
+                    "--publisherDisplayName",
+                    "-n"
+                },
                 description: "The Publisher Display Name used to configure the application. If provided, avoids an extra APIs call.");
 
             AddOption(publisherDisplayName);
 
             var package = new Option<bool>(
-                aliases: new string[] { "--package" },
+                aliases: new string[]
+                {
+                    "--package"
+                },
                 description: "If supported by the app type, automatically packs the project.");
 
             AddOption(package);
 
             var publish = new Option<bool>(
-                aliases: new string[] { "--publish" },
+                aliases: new string[]
+                {
+                    "--publish"
+                },
                 description: "If supported by the app type, automatically publishes the project. Implies '--package true'");
 
             AddOption(publish);
@@ -191,9 +213,15 @@ namespace MSStore.CLI.Commands
 
                 var props = new Dictionary<string, string>
                 {
-                    { "withPDN", (PublisherDisplayName != null).ToString() },
-                    { "Package", (Package == true).ToString() },
-                    { "Publish", (Publish == true).ToString() }
+                    {
+                        "withPDN", (PublisherDisplayName != null).ToString()
+                    },
+                    {
+                        "Package", (Package == true).ToString()
+                    },
+                    {
+                        "Publish", (Publish == true).ToString()
+                    }
                 };
 
                 if (configurator == null)
@@ -360,7 +388,7 @@ namespace MSStore.CLI.Commands
                         return await _telemetryClient.TrackCommandEventAsync<Handler>(-5, props, ct);
                     }
 
-                    result = await projectPublisher.PublishAsync(PathOrUrl, app, FlightId, outputDirectory, storePackagedAPI, ct);
+                    result = await projectPublisher.PublishAsync(PathOrUrl, app, FlightId, outputDirectory, false, storePackagedAPI, ct);
                 }
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(result, props, ct);

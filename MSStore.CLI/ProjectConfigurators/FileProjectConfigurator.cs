@@ -105,7 +105,12 @@ namespace MSStore.CLI.ProjectConfigurators
         {
             var files = projectRootPath.GetFiles(searchPattern, SearchOption.AllDirectories).ToList();
 
-            var rootDirectoriesToIgnore = new string[] { "node_modules", "obj", "bin" };
+            var rootDirectoriesToIgnore = new string[]
+            {
+                "node_modules",
+                "obj",
+                "bin"
+            };
 
             foreach (var ignoreDirectory in rootDirectoriesToIgnore)
             {
@@ -142,7 +147,7 @@ namespace MSStore.CLI.ProjectConfigurators
             return Task.FromResult<(string, List<SubmissionImage>)>((description, images));
         }
 
-        public virtual async Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, string? flightId, DirectoryInfo? inputDirectory, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public virtual async Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, string? flightId, DirectoryInfo? inputDirectory, bool noCommit, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             var (projectRootPath, projectFile) = GetInfo(pathOrUrl);
 
@@ -171,8 +176,8 @@ namespace MSStore.CLI.ProjectConfigurators
             var output = projectRootPath.CreateSubdirectory(OutputSubdirectory);
 
             var packageFiles = inputDirectory.GetFiles("*.*", PackageFilesSearchOption)
-                                  .Where(f => PackageFilesExtensionInclude.Contains(f.Extension, StringComparer.OrdinalIgnoreCase)
-                                           && PackageFilesExtensionExclude?.All(e => !f.Name.EndsWith(e, StringComparison.OrdinalIgnoreCase)) != false);
+                .Where(f => PackageFilesExtensionInclude.Contains(f.Extension, StringComparer.OrdinalIgnoreCase)
+                    && PackageFilesExtensionExclude?.All(e => !f.Name.EndsWith(e, StringComparison.OrdinalIgnoreCase)) != false);
 
             if (PublishFileSearchFilterStrategy == PublishFileSearchFilterStrategy.Newest)
             {
@@ -185,7 +190,7 @@ namespace MSStore.CLI.ProjectConfigurators
 
             Logger.LogInformation("Trying to publish these {FileCount} files: {FileNames}", packageFiles.Count(), string.Join(", ", packageFiles.Select(f => $"'{f.FullName}'")));
 
-            return await storePackagedAPI.PublishAsync(app, flightId, GetFirstSubmissionDataAsync, AllowTargetFutureDeviceFamilies, output, packageFiles, _browserLauncher, _consoleReader, _zipFileManager, _fileDownloader, _azureBlobManager, _environmentInformationService, _logger, ct);
+            return await storePackagedAPI.PublishAsync(app, flightId, GetFirstSubmissionDataAsync, AllowTargetFutureDeviceFamilies, output, packageFiles, noCommit, _browserLauncher, _consoleReader, _zipFileManager, _fileDownloader, _azureBlobManager, _environmentInformationService, _logger, ct);
         }
 
         protected virtual DirectoryInfo GetInputDirectory(DirectoryInfo projectRootPath)

@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -125,7 +126,7 @@ namespace MSStore.API
         /// <param name="ct">Cancelation token.</param>
         /// <returns>Autorization token. Prepend it with "Bearer: " and pass it in the request header as the
         /// value for "Authorization: " header.</returns>
-        public static async Task<AuthenticationResult> GetClientCredentialAccessTokenAsync(
+        public static Task<AuthenticationResult> GetClientCredentialAccessTokenAsync(
             string tenantId,
             string clientId,
             string clientSecret,
@@ -133,9 +134,45 @@ namespace MSStore.API
             ILogger? logger = null,
             CancellationToken ct = default)
         {
+            return GetClientCredentialAccessTokenAsync(tenantId, clientId, (builder) => builder.WithClientSecret(clientSecret), scope, logger, ct);
+        }
+
+        /// <summary>
+        /// Gets the authorization token for the provided client id, client secret, and the scope.
+        /// This token is usually valid for 1 hour, so if your submission takes longer than that to complete,
+        /// make sure to get a new one periodically.
+        /// </summary>
+        /// <param name="tenantId">The tenantId used to get the access token, specific to your
+        /// Azure Active Directory app. Example: "d454d300-128e-2d81-334a-27d9b2baf002"</param>
+        /// <param name="clientId">Client Id of your Azure Active Directory app. Example: "ba3c223b-03ab-4a44-aa32-38aa10c27e32"</param>
+        /// <param name="certificate">Client certificate of your Azure Active Directory app</param>
+        /// <param name="scope">Scope. If not provided, default one is used for the production API endpoint.</param>
+        /// <param name="logger">ILogger for logs.</param>
+        /// <param name="ct">Cancelation token.</param>
+        /// <returns>Autorization token. Prepend it with "Bearer: " and pass it in the request header as the
+        /// value for "Authorization: " header.</returns>
+        public static Task<AuthenticationResult> GetClientCredentialAccessTokenAsync(
+            string tenantId,
+            string clientId,
+            X509Certificate2 certificate,
+            string scope,
+            ILogger? logger = null,
+            CancellationToken ct = default)
+        {
+            return GetClientCredentialAccessTokenAsync(tenantId, clientId, (builder) => builder.WithCertificate(certificate, true), scope, logger, ct);
+        }
+
+        private static async Task<AuthenticationResult> GetClientCredentialAccessTokenAsync(
+            string tenantId,
+            string clientId,
+            Func<ConfidentialClientApplicationBuilder, ConfidentialClientApplicationBuilder> authorizationBuilder,
+            string scope,
+            ILogger? logger = null,
+            CancellationToken ct = default)
+        {
             using ((logger ?? NullLogger.Instance).BeginScope("GetClientCredentialAccessToken"))
             {
-                var app = await CreateAppAsync(clientId, clientSecret);
+                var app = await CreateAppAsync(clientId, authorizationBuilder);
 
                 AuthenticationResult authenticationResult;
 
@@ -147,7 +184,7 @@ namespace MSStore.API
                 }
                 catch (Exception e)
                 {
-                    logger?.LogError("Failed to get access token. Response: {Message}", e.Message);
+                    logger?.LogError(e, "Failed to get access token.");
                     throw new MSStoreException("Could not retrieve access token", e);
                 }
 
@@ -155,7 +192,7 @@ namespace MSStore.API
             }
         }
 
-        private static async Task<IConfidentialClientApplication> CreateAppAsync(string clientId, string clientSecret)
+        private static async Task<IConfidentialClientApplication> CreateAppAsync(string clientId, Func<ConfidentialClientApplicationBuilder, ConfidentialClientApplicationBuilder> authorizationBuilder)
         {
             var cacheDirectory = Path.Combine(MsalCacheHelper.UserRootDirectory, "Microsoft", "MSStore.API", "Cache");
 
@@ -173,9 +210,8 @@ namespace MSStore.API
                      KeyChainAccountName)
                  .Build();
 
-            var app = ConfidentialClientApplicationBuilder
-                .Create(clientId)
-                .WithClientSecret(clientSecret)
+            var app = authorizationBuilder(ConfidentialClientApplicationBuilder
+                .Create(clientId))
                 .Build();
 
             var cacheHelper = await MsalCacheHelper.CreateAsync(storageProperties);

@@ -35,7 +35,11 @@ namespace MSStore.CLI.Commands
             AddArgument(InitCommand.PathOrUrl);
 
             var inputDirectory = new Option<DirectoryInfo?>(
-                aliases: new string[] { "--inputDirectory", "-i" },
+                aliases: new string[]
+                {
+                    "--inputDirectory",
+                    "-i"
+                },
                 description: "The directory where the '.msix' or '.msixupload' file to be used for the publishing command. If not provided, the cli will try to find the best candidate based on the 'pathOrUrl' argument.",
                 parseArgument: result =>
                 {
@@ -59,10 +63,25 @@ namespace MSStore.CLI.Commands
             AddOption(inputDirectory);
 
             var appIdOption = new Option<string>(
-                aliases: new string[] { "--appId", "-id" },
+                aliases: new string[]
+                {
+                    "--appId",
+                    "-id"
+                },
                 description: "Specifies the Application Id. Only needed if the project has not been initialized before with the 'init' command.");
 
             AddOption(appIdOption);
+
+            var noCommitOption = new Option<bool>(
+                aliases: new string[]
+                {
+                    "--noCommit",
+                    "-nc"
+                },
+                description: "Disables committing the submission, keeping it in draft state.",
+                getDefaultValue: () => false);
+
+            AddOption(noCommitOption);
 
             AddOption(FlightIdOption);
         }
@@ -81,6 +100,8 @@ namespace MSStore.CLI.Commands
             public string? FlightId { get; set; }
 
             public DirectoryInfo? InputDirectory { get; set; } = null!;
+
+            public bool NoCommit { get; set; }
 
             public Handler(
                 IProjectConfiguratorFactory projectConfiguratorFactory,
@@ -148,7 +169,7 @@ namespace MSStore.CLI.Commands
                 }
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(
-                    await projectPublisher.PublishAsync(PathOrUrl, app, FlightId, InputDirectory, storePackagedAPI, ct), props, ct);
+                    await projectPublisher.PublishAsync(PathOrUrl, app, FlightId, InputDirectory, NoCommit, storePackagedAPI, ct), props, ct);
             }
         }
     }

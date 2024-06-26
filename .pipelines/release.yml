@@ -24,6 +24,15 @@ parameters:
   - name: DoEsrp
     type: boolean
     default: true
+  - name: signingIdentity
+    type: object
+    default:
+      serviceName: $(SigningServiceName)
+      appId: $(SigningAppId)
+      tenantId: $(SigningTenantId)
+      akvName: $(SigningAKVName)
+      authCertName: $(SigningAuthCertName)
+      signCertName: $(SigningSignCertName)
   - name: pools
     type: object
     default:
@@ -87,7 +96,7 @@ extends:
                     version: 6.0.x
               - script: mv -f $(Build.SourcesDirectory)/.pipelines/release-nuget.config ./nuget.config
                 displayName: Add release package source
-              - task: NuGetAuthenticate@0
+              - task: NuGetAuthenticate@1
               - script: dotnet restore MSStore.CLI.sln /p:Configuration=${{ dotnet_config }}
                 displayName: Restore dependencies
               - template: ./.pipelines/templates/build-nuget.yaml@self
@@ -95,11 +104,13 @@ extends:
                   dotnet_configuration: ${{ dotnet_config }}
                   AgentOS: $(Agent.OS)
                   DoEsrp: ${{ parameters.DoEsrp }}
+                  signingIdentity: ${{ parameters.signingIdentity }}
               - template: ./.pipelines/templates/pack-nuget.yaml@self
                 parameters:
                   dotnet_configuration: ${{ dotnet_config }}
                   AgentOS: $(Agent.OS)
                   DoEsrp: ${{ parameters.DoEsrp }}
+                  signingIdentity: ${{ parameters.signingIdentity }}
 
       - stage: CLI
         dependsOn: NuGet
@@ -138,7 +149,7 @@ extends:
                     jsonTargetFiles: MSStore.CLI/config.json
                     xmlTargetFiles: ''
                     xmlTransformationRules: ''
-                - task: NuGetAuthenticate@0
+                - task: NuGetAuthenticate@1
                 - script: dotnet restore MSStore.CLI -r ${{ pool.dotnet_runtime }}-${{ platform }} /p:Configuration=${{ dotnet_config }} /p:PublishReadyToRun=true
                   displayName: Restore CLI
                 - template: ./.pipelines/templates/build-cli.yaml@self
@@ -149,3 +160,4 @@ extends:
                     dotnet_configuration: ${{ dotnet_config }}
                     AgentOS: $(Agent.OS)
                     DoEsrp: ${{ parameters.DoEsrp }}
+                    signingIdentity: ${{ parameters.signingIdentity }}

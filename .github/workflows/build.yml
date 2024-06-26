@@ -24,7 +24,7 @@ jobs:
       with:
         fetch-depth: 0
     - name: Setup .NET
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
     - name: Install and Configure Keyring
@@ -54,30 +54,28 @@ jobs:
         CollectCoverage: true
         CoverletOutputFormat: cobertura
       run: dotnet test MSStore.CLI.sln --no-restore /p:Configuration=Release --logger trx & wait
-    - name: Display test results
-      uses: dorny/test-reporter@v1
-      if: always()
+    - name: Publish test results
+      if: ${{ !cancelled() }}
+      uses: actions/upload-artifact@v4
       with:
-        name: Test - Results - ${{ matrix.os }}
+        name: test-results-${{ matrix.os }}
         path: MSStore.CLI.UnitTests/TestResults/*.trx
-        reporter: dotnet-trx
     - name: Install ReportGenerator
-      run: dotnet tool install --global dotnet-reportgenerator-globaltool --version 5.2.2
+      run: dotnet tool install --global dotnet-reportgenerator-globaltool --version 5.3.6
     - name: Merge code coverage files
       run: reportgenerator "-reports:${{ github.workspace }}/**/*coverage.*.cobertura.xml" "-targetdir:${{ github.workspace }}/report" "-reporttypes:Cobertura" "-filefilters:-*GenerationContext*.g.cs"
     - name: Publish code coverage results
-      if: ${{ !env.ACT }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: Cobertura
+        name: Cobertura-${{ matrix.os }}
         path: ${{ github.workspace }}/report/Cobertura.xml
     # TODO: Publish github comment with code coverage
     - name: Pack NuGet
       if: ${{ matrix.os == 'ubuntu-latest' }}
       run: dotnet pack MSStore.API --no-build -c Release
     - name: Upload Artifact - NuGet
-      if: ${{ matrix.os == 'ubuntu-latest' && !env.ACT }}
-      uses: actions/upload-artifact@v3
+      if: ${{ matrix.os == 'ubuntu-latest' }}
+      uses: actions/upload-artifact@v4
       with:
         name: NuGet
         path: MSStore.API/bin/Release/*.nupkg
@@ -108,12 +106,12 @@ jobs:
       with:
         fetch-depth: 0
     - name: Setup .NET
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
     - name: Add msbuild to PATH
       if: ${{ matrix.os == 'windows-latest' }}
-      uses: microsoft/setup-msbuild@v1.3
+      uses: microsoft/setup-msbuild@v2
     - name: Install NBGV tool
       run: dotnet tool install --tool-path . nbgv
     - name: Set Version
@@ -143,13 +141,13 @@ jobs:
       run: ."C:\Program Files (x86)\Windows Kits\10\App Certification Kit\SignTool.exe" sign /fd SHA256 /a /f .\MSStore.CLI.MSIX\MSStore.CLI.MSIX_TemporaryKey.pfx ${{ github.workspace }}/MSStore.CLI.MSIX/AppPackages/${{ matrix.dotnet-arch }}/MSStore.CLI.MSIX_${{ env.GitBuildVersionSimple }}.0_${{ matrix.dotnet-arch }}_Test.msix
     - name: Upload Artifact - CLI
       if: ${{ !env.ACT }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: CLI-${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }}
         path: ${{ github.workspace }}/MSStore.CLI/bin/Release/${{ matrix.dotnet-framework }}/${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }}/publish/**/*
     - name: Upload Artifact - MSIX
       if: ${{ matrix.os == 'windows-latest' && !env.ACT }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: CLI-MSIX-${{ matrix.dotnet-arch }}
         path: ${{ github.workspace }}/MSStore.CLI.MSIX/AppPackages/${{ matrix.dotnet-arch }}/MSStore.CLI.MSIX_${{ env.GitBuildVersionSimple }}.0_${{ matrix.dotnet-arch }}_Test.msix

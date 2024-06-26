@@ -263,7 +263,7 @@ namespace MSStore.CLI.UnitTests
             ExternalCommandExecutor
                 .Setup(x => x.RunAsync(
                     It.Is<string>(s => s == "dotnet"),
-                    It.Is<string>(s => s.Contains("publish -f net8.0-windows10.0.19041.0 -r win10-x64 --self-contained /p:Configuration=Release")),
+                    It.Is<string>(s => s.Contains("publish -f net8.0-windows10.0.19041.0 -p:RuntimeIdentifierOverride=win10-x64 --self-contained -c Release")),
                     It.Is<string>(s => s == dirInfo.FullName),
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult
@@ -305,8 +305,8 @@ namespace MSStore.CLI.UnitTests
             ExternalCommandExecutor
                 .Setup(x => x.RunAsync(
                     It.Is<string>(s => s == "dotnet"),
-                    It.Is<string>(s => s.Contains("publish -f net8.0-windows10.0.19041.0 -r win10-x64 --self-contained /p:Configuration=Release")
-                        && s.Contains($"AppxPackageDir={customPath}\\;")
+                    It.Is<string>(s => s.Contains("publish -f net8.0-windows10.0.19041.0 -p:RuntimeIdentifierOverride=win10-x64 --self-contained -c Release")
+                        && s.Contains($"AppxPackageDir={customPath}\\")
                         && s.EndsWith($"AppxPackageTestDir={customPath}\\MauiProject_1.0.0.0_X64_Test\\")),
                     It.Is<string>(s => s == dirInfo.FullName),
                     It.IsAny<CancellationToken>()))

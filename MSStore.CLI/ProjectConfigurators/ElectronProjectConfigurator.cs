@@ -32,7 +32,10 @@ namespace MSStore.CLI.ProjectConfigurators
 
         public override string ToString() => "Electron";
 
-        public override string[] PackageFilesExtensionInclude => new[] { ".appx" };
+        public override string[] PackageFilesExtensionInclude => new[]
+        {
+            ".appx"
+        };
         public override string[]? PackageFilesExtensionExclude { get; }
         public override SearchOption PackageFilesSearchOption { get; } = SearchOption.TopDirectoryOnly;
         public override PublishFileSearchFilterStrategy PublishFileSearchFilterStrategy { get; } = PublishFileSearchFilterStrategy.All;
@@ -53,7 +56,11 @@ namespace MSStore.CLI.ProjectConfigurators
             }
         }
 
-        public override IEnumerable<BuildArch>? DefaultBuildArchs => new[] { BuildArch.X64, BuildArch.Arm64 };
+        public override IEnumerable<BuildArch>? DefaultBuildArchs => new[]
+        {
+            BuildArch.X64,
+            BuildArch.Arm64
+        };
 
         public override bool PackageOnlyOnWindows => true;
 
@@ -114,10 +121,18 @@ namespace MSStore.CLI.ProjectConfigurators
         {
             var defaultAssets = new Dictionary<string, string>()
             {
-                { "SampleAppx.50x50.png", "StoreLogo.png" },
-                { "SampleAppx.150x150.png", "Square150x150Logo.png" },
-                { "SampleAppx.44x44.png", "Square44x44Logo.png" },
-                { "SampleAppx.310x150.png", "Wide310x150Logo.png" }
+                {
+                    "SampleAppx.50x50.png", "StoreLogo.png"
+                },
+                {
+                    "SampleAppx.150x150.png", "Square150x150Logo.png"
+                },
+                {
+                    "SampleAppx.44x44.png", "Square44x44Logo.png"
+                },
+                {
+                    "SampleAppx.310x150.png", "Wide310x150Logo.png"
+                }
             };
 
             var appxAssetsFolder = GetDefaultAssetsAppxFolder();
@@ -169,7 +184,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 Directory.GetFiles(appxFolder)
                     .Where(f => fileNames
                         .Any(n => Path.GetFileNameWithoutExtension(f)
-                                      .Equals(n, StringComparison.OrdinalIgnoreCase)))
+                            .Equals(n, StringComparison.OrdinalIgnoreCase)))
                     .ToList());
         }
 
@@ -220,12 +235,18 @@ namespace MSStore.CLI.ProjectConfigurators
             {
                 if (jsonValue.TryGetValue(out string? existingTarget))
                 {
-                    electronManifest.Build.Windows.Targets = new JsonArray { JsonNode.Parse("\"appx\""), JsonNode.Parse($"\"{existingTarget}\"") };
+                    electronManifest.Build.Windows.Targets = new JsonArray
+                    {
+                        JsonNode.Parse("\"appx\""), JsonNode.Parse($"\"{existingTarget}\"")
+                    };
                 }
             }
             else
             {
-                electronManifest.Build.Windows.Targets = new JsonArray { JsonNode.Parse("\"appx\"") };
+                electronManifest.Build.Windows.Targets = new JsonArray
+                {
+                    JsonNode.Parse("\"appx\"")
+                };
             }
 
             electronManifest.Build.Appx ??= new ElectronManifestBuildAppX();
@@ -337,7 +358,12 @@ namespace MSStore.CLI.ProjectConfigurators
 
                     var cleanedStdOut = System.Text.RegularExpressions.Regex.Replace(result.StdOut, @"\e([^\[\]]|\[.*?[a-zA-Z]|\].*?\a)", string.Empty);
 
-                    var msixLine = cleanedStdOut.Split(new string[] { "\n", Environment.NewLine }, StringSplitOptions.None).LastOrDefault(line => line.Contains("target=AppX"));
+                    var msixLine = cleanedStdOut.Split(
+                        new string[]
+                        {
+                            "\n",
+                            Environment.NewLine
+                        }, StringSplitOptions.None).LastOrDefault(line => line.Contains("target=AppX"));
                     int index;
                     var search = "file=";
                     if (msixLine == null || (index = msixLine.IndexOf(search, StringComparison.OrdinalIgnoreCase)) == -1)
@@ -387,7 +413,7 @@ namespace MSStore.CLI.ProjectConfigurators
             _electronManifest ??= await _electronManifestManager.LoadAsync(fileInfo, ct);
         }
 
-        public override async Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, string? flightId, DirectoryInfo? inputDirectory, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public override async Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, string? flightId, DirectoryInfo? inputDirectory, bool noCommit, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             if (_electronManifest == null)
             {
@@ -395,7 +421,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 await EnsureElectronManifestAsync(manifestFile, ct);
             }
 
-            return await base.PublishAsync(pathOrUrl, app, flightId, inputDirectory, storePackagedAPI, ct);
+            return await base.PublishAsync(pathOrUrl, app, flightId, inputDirectory, noCommit, storePackagedAPI, ct);
         }
     }
 }

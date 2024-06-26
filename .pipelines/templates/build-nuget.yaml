@@ -9,6 +9,9 @@ parameters:
   - name: DoEsrp
     type: boolean
     default: false
+  - name: signingIdentity
+    type: object
+    default: {}
 
 steps:
 - bash: |
@@ -53,7 +56,7 @@ steps:
   inputs:
     command: custom
     custom: tool
-    arguments: 'install --global dotnet-reportgenerator-globaltool --version 5.2.2'
+    arguments: 'install --global dotnet-reportgenerator-globaltool --version 5.3.6'
 - script: reportgenerator "-reports:$(Build.SourcesDirectory)/**/*coverage.*.cobertura.xml" "-targetdir:$(Build.SourcesDirectory)/report" "-reporttypes:Cobertura" "-filefilters:-*GenerationContext*.g.cs"
   displayName: Merge code coverage files
 - task: PublishCodeCoverageResults@1
@@ -62,11 +65,16 @@ steps:
     codeCoverageTool: 'Cobertura'
     summaryFileLocation: '$(Build.SourcesDirectory)/report/Cobertura.xml'
 - ${{ if eq(parameters['DoEsrp'], 'true') }}:
-  - task: EsrpCodeSigning@2
+  - task: EsrpCodeSigning@5
     displayName: Code Sign ESRP - API DLL
     condition: startsWith(variables.AgentOS, 'Linux')
     inputs:
-      ConnectedServiceName: 'MSStoreCLI - ESRP Code Signing'
+      ConnectedServiceName: ${{ parameters.signingIdentity.serviceName }}
+      AppRegistrationClientId: ${{ parameters.signingIdentity.appId }}
+      AppRegistrationTenantId: ${{ parameters.signingIdentity.tenantId }}
+      AuthAKVName: ${{ parameters.signingIdentity.akvName }}
+      AuthCertName: ${{ parameters.signingIdentity.authCertName }}
+      AuthSignCertName: ${{ parameters.signingIdentity.signCertName }}
       FolderPath: '$(System.DefaultWorkingDirectory)/MSStore.API/bin/${{ parameters.dotnet_configuration }}/net8.0'
       Pattern: 'MSStore.API.dll'
       signConfigType: inlineSignParams
