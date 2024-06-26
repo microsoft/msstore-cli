@@ -55,17 +55,16 @@ jobs:
         CoverletOutputFormat: cobertura
       run: dotnet test MSStore.CLI.sln --no-restore /p:Configuration=Release --logger trx & wait
     - name: Publish test results
-      if: ${{ !env.ACT }} && (success() || failure())
+      if: ${{ !cancelled() }}
       uses: actions/upload-artifact@v4
       with:
         name: test-results-${{ matrix.os }}
         path: MSStore.CLI.UnitTests/TestResults/*.trx
     - name: Install ReportGenerator
-      run: dotnet tool install --global dotnet-reportgenerator-globaltool --version 5.2.2
+      run: dotnet tool install --global dotnet-reportgenerator-globaltool --version 5.3.6
     - name: Merge code coverage files
       run: reportgenerator "-reports:${{ github.workspace }}/**/*coverage.*.cobertura.xml" "-targetdir:${{ github.workspace }}/report" "-reporttypes:Cobertura" "-filefilters:-*GenerationContext*.g.cs"
     - name: Publish code coverage results
-      if: ${{ !env.ACT }}
       uses: actions/upload-artifact@v4
       with:
         name: Cobertura-${{ matrix.os }}
@@ -75,7 +74,7 @@ jobs:
       if: ${{ matrix.os == 'ubuntu-latest' }}
       run: dotnet pack MSStore.API --no-build -c Release
     - name: Upload Artifact - NuGet
-      if: ${{ matrix.os == 'ubuntu-latest' && !env.ACT }}
+      if: ${{ matrix.os == 'ubuntu-latest' }}
       uses: actions/upload-artifact@v4
       with:
         name: NuGet
