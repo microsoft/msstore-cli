@@ -48,6 +48,32 @@ namespace MSStore.CLI.Helpers
             return submission;
         }
 
+        public static async Task<DevCenterFlightSubmission?> GetAnyFlightSubmissionAsync(this IStorePackagedAPI storePackagedAPI, string applicationId, DevCenterFlight flight, StatusContext ctx, ILogger logger, CancellationToken ct)
+        {
+            if (applicationId == null || flight.FlightId == null)
+            {
+                return null;
+            }
+
+            DevCenterFlightSubmission? submission = null;
+            if (flight.PendingFlightSubmission?.Id != null)
+            {
+                AnsiConsole.MarkupLine($"Found [green]Pending Flight Submission[/].");
+                logger.LogInformation("Found Pending Flight Submission with Id '{FlightPendingFlightSubmissionId}'", flight.PendingFlightSubmission.Id);
+                ctx.Status("Retrieving Pending Flight Submission");
+                submission = await storePackagedAPI.GetFlightSubmissionAsync(applicationId, flight.FlightId, flight.PendingFlightSubmission.Id, ct);
+            }
+            else if (flight.LastPublishedFlightSubmission?.Id != null)
+            {
+                AnsiConsole.MarkupLine("Could not find a Pending Flight Submission, but found the [green]Last Published Flight Submission[/].");
+                logger.LogInformation("Could not find a Pending Flight Submission, but found the Last Published Flight Submission with Id '{FlightLastPublishedFlightSubmissionId}'", flight.LastPublishedFlightSubmission.Id);
+                ctx.Status("Retrieving Last Published Flight Submission");
+                submission = await storePackagedAPI.GetFlightSubmissionAsync(applicationId, flight.FlightId, flight.LastPublishedFlightSubmission.Id, ct);
+            }
+
+            return submission;
+        }
+
         public static async Task<DevCenterSubmission?> CreateNewSubmissionAsync(this IStorePackagedAPI storePackagedAPI, string productId, ILogger logger, CancellationToken ct)
         {
             return await AnsiConsole.Status().StartAsync("Creating new Submission", async ctx =>
@@ -92,13 +118,21 @@ namespace MSStore.CLI.Helpers
             });
         }
 
-        public static async Task<DevCenterSubmission?> GetExistingSubmission(this IStorePackagedAPI storePackagedAPI, string appId, string submissionId, ILogger logger, CancellationToken ct)
+        private static async Task<IDevCenterSubmission?> GetExistingSubmission(this IStorePackagedAPI storePackagedAPI, string appId, string? flightId, string submissionId, ILogger logger, CancellationToken ct)
         {
             return await AnsiConsole.Status().StartAsync("Retrieving existing Submission", async ctx =>
             {
                 try
                 {
-                    var submission = await storePackagedAPI.GetSubmissionAsync(appId, submissionId, ct);
+                    IDevCenterSubmission submission;
+                    if (flightId != null)
+                    {
+                        submission = await storePackagedAPI.GetFlightSubmissionAsync(appId, flightId, submissionId, ct);
+                    }
+                    else
+                    {
+                        submission = await storePackagedAPI.GetSubmissionAsync(appId, submissionId, ct);
+                    }
 
                     AnsiConsole.MarkupLine($":check_mark_button: [green]Submission retrieved[/]");
                     logger.LogInformation("Submission retrieved. Id = '{SubmissionId}'", submission.Id);
@@ -114,7 +148,7 @@ namespace MSStore.CLI.Helpers
             });
         }
 
-        private static async IAsyncEnumerable<DevCenterSubmissionStatusResponse> EnumerateSubmissionStatusAsync(this IStorePackagedAPI storePackagedAPI, string productId, string submissionId, bool waitFirst, [EnumeratorCancellation] CancellationToken ct = default)
+        private static async IAsyncEnumerable<DevCenterSubmissionStatusResponse> EnumerateSubmissionStatusAsync(this IStorePackagedAPI storePackagedAPI, string productId, string? flightId, string submissionId, bool waitFirst, [EnumeratorCancellation] CancellationToken ct = default)
         {
             // Let's periodically check the status until it changes from "CommitsStarted" to either
             // successful status or a failure.
@@ -127,7 +161,14 @@ namespace MSStore.CLI.Helpers
                 }
 
                 waitFirst = true;
-                submissionStatus = await storePackagedAPI.GetSubmissionStatusAsync(productId, submissionId, ct);
+                if (flightId == null)
+                {
+                    submissionStatus = await storePackagedAPI.GetSubmissionStatusAsync(productId, submissionId, ct);
+                }
+                else
+                {
+                    submissionStatus = await storePackagedAPI.GetFlightSubmissionStatusAsync(productId, flightId, submissionId, ct);
+                }
 
                 yield return submissionStatus;
             }
@@ -136,10 +177,10 @@ namespace MSStore.CLI.Helpers
                    && submissionStatus.StatusDetails?.CertificationReports.IsNullOrEmpty() == true);
         }
 
-        public static async Task<DevCenterSubmissionStatusResponse?> PollSubmissionStatusAsync(this IStorePackagedAPI storePackagedAPI, string productId, string submissionId, bool waitFirst, ILogger? logger, CancellationToken ct = default)
+        public static async Task<DevCenterSubmissionStatusResponse?> PollSubmissionStatusAsync(this IStorePackagedAPI storePackagedAPI, string productId, string? flightId, string submissionId, bool waitFirst, ILogger? logger, CancellationToken ct = default)
         {
             DevCenterSubmissionStatusResponse? lastSubmissionStatus = null;
-            await foreach (var submissionStatus in storePackagedAPI.EnumerateSubmissionStatusAsync(productId, submissionId, waitFirst, ct: ct))
+            await foreach (var submissionStatus in storePackagedAPI.EnumerateSubmissionStatusAsync(productId, flightId, submissionId, waitFirst, ct: ct))
             {
                 AnsiConsole.MarkupLine($"Submission Status - [green]{submissionStatus.Status}[/]");
                 submissionStatus.StatusDetails?.PrintAllTables(productId, submissionId, logger);
@@ -152,7 +193,7 @@ namespace MSStore.CLI.Helpers
             return lastSubmissionStatus;
         }
 
-        public static async Task<int> HandleLastSubmissionStatusAsync(this IStorePackagedAPI storePackagedAPI, DevCenterSubmissionStatusResponse lastSubmissionStatus, string productId, string submissionId, IBrowserLauncher browserLauncher, ILogger logger, CancellationToken ct = default)
+        public static async Task<int> HandleLastSubmissionStatusAsync(this IStorePackagedAPI storePackagedAPI, DevCenterSubmissionStatusResponse lastSubmissionStatus, string productId, string? flightId, string submissionId, IBrowserLauncher browserLauncher, ILogger logger, CancellationToken ct = default)
         {
             if ("CommitFailed".Equals(lastSubmissionStatus?.Status, StringComparison.Ordinal))
             {
@@ -182,7 +223,7 @@ namespace MSStore.CLI.Helpers
             }
             else
             {
-                var submission = await storePackagedAPI.GetExistingSubmission(productId, submissionId, logger, ct);
+                var submission = await storePackagedAPI.GetExistingSubmission(productId, flightId, submissionId, logger, ct);
 
                 if (submission == null || submission.Id == null)
                 {
@@ -190,11 +231,20 @@ namespace MSStore.CLI.Helpers
                     return -1;
                 }
 
-                if (submission.ApplicationPackages != null)
+                if (submission is DevCenterSubmission devCenterSubmission && devCenterSubmission.ApplicationPackages != null)
                 {
                     AnsiConsole.WriteLine("Submission commit success! Here is some data:");
                     AnsiConsole.WriteLine("Packages:");
-                    foreach (var applicationPackage in submission.ApplicationPackages)
+                    foreach (var applicationPackage in devCenterSubmission.ApplicationPackages)
+                    {
+                        AnsiConsole.WriteLine(applicationPackage.FileName ?? string.Empty);
+                    }
+                }
+                else if (submission is DevCenterFlightSubmission devCenterFlightSubmission && devCenterFlightSubmission.FlightPackages != null)
+                {
+                    AnsiConsole.WriteLine("Submission commit success! Here is some data:");
+                    AnsiConsole.WriteLine("Packages:");
+                    foreach (var applicationPackage in devCenterFlightSubmission.FlightPackages)
                     {
                         AnsiConsole.WriteLine(applicationPackage.FileName ?? string.Empty);
                     }
@@ -294,12 +344,13 @@ namespace MSStore.CLI.Helpers
         public static async Task<int> PublishAsync(
             this IStorePackagedAPI storePackagedAPI,
             DevCenterApplication app,
+            string? flightId,
             FirstSubmissionDataCallback firstSubmissionDataCallback,
             AllowTargetFutureDeviceFamily[] allowTargetFutureDeviceFamilies,
             DirectoryInfo output,
             IEnumerable<FileInfo> input,
             bool noCommit,
-            IBrowserLauncher _browserLauncher,
+            IBrowserLauncher browserLauncher,
             IConsoleReader consoleReader,
             IZipFileManager zipFileManager,
             IFileDownloader fileDownloader,
@@ -313,14 +364,42 @@ namespace MSStore.CLI.Helpers
                 return -1;
             }
 
-            var pendingSubmissionId = app.PendingApplicationSubmission?.Id;
+            string? pendingSubmissionId = null;
+            DevCenterFlight? flight = null;
+
+            if (flightId == null)
+            {
+                pendingSubmissionId = app.PendingApplicationSubmission?.Id;
+            }
+            else
+            {
+                flight = await storePackagedAPI.GetFlightAsync(app.Id, flightId, ct);
+
+                if (flight?.FlightId == null)
+                {
+                    AnsiConsole.MarkupLine($"Could not find application flight with ID '{app.Id}'/'{flightId}'");
+                    return -1;
+                }
+
+                pendingSubmissionId = flight.PendingFlightSubmission?.Id;
+            }
+
             bool success = true;
 
-            // Do not delete if first submission
-            if (pendingSubmissionId != null && app.LastPublishedApplicationSubmission != null)
+            ApplicationSubmissionInfo? lastPublishedSubmittion = null;
+            if (flight != null)
             {
-                // TODO: pass the flightId
-                success = await storePackagedAPI.DeleteSubmissionAsync(app.Id, null, pendingSubmissionId, _browserLauncher, logger, ct);
+                lastPublishedSubmittion = flight.LastPublishedFlightSubmission;
+            }
+            else
+            {
+                lastPublishedSubmittion = app.LastPublishedApplicationSubmission;
+            }
+
+            // Do not delete if first submission
+            if (pendingSubmissionId != null && lastPublishedSubmittion != null)
+            {
+                success = await storePackagedAPI.DeleteSubmissionAsync(app.Id, flightId, pendingSubmissionId, browserLauncher, logger, ct);
 
                 if (!success)
                 {
@@ -328,12 +407,12 @@ namespace MSStore.CLI.Helpers
                 }
             }
 
-            DevCenterSubmission? submission = null;
+            IDevCenterSubmission? submission = null;
 
             // If first submission, just use it // TODO, check that can update
-            if (pendingSubmissionId != null && app.LastPublishedApplicationSubmission == null)
+            if (pendingSubmissionId != null && lastPublishedSubmittion == null)
             {
-                submission = await storePackagedAPI.GetExistingSubmission(app.Id, pendingSubmissionId, logger, ct);
+                submission = await storePackagedAPI.GetExistingSubmission(app.Id, flightId, pendingSubmissionId, logger, ct);
 
                 if (submission == null || submission.Id == null)
                 {
@@ -361,8 +440,7 @@ namespace MSStore.CLI.Helpers
                         AnsiConsole.MarkupLine("[yellow]The submission was in a failed state. We will delete it and create a new one.[/]");
                     }
 
-                    // TODO: pass the flightId
-                    success = await storePackagedAPI.DeleteSubmissionAsync(app.Id, null, submission.Id, _browserLauncher, logger, ct);
+                    success = await storePackagedAPI.DeleteSubmissionAsync(app.Id, flightId, submission.Id, browserLauncher, logger, ct);
 
                     if (!success)
                     {
@@ -375,7 +453,10 @@ namespace MSStore.CLI.Helpers
 
             if (submission == null)
             {
-                var newSubmission = await storePackagedAPI.CreateNewSubmissionAsync(app.Id, logger, ct);
+                IDevCenterSubmission? newSubmission = flightId != null
+                    ? await storePackagedAPI.CreateNewFlightSubmissionAsync(app.Id, flightId, logger, ct)
+                    : await storePackagedAPI.CreateNewSubmissionAsync(app.Id, logger, ct);
+
                 if (newSubmission != null)
                 {
                     submission = newSubmission;
@@ -391,7 +472,7 @@ namespace MSStore.CLI.Helpers
                 return -1;
             }
 
-            submission = await storePackagedAPI.GetExistingSubmission(app.Id, submission.Id, logger, ct);
+            submission = await storePackagedAPI.GetExistingSubmission(app.Id, flightId, submission.Id, logger, ct);
 
             if (submission == null || submission.Id == null || submission.FileUploadUrl == null)
             {
@@ -400,7 +481,10 @@ namespace MSStore.CLI.Helpers
                 return -1;
             }
 
-            if (submission.ApplicationPackages == null)
+            DevCenterSubmission? devCenterSubmission = submission as DevCenterSubmission;
+            DevCenterFlightSubmission? devCenterFlightSubmission = submission as DevCenterFlightSubmission;
+            if ((devCenterSubmission != null && devCenterSubmission.ApplicationPackages == null) ||
+                (devCenterFlightSubmission != null && devCenterFlightSubmission.FlightPackages == null))
             {
                 AnsiConsole.WriteLine("No application packages found.");
                 return -1;
@@ -411,7 +495,10 @@ namespace MSStore.CLI.Helpers
                 return -1;
             }
 
-            await FulfillApplicationAsync(app, submission, firstSubmissionDataCallback, allowTargetFutureDeviceFamilies, consoleReader, environmentInformationService, logger, ct);
+            if (devCenterSubmission != null)
+            {
+                await FulfillApplicationAsync(app, devCenterSubmission, firstSubmissionDataCallback, allowTargetFutureDeviceFamilies, consoleReader, environmentInformationService, logger, ct);
+            }
 
             AnsiConsole.MarkupLine("New Submission [green]properly configured[/].");
             logger.LogInformation("New Submission properly configured. FileUploadUrl: {FileUploadUrl}", submission.FileUploadUrl);
@@ -423,7 +510,32 @@ namespace MSStore.CLI.Helpers
                 return -1;
             }
 
-            submission = await storePackagedAPI.UpdateSubmissionAsync(app.Id, submission.Id, submission, ct);
+            if (devCenterSubmission != null)
+            {
+                submission = await storePackagedAPI.UpdateSubmissionAsync(app.Id, submission.Id, devCenterSubmission, ct);
+            }
+            else if (devCenterFlightSubmission != null && flightId != null)
+            {
+                submission = await storePackagedAPI.UpdateFlightSubmissionAsync(
+                    app.Id,
+                    flightId,
+                    submission.Id,
+                    new DevCenterFlightSubmissionUpdate
+                    {
+                        FlightPackages = devCenterFlightSubmission.FlightPackages?.Select(p => new FlightPackageUpdate
+                        {
+                            FileName = p.FileName,
+                            FileStatus = p.FileStatus,
+                            MinimumDirectXVersion = p.MinimumDirectXVersion,
+                            MinimumSystemRam = p.MinimumSystemRam
+                        })?.ToList(),
+                        PackageDeliveryOptions = devCenterFlightSubmission.PackageDeliveryOptions,
+                        TargetPublishMode = devCenterFlightSubmission.TargetPublishMode,
+                        TargetPublishDate = devCenterFlightSubmission.TargetPublishDate,
+                        NotesForCertification = devCenterFlightSubmission.NotesForCertification
+                    },
+                    ct);
+            }
 
             if (submission == null || submission.Id == null || submission.FileUploadUrl == null)
             {
@@ -461,7 +573,15 @@ namespace MSStore.CLI.Helpers
                 return 0;
             }
 
-            var submissionCommit = await storePackagedAPI.CommitSubmissionAsync(app.Id, submission.Id, ct);
+            DevCenterCommitResponse? submissionCommit = null;
+            if (devCenterSubmission != null)
+            {
+                submissionCommit = await storePackagedAPI.CommitSubmissionAsync(app.Id, submission.Id, ct);
+            }
+            else if (devCenterFlightSubmission != null && flightId != null)
+            {
+                submissionCommit = await storePackagedAPI.CommitFlightSubmissionAsync(app.Id, flightId, submission.Id, ct);
+            }
 
             if (submissionCommit == null)
             {
@@ -480,19 +600,24 @@ namespace MSStore.CLI.Helpers
             AnsiConsole.WriteLine("Waiting for the submission commit processing to complete. This may take a couple of minutes.");
             AnsiConsole.MarkupLine($"Submission Committed - Status=[green u]{submissionCommit.Status}[/]");
 
-            var lastSubmissionStatus = await storePackagedAPI.PollSubmissionStatusAsync(app.Id, submission.Id, true, logger, ct: ct);
-
+            var lastSubmissionStatus = await storePackagedAPI.PollSubmissionStatusAsync(app.Id, flightId, submission.Id, true, logger, ct: ct);
             if (lastSubmissionStatus == null)
             {
                 return -1;
             }
 
-            return await storePackagedAPI.HandleLastSubmissionStatusAsync(lastSubmissionStatus, app.Id, submission.Id, _browserLauncher, logger, ct);
+            return await storePackagedAPI.HandleLastSubmissionStatusAsync(lastSubmissionStatus, app.Id, flightId, submission.Id, browserLauncher, logger, ct);
         }
 
-        private static async Task<string?> PrepareBundleAsync(DevCenterSubmission submission, DirectoryInfo output, IEnumerable<FileInfo> packageFiles, IZipFileManager zipFileManager, IFileDownloader fileDownloader, ILogger logger, CancellationToken ct)
+        private static async Task<string?> PrepareBundleAsync(IDevCenterSubmission submission, DirectoryInfo output, IEnumerable<FileInfo> packageFiles, IZipFileManager zipFileManager, IFileDownloader fileDownloader, ILogger logger, CancellationToken ct)
         {
-            if (submission?.ApplicationPackages == null)
+            DevCenterSubmission? devCenterSubmission = submission as DevCenterSubmission;
+            DevCenterFlightSubmission? devCenterFlightSubmission = submission as DevCenterFlightSubmission;
+            if (devCenterSubmission != null && devCenterSubmission.ApplicationPackages == null)
+            {
+                return null;
+            }
+            else if (devCenterFlightSubmission != null && devCenterFlightSubmission.FlightPackages == null)
             {
                 return null;
             }
@@ -505,18 +630,37 @@ namespace MSStore.CLI.Helpers
                     DirectoryInfo? uploadDir = null;
                     try
                     {
-                        var applicationPackages = submission.ApplicationPackages.FilterUnsupported();
+                        List<ApplicationPackage>? packages;
+                        if (devCenterSubmission != null)
+                        {
+                            packages = devCenterSubmission.ApplicationPackages.FilterUnsupported();
+                        }
+                        else if (devCenterFlightSubmission != null)
+                        {
+                            packages = devCenterFlightSubmission.FlightPackages.FilterUnsupported();
+                        }
+                        else
+                        {
+                            return null;
+                        }
 
                         uploadDir = Directory.CreateDirectory(Path.Combine(output.FullName, $"Upload_{Path.GetFileNameWithoutExtension(Path.GetRandomFileName())}"));
 
                         foreach (var file in packageFiles)
                         {
-                            var applicationPackage = applicationPackages.FirstOrDefault(p => Path.GetExtension(p.FileName) == file.Extension);
+                            var applicationPackage = packages.FirstOrDefault(p => Path.GetExtension(p.FileName) == file.Extension);
                             if (applicationPackage != null)
                             {
                                 if (applicationPackage.FileStatus == FileStatus.PendingUpload)
                                 {
-                                    submission.ApplicationPackages.Remove(applicationPackage);
+                                    if (devCenterSubmission != null)
+                                    {
+                                        devCenterSubmission.ApplicationPackages?.Remove(applicationPackage);
+                                    }
+                                    else if (devCenterFlightSubmission != null)
+                                    {
+                                        devCenterFlightSubmission.FlightPackages?.Remove(applicationPackage);
+                                    }
                                 }
                                 else
                                 {
@@ -527,20 +671,28 @@ namespace MSStore.CLI.Helpers
 
                             var newApplicationPackage = new ApplicationPackage
                             {
-                                FileStatus = FileStatus.PendingUpload, FileName = file.Name
+                                FileStatus = FileStatus.PendingUpload,
+                                FileName = file.Name
                             };
 
-                            submission.ApplicationPackages.Add(newApplicationPackage);
+                            if (devCenterSubmission != null)
+                            {
+                                devCenterSubmission.ApplicationPackages?.Add(newApplicationPackage);
+                            }
+                            else if (devCenterFlightSubmission != null)
+                            {
+                                devCenterFlightSubmission.FlightPackages?.Add(newApplicationPackage);
+                            }
 
                             logger.LogInformation("Copying '{FileFullName}' to zip bundle folder.", file.FullName);
                             File.Copy(file.FullName, Path.Combine(uploadDir.FullName, file.Name));
                         }
 
                         // Add images to Bundle
-                        if (submission.Listings != null)
+                        if (devCenterSubmission != null && devCenterSubmission.Listings != null)
                         {
                             var tasks = new List<Task<bool>>();
-                            foreach (var listing in submission.Listings)
+                            foreach (var listing in devCenterSubmission.Listings)
                             {
                                 if (listing.Value?.BaseListing?.Images?.Count > 0)
                                 {
@@ -696,7 +848,8 @@ namespace MSStore.CLI.Helpers
                     {
                         BaseListing = new BaseListing
                         {
-                            Title = app.PrimaryName, Description = submissionData.Description,
+                            Title = app.PrimaryName,
+                            Description = submissionData.Description,
                         }
                     };
 
@@ -708,7 +861,9 @@ namespace MSStore.CLI.Helpers
                         {
                             listing.BaseListing.Images.Add(new Image
                             {
-                                FileName = image.FileName, FileStatus = FileStatus.PendingUpload, ImageType = image.ImageType.ToString()
+                                FileName = image.FileName,
+                                FileStatus = FileStatus.PendingUpload,
+                                ImageType = image.ImageType.ToString()
                             });
                         }
                     }

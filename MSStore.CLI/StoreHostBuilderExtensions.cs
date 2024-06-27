@@ -32,6 +32,8 @@ namespace MSStore.CLI
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Commands.Flights.Submission.DeleteCommand.Handler))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Commands.Flights.Submission.UpdateCommand.Handler))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Commands.Flights.Submission.PublishCommand.Handler))]
+        [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Commands.Flights.Submission.PollCommand.Handler))]
+        [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Commands.Flights.Submission.StatusCommand.Handler))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(PackageCommand.Handler))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(PublishCommand.Handler))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(MicrosoftStoreCLI.Handler))]
@@ -61,6 +63,8 @@ namespace MSStore.CLI
                   .UseCommandHandler<Commands.Flights.Submission.DeleteCommand, Commands.Flights.Submission.DeleteCommand.Handler>()
                   .UseCommandHandler<Commands.Flights.Submission.UpdateCommand, Commands.Flights.Submission.UpdateCommand.Handler>()
                   .UseCommandHandler<Commands.Flights.Submission.PublishCommand, Commands.Flights.Submission.PublishCommand.Handler>()
+                  .UseCommandHandler<Commands.Flights.Submission.PollCommand, Commands.Flights.Submission.PollCommand.Handler>()
+                  .UseCommandHandler<Commands.Flights.Submission.StatusCommand, Commands.Flights.Submission.StatusCommand.Handler>()
                   .UseCommandHandler<MicrosoftStoreCLI, MicrosoftStoreCLI.Handler>();
         }
     }

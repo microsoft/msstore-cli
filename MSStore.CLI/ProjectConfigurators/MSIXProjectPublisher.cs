@@ -104,7 +104,7 @@ namespace MSStore.CLI.ProjectConfigurators
             return Task.FromResult(_appXManifestManager.GetAppId(appxManifest));
         }
 
-        public async Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, DirectoryInfo? inputDirectory, bool noCommit, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public async Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, string? flightId, DirectoryInfo? inputDirectory, bool noCommit, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             var msix = new FileInfo(pathOrUrl);
 
@@ -141,7 +141,7 @@ namespace MSStore.CLI.ProjectConfigurators
 
             _logger.LogInformation("Trying to publish these {FileCount} files: {FileNames}", packageFiles.Count, string.Join(", ", packageFiles.Select(f => $"'{f.FullName}'")));
 
-            return await storePackagedAPI.PublishAsync(_app, GetFirstSubmissionDataAsync, AllowTargetFutureDeviceFamilies, output, packageFiles, noCommit, _browserLauncher, _consoleReader, _zipFileManager, _fileDownloader, _azureBlobManager, _environmentInformationService, _logger, ct);
+            return await storePackagedAPI.PublishAsync(_app, flightId, GetFirstSubmissionDataAsync, AllowTargetFutureDeviceFamilies, output, packageFiles, noCommit, _browserLauncher, _consoleReader, _zipFileManager, _fileDownloader, _azureBlobManager, _environmentInformationService, _logger, ct);
         }
 
         private Task<(string Description, List<SubmissionImage> Images)> GetFirstSubmissionDataAsync(string listingLanguage, CancellationToken ct)
