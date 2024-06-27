@@ -21,7 +21,8 @@ namespace MSStore.CLI.ProjectConfigurators
         public string[] PackageFilesExtensionInclude => new[]
         {
             ".msix",
-            ".msixbundle"
+            ".msixbundle",
+            ".msixupload"
         };
 
         public override string ToString() => "MSIX";
