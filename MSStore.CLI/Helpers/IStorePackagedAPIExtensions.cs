@@ -48,21 +48,39 @@ namespace MSStore.CLI.Helpers
             return submission;
         }
 
-        public static async Task<IDevCenterSubmission?> CreateNewSubmissionAsync(this IStorePackagedAPI storePackagedAPI, string productId, string? flightId, ILogger logger, CancellationToken ct)
+        public static async Task<DevCenterFlightSubmission?> GetAnyFlightSubmissionAsync(this IStorePackagedAPI storePackagedAPI, string applicationId, DevCenterFlight flight, StatusContext ctx, ILogger logger, CancellationToken ct)
+        {
+            if (applicationId == null || flight.FlightId == null)
+            {
+                return null;
+            }
+
+            DevCenterFlightSubmission? submission = null;
+            if (flight.PendingFlightSubmission?.Id != null)
+            {
+                AnsiConsole.MarkupLine($"Found [green]Pending Flight Submission[/].");
+                logger.LogInformation("Found Pending Flight Submission with Id '{FlightPendingFlightSubmissionId}'", flight.PendingFlightSubmission.Id);
+                ctx.Status("Retrieving Pending Flight Submission");
+                submission = await storePackagedAPI.GetFlightSubmissionAsync(applicationId, flight.FlightId, flight.PendingFlightSubmission.Id, ct);
+            }
+            else if (flight.LastPublishedFlightSubmission?.Id != null)
+            {
+                AnsiConsole.MarkupLine("Could not find a Pending Flight Submission, but found the [green]Last Published Flight Submission[/].");
+                logger.LogInformation("Could not find a Pending Flight Submission, but found the Last Published Flight Submission with Id '{FlightLastPublishedFlightSubmissionId}'", flight.LastPublishedFlightSubmission.Id);
+                ctx.Status("Retrieving Last Published Flight Submission");
+                submission = await storePackagedAPI.GetFlightSubmissionAsync(applicationId, flight.FlightId, flight.LastPublishedFlightSubmission.Id, ct);
+            }
+
+            return submission;
+        }
+
+        public static async Task<DevCenterSubmission?> CreateNewSubmissionAsync(this IStorePackagedAPI storePackagedAPI, string productId, ILogger logger, CancellationToken ct)
         {
             return await AnsiConsole.Status().StartAsync("Creating new Submission", async ctx =>
             {
                 try
                 {
-                    IDevCenterSubmission? submission = null;
-                    if (flightId != null)
-                    {
-                        submission = await storePackagedAPI.CreateFlightSubmissionAsync(productId, flightId, ct);
-                    }
-                    else
-                    {
-                        submission = await storePackagedAPI.CreateSubmissionAsync(productId, ct);
-                    }
+                    var submission = await storePackagedAPI.CreateSubmissionAsync(productId, ct);
 
                     ctx.SuccessStatus($"Submission created.");
                     logger.LogInformation("Submission created. Id={SubmissionId}", submission.Id);
@@ -323,20 +341,65 @@ namespace MSStore.CLI.Helpers
             return application;
         }
 
-        public static async Task<int> PublishAsync(this IStorePackagedAPI storePackagedAPI, DevCenterApplication app, string? flightId, FirstSubmissionDataCallback firstSubmissionDataCallback, AllowTargetFutureDeviceFamily[] allowTargetFutureDeviceFamilies, DirectoryInfo output, IEnumerable<FileInfo> input, bool noCommit, IBrowserLauncher _browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, IEnvironmentInformationService environmentInformationService, ILogger logger, CancellationToken ct)
+        public static async Task<int> PublishAsync(
+            this IStorePackagedAPI storePackagedAPI,
+            DevCenterApplication app,
+            string? flightId,
+            FirstSubmissionDataCallback firstSubmissionDataCallback,
+            AllowTargetFutureDeviceFamily[] allowTargetFutureDeviceFamilies,
+            DirectoryInfo output,
+            IEnumerable<FileInfo> input,
+            bool noCommit,
+            IBrowserLauncher browserLauncher,
+            IConsoleReader consoleReader,
+            IZipFileManager zipFileManager,
+            IFileDownloader fileDownloader,
+            IAzureBlobManager azureBlobManager,
+            IEnvironmentInformationService environmentInformationService,
+            ILogger logger,
+            CancellationToken ct)
         {
             if (app?.Id == null)
             {
                 return -1;
             }
 
-            var pendingSubmissionId = app.PendingApplicationSubmission?.Id;
+            string? pendingSubmissionId = null;
+            DevCenterFlight? flight = null;
+
+            if (flightId == null)
+            {
+                pendingSubmissionId = app.PendingApplicationSubmission?.Id;
+            }
+            else
+            {
+                flight = await storePackagedAPI.GetFlightAsync(app.Id, flightId, ct);
+
+                if (flight?.FlightId == null)
+                {
+                    AnsiConsole.MarkupLine($"Could not find application flight with ID '{app.Id}'/'{flightId}'");
+                    return -1;
+                }
+
+                pendingSubmissionId = flight.PendingFlightSubmission?.Id;
+            }
+
             bool success = true;
 
-            // Do not delete if first submission
-            if (pendingSubmissionId != null && app.LastPublishedApplicationSubmission != null)
+            ApplicationSubmissionInfo? lastPublishedSubmittion = null;
+            if (flight != null)
             {
-                success = await storePackagedAPI.DeleteSubmissionAsync(app.Id, flightId, pendingSubmissionId, _browserLauncher, logger, ct);
+                lastPublishedSubmittion = flight.LastPublishedFlightSubmission;
+            }
+            else
+            {
+                lastPublishedSubmittion = app.LastPublishedApplicationSubmission;
+            }
+
+            // Do not delete if first submission
+            if (pendingSubmissionId != null && lastPublishedSubmittion != null)
+            {
+                success = await storePackagedAPI.DeleteSubmissionAsync(app.Id, flightId, pendingSubmissionId, browserLauncher, logger, ct);
 
                 if (!success)
                 {
@@ -347,7 +410,7 @@ namespace MSStore.CLI.Helpers
             IDevCenterSubmission? submission = null;
 
             // If first submission, just use it // TODO, check that can update
-            if (pendingSubmissionId != null && app.LastPublishedApplicationSubmission == null)
+            if (pendingSubmissionId != null && lastPublishedSubmittion == null)
             {
                 submission = await storePackagedAPI.GetExistingSubmission(app.Id, flightId, pendingSubmissionId, logger, ct);
 
@@ -377,7 +440,7 @@ namespace MSStore.CLI.Helpers
                         AnsiConsole.MarkupLine("[yellow]The submission was in a failed state. We will delete it and create a new one.[/]");
                     }
 
-                    success = await storePackagedAPI.DeleteSubmissionAsync(app.Id, flightId, submission.Id, _browserLauncher, logger, ct);
+                    success = await storePackagedAPI.DeleteSubmissionAsync(app.Id, flightId, submission.Id, browserLauncher, logger, ct);
 
                     if (!success)
                     {
@@ -390,7 +453,10 @@ namespace MSStore.CLI.Helpers
 
             if (submission == null)
             {
-                var newSubmission = await storePackagedAPI.CreateNewSubmissionAsync(app.Id, flightId, logger, ct);
+                IDevCenterSubmission? newSubmission = flightId != null
+                    ? await storePackagedAPI.CreateNewFlightSubmissionAsync(app.Id, flightId, logger, ct)
+                    : await storePackagedAPI.CreateNewSubmissionAsync(app.Id, logger, ct);
+
                 if (newSubmission != null)
                 {
                     submission = newSubmission;
@@ -448,7 +514,7 @@ namespace MSStore.CLI.Helpers
             {
                 submission = await storePackagedAPI.UpdateSubmissionAsync(app.Id, submission.Id, devCenterSubmission, ct);
             }
-            else if(devCenterFlightSubmission != null && flightId != null)
+            else if (devCenterFlightSubmission != null && flightId != null)
             {
                 submission = await storePackagedAPI.UpdateFlightSubmissionAsync(
                     app.Id,
@@ -540,7 +606,7 @@ namespace MSStore.CLI.Helpers
                 return -1;
             }
 
-            return await storePackagedAPI.HandleLastSubmissionStatusAsync(lastSubmissionStatus, app.Id, flightId, submission.Id, _browserLauncher, logger, ct);
+            return await storePackagedAPI.HandleLastSubmissionStatusAsync(lastSubmissionStatus, app.Id, flightId, submission.Id, browserLauncher, logger, ct);
         }
 
         private static async Task<string?> PrepareBundleAsync(IDevCenterSubmission submission, DirectoryInfo output, IEnumerable<FileInfo> packageFiles, IZipFileManager zipFileManager, IFileDownloader fileDownloader, ILogger logger, CancellationToken ct)
@@ -605,7 +671,8 @@ namespace MSStore.CLI.Helpers
 
                             var newApplicationPackage = new ApplicationPackage
                             {
-                                FileStatus = FileStatus.PendingUpload, FileName = file.Name
+                                FileStatus = FileStatus.PendingUpload,
+                                FileName = file.Name
                             };
 
                             if (devCenterSubmission != null)
@@ -781,7 +848,8 @@ namespace MSStore.CLI.Helpers
                     {
                         BaseListing = new BaseListing
                         {
-                            Title = app.PrimaryName, Description = submissionData.Description,
+                            Title = app.PrimaryName,
+                            Description = submissionData.Description,
                         }
                     };
 
@@ -793,7 +861,9 @@ namespace MSStore.CLI.Helpers
                         {
                             listing.BaseListing.Images.Add(new Image
                             {
-                                FileName = image.FileName, FileStatus = FileStatus.PendingUpload, ImageType = image.ImageType.ToString()
+                                FileName = image.FileName,
+                                FileStatus = FileStatus.PendingUpload,
+                                ImageType = image.ImageType.ToString()
                             });
                         }
                     }

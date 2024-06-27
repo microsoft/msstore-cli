@@ -33,7 +33,6 @@ namespace MSStore.CLI.Commands.Flights.Submission
 
             public string ProductId { get; set; } = null!;
             public string FlightId { get; set; } = null!;
-            public string SubmissionId { get; set; } = null!;
 
             public Handler(ILogger<Handler> logger, IStoreAPIFactory storeAPIFactory, TelemetryClient telemetryClient, IBrowserLauncher browserLauncher)
             {
@@ -68,14 +67,6 @@ namespace MSStore.CLI.Commands.Flights.Submission
                     try
                     {
                         storePackagedAPI = await _storeAPIFactory.CreatePackagedAsync(ct: ct);
-
-                        var application = await storePackagedAPI.GetApplicationAsync(ProductId, ct);
-
-                        if (application?.Id == null)
-                        {
-                            ctx.ErrorStatus($"Could not find application with ID '{ProductId}'");
-                            return null;
-                        }
 
                         flight = await storePackagedAPI.GetFlightAsync(ProductId, FlightId, ct);
 
