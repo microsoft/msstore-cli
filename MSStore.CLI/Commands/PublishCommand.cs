@@ -21,12 +21,40 @@ namespace MSStore.CLI.Commands
     internal class PublishCommand : Command
     {
         internal static readonly Option<string> FlightIdOption;
+        internal static readonly Option<float> PackageRolloutPercentageOption;
 
         static PublishCommand()
         {
             FlightIdOption = new Option<string>(
                 aliases: new string[] { "--flightId", "-f" },
                 description: "Specifies the Flight Id where the package will be published.");
+            PackageRolloutPercentageOption = new Option<float>(
+                aliases: new string[] { "--packageRolloutPercentage", "-prp" },
+                description: "Specifies the rollout percentage of the package. The value must be between 0 and 100.",
+                isDefault: false,
+                parseArgument: result =>
+                {
+                    if (result.Tokens.Count == 0)
+                    {
+                        return 100f;
+                    }
+
+                    string? percentage = result.Tokens.Single().Value;
+                    if (!float.TryParse(percentage, out float parsedPercentage))
+                    {
+                        result.ErrorMessage = "Invalid rollout percentage. The value must be between 0 and 100.";
+                        return 100f;
+                    }
+                    else if (parsedPercentage < 0 || parsedPercentage > 100)
+                    {
+                        result.ErrorMessage = "Invalid rollout percentage. The value must be between 0 and 100.";
+                        return 100f;
+                    }
+                    else
+                    {
+                        return parsedPercentage;
+                    }
+                });
         }
 
         public PublishCommand()
@@ -84,6 +112,8 @@ namespace MSStore.CLI.Commands
             AddOption(noCommitOption);
 
             AddOption(FlightIdOption);
+
+            AddOption(PackageRolloutPercentageOption);
         }
 
         public new class Handler : ICommandHandler
@@ -98,6 +128,7 @@ namespace MSStore.CLI.Commands
             public string? AppId { get; set; }
 
             public string? FlightId { get; set; }
+            public float? PackageRolloutPercentage { get; set; }
 
             public DirectoryInfo? InputDirectory { get; set; } = null!;
 
@@ -169,7 +200,7 @@ namespace MSStore.CLI.Commands
                 }
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(
-                    await projectPublisher.PublishAsync(PathOrUrl, app, FlightId, InputDirectory, NoCommit, storePackagedAPI, ct), props, ct);
+                    await projectPublisher.PublishAsync(PathOrUrl, app, FlightId, InputDirectory, NoCommit, PackageRolloutPercentage, storePackagedAPI, ct), props, ct);
             }
         }
     }
