@@ -334,15 +334,15 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
-        [DataRow(-1, "WinUIProject")]
-        [DataRow(-1, "UWPProject")]
-        [DataRow(-6, "MauiProject")]
-        [DataRow(-6, "FlutterProject")]
-        [DataRow(-6, "ElectronProject", "Npm")]
-        [DataRow(-6, "ElectronProject", "Yarn")]
-        [DataRow(-6, "ReactNativeProject", "Npm")]
-        [DataRow(-6, "ReactNativeProject", "Yarn")]
-        public async Task PackageCommandShouldNotWorkIfNotWindowsOnSpecificPlatforms(int expectedResult, params string[] testDataProjectSubPath)
+        [DataRow(-1, new[] { "WinUIProject" })]
+        [DataRow(-1, new[] { "UWPProject" })]
+        [DataRow(-6, new[] { "MauiProject" })]
+        [DataRow(-6, new[] { "FlutterProject" })]
+        [DataRow(-6, new[] { "ElectronProject", "Npm" })]
+        [DataRow(-6, new[] { "ElectronProject", "Yarn" })]
+        [DataRow(-6, new[] { "ReactNativeProject", "Npm" })]
+        [DataRow(-6, new[] { "ReactNativeProject", "Yarn" })]
+        public async Task PackageCommandShouldNotWorkIfNotWindowsOnSpecificPlatforms(int expectedResult, string[] testDataProjectSubPath)
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {

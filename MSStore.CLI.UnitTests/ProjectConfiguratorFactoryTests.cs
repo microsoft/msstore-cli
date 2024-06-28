@@ -11,17 +11,17 @@ namespace MSStore.CLI.UnitTests
     public class ProjectConfiguratorFactoryTests : BaseCommandLineTest
     {
         [TestMethod]
-        [DataRow("https://www.microsoft.com", typeof(PWAProjectConfigurator))]
-        [DataRow("https://store.microsoft.com", typeof(PWAProjectConfigurator))]
-        [DataRow(null, typeof(FlutterProjectConfigurator), "FlutterProject")]
-        [DataRow(null, typeof(UWPProjectConfigurator), "UWPProject")]
-        [DataRow(null, typeof(ElectronProjectConfigurator), "ElectronProject", "Npm")]
-        [DataRow(null, typeof(ElectronProjectConfigurator), "ElectronProject", "Yarn")]
-        [DataRow(null, typeof(ReactNativeProjectConfigurator), "ReactNativeProject", "Npm")]
-        [DataRow(null, typeof(ReactNativeProjectConfigurator), "ReactNativeProject", "Yarn")]
-        [DataRow(null, typeof(WinUIProjectConfigurator), "WinUIProject")]
-        [DataRow(null, typeof(MauiProjectConfigurator), "MauiProject")]
-        public async Task ProjectConfiguratorFactoryFindsURLProperly(string pathOrUrl, Type expectedProjectConfiguratorType, params string[] testDataProjectSubPath)
+        [DataRow("https://www.microsoft.com", typeof(PWAProjectConfigurator), null)]
+        [DataRow("https://store.microsoft.com", typeof(PWAProjectConfigurator), null)]
+        [DataRow(null, typeof(FlutterProjectConfigurator), new[] { "FlutterProject" })]
+        [DataRow(null, typeof(UWPProjectConfigurator), new[] { "UWPProject" })]
+        [DataRow(null, typeof(ElectronProjectConfigurator), new[] { "ElectronProject", "Npm" })]
+        [DataRow(null, typeof(ElectronProjectConfigurator), new[] { "ElectronProject", "Yarn" })]
+        [DataRow(null, typeof(ReactNativeProjectConfigurator), new[] { "ReactNativeProject", "Npm" })]
+        [DataRow(null, typeof(ReactNativeProjectConfigurator), new[] { "ReactNativeProject", "Yarn" })]
+        [DataRow(null, typeof(WinUIProjectConfigurator), new[] { "WinUIProject" })]
+        [DataRow(null, typeof(MauiProjectConfigurator), new[] { "MauiProject" })]
+        public async Task ProjectConfiguratorFactoryFindsURLProperly(string pathOrUrl, Type expectedProjectConfiguratorType, string[] testDataProjectSubPath)
         {
             string? path = null;
             if (testDataProjectSubPath != null && testDataProjectSubPath.Length != 0)
