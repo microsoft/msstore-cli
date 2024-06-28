@@ -62,6 +62,12 @@ namespace MSStore.CLI.Commands.Submission.Rollout
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
                 }
 
+                if (Percentage < 0 || Percentage > 100)
+                {
+                    AnsiConsole.WriteLine("The percentage must be between 0 and 100.");
+                    return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
+                }
+
                 var submissionRollout = await AnsiConsole.Status().StartAsync("Updating Submission Rollout", async ctx =>
                 {
                     try
