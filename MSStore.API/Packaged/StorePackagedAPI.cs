@@ -30,6 +30,8 @@ namespace MSStore.API.Packaged
         private static readonly CompositeFormat DevCenterSubmissionStatusTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}/submissions/{2}/status");
         private static readonly CompositeFormat DevCenterListFlightsTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}/listflights?skip={2}&top={3}");
         private static readonly CompositeFormat DevCenterGetFlightTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}/flights/{2}");
+        private static readonly CompositeFormat DevCenterDeleteFlightTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}/flights/{2}");
+        private static readonly CompositeFormat DevCenterCreateFlightTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}/flights");
         private static readonly CompositeFormat DevCenterCreateFlightSubmissionTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}/flights/{2}/submissions");
         private static readonly CompositeFormat DevCenterPutFlightSubmissionTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}/flights/{2}/submissions/{3}");
         private static readonly CompositeFormat DevCenterGetFlightSubmissionTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}/flights/{2}/submissions/{3}");
@@ -379,6 +381,51 @@ namespace MSStore.API.Packaged
                     productId,
                     flightId),
                 null,
+                ct);
+        }
+
+        public async Task<DevCenterError?> DeleteFlightAsync(string productId, string flightId, CancellationToken ct = default)
+        {
+            AssertClientInitialized();
+
+            var ret = await _devCenterClient.InvokeAsync<string>(
+                HttpMethod.Delete,
+                string.Format(
+                    CultureInfo.InvariantCulture,
+                    DevCenterDeleteFlightTemplate,
+                    DevCenterVersion,
+                    productId,
+                    flightId),
+                null,
+                ct);
+
+            if (string.IsNullOrEmpty(ret))
+            {
+                return null;
+            }
+
+            return JsonSerializer.Deserialize(ret, typeof(DevCenterError), SourceGenerationContext.GetCustom()) as DevCenterError;
+        }
+
+        public async Task<DevCenterFlight> CreateFlightAsync(string productId, string friendlyName, List<string>? groupIds, string? rankHigherThan, CancellationToken ct = default)
+        {
+            AssertClientInitialized();
+
+            var flight = new DevCenterFlight
+            {
+                FriendlyName = friendlyName,
+                GroupIds = groupIds,
+                RankHigherThan = rankHigherThan
+            };
+
+            return await _devCenterClient.InvokeAsync<DevCenterFlight>(
+                HttpMethod.Post,
+                string.Format(
+                    CultureInfo.InvariantCulture,
+                    DevCenterCreateFlightTemplate,
+                    DevCenterVersion,
+                    productId),
+                flight,
                 ct);
         }
 

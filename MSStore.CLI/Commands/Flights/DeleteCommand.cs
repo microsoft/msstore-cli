@@ -4,31 +4,24 @@
 using System;
 using System.CommandLine;
 using System.CommandLine.Invocation;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Logging;
-using MSStore.API.Models;
+using MSStore.API;
+using MSStore.API.Packaged.Models;
 using MSStore.CLI.Helpers;
 using MSStore.CLI.Services;
 using Spectre.Console;
 
 namespace MSStore.CLI.Commands.Flights
 {
-    internal class GetCommand : Command
+    internal class DeleteCommand : Command
     {
-        internal static readonly Argument<string> FlightIdArgument;
-
-        static GetCommand()
-        {
-            FlightIdArgument = new Argument<string>("flightId", "The flight Id.");
-        }
-
-        public GetCommand()
-            : base("get", "Retrieves a flight for the specified Application and flight.")
+        public DeleteCommand()
+            : base("delete", "Deletes a flight for the specified Application and flight.")
         {
             AddArgument(SubmissionCommand.ProductIdArgument);
-            AddArgument(FlightIdArgument);
+            AddArgument(GetCommand.FlightIdArgument);
         }
 
         public new class Handler : ICommandHandler
@@ -63,23 +56,29 @@ namespace MSStore.CLI.Commands.Flights
                 }
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(
-                    await AnsiConsole.Status().StartAsync("Retrieving Flight", async ctx =>
+                    await AnsiConsole.Status().StartAsync("Deleting Flight", async ctx =>
                     {
                         try
                         {
                             var storePackagedAPI = await _storeAPIFactory.CreatePackagedAsync(ct: ct);
 
-                            var flight = await storePackagedAPI.GetFlightAsync(ProductId, FlightId, ct);
+                            DevCenterError? devCenterError = await storePackagedAPI.DeleteFlightAsync(ProductId, FlightId, ct);
 
-                            ctx.SuccessStatus("[bold green]Retrieved Flight[/]");
+                            ctx.SuccessStatus("[bold green]Deleted Flight[/]");
 
-                            AnsiConsole.WriteLine(JsonSerializer.Serialize(flight, SourceGenerationContext.GetCustom(true).DevCenterFlight));
-                            return await _telemetryClient.TrackCommandEventAsync<Handler>(0, ct);
+                            return 0;
+                        }
+                        catch (MSStoreHttpException err)
+                        {
+                            _logger.LogError(err, "Could not delete the flight.");
+                            ctx.ErrorStatus("Could not delete the flight.");
+
+                            return -1;
                         }
                         catch (Exception err)
                         {
-                            _logger.LogError(err, "Error while retrieving Flight.");
-                            ctx.ErrorStatus(err);
+                            _logger.LogError(err, "Error while deleting flight.");
+                            ctx.ErrorStatus("Error while deleting flight. Please try again.");
                             return -1;
                         }
                     }), ct);

@@ -479,6 +479,26 @@ namespace MSStore.CLI.UnitTests
             FakeStorePackagedAPI
                 .Setup(x => x.GetFlightsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(FakeFlights);
+            FakeStorePackagedAPI
+                .Setup(x => x.GetFlightAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((string productId, string flightId, CancellationToken ct) => FakeFlights.First(f => f.FlightId == flightId));
+            FakeStorePackagedAPI
+                .Setup(x => x.DeleteFlightAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((string productId, string flightId, CancellationToken ct) =>
+                {
+                    return null;
+                });
+
+            var fakeFlight = new DevCenterFlight
+            {
+                FlightId = "632B6A77-0E18-4B41-9033-3614D2174F2E",
+                FriendlyName = "NewFlight",
+                GroupIds = new List<string> { "1" }
+            };
+
+            FakeStorePackagedAPI
+                .Setup(x => x.CreateFlightAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(fakeFlight);
         }
 
         internal void InitDefaultSubmissionStatusResponseQueue()

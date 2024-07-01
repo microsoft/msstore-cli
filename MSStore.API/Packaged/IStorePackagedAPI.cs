@@ -20,6 +20,8 @@ namespace MSStore.API.Packaged
         Task<DevCenterSubmissionStatusResponse> GetSubmissionStatusAsync(string productId, string submissionId, CancellationToken ct = default);
         Task<List<DevCenterFlight>> GetFlightsAsync(string productId, CancellationToken ct = default);
         Task<DevCenterFlight> GetFlightAsync(string productId, string flightId, CancellationToken ct = default);
+        Task<DevCenterError?> DeleteFlightAsync(string productId, string flightId, CancellationToken ct = default);
+        Task<DevCenterFlight> CreateFlightAsync(string productId, string friendlyName, List<string>? groupIds, string? rankHigherThan, CancellationToken ct = default);
         Task<DevCenterFlightSubmission> GetFlightSubmissionAsync(string productId, string flightId, string submissionId, CancellationToken ct = default);
         Task<DevCenterError?> DeleteFlightSubmissionAsync(string productId, string flightId, string submissionId, CancellationToken ct = default);
         Task<DevCenterFlightSubmission> CreateFlightSubmissionAsync(string productId, string flightId, CancellationToken ct = default);
