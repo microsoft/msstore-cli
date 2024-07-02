@@ -350,6 +350,7 @@ namespace MSStore.CLI.Helpers
             DirectoryInfo output,
             IEnumerable<FileInfo> input,
             bool noCommit,
+            float? packageRolloutPercentage,
             IBrowserLauncher browserLauncher,
             IConsoleReader consoleReader,
             IZipFileManager zipFileManager,
@@ -479,6 +480,12 @@ namespace MSStore.CLI.Helpers
                 logger.LogError("Could not retrieve submission. Please try again.");
                 AnsiConsole.WriteLine("Could not retrieve submission. Please try again.");
                 return -1;
+            }
+
+            if (submission.PackageDeliveryOptions?.PackageRollout != null && packageRolloutPercentage != null)
+            {
+                submission.PackageDeliveryOptions.PackageRollout.IsPackageRollout = true;
+                submission.PackageDeliveryOptions.PackageRollout.PackageRolloutPercentage = packageRolloutPercentage.Value;
             }
 
             DevCenterSubmission? devCenterSubmission = submission as DevCenterSubmission;

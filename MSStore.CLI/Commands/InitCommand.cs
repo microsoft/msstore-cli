@@ -145,6 +145,8 @@ namespace MSStore.CLI.Commands
             AddOption(Arch);
 
             AddOption(Version);
+
+            AddOption(PublishCommand.PackageRolloutPercentageOption);
         }
 
         public new class Handler : ICommandHandler
@@ -171,6 +173,8 @@ namespace MSStore.CLI.Commands
             public string? FlightId { get; set; }
 
             public Version? Version { get; set; } = null!;
+
+            public float? PackageRolloutPercentage { get; set; }
 
             public DirectoryInfo? Output { get; set; } = null!;
 
@@ -388,7 +392,7 @@ namespace MSStore.CLI.Commands
                         return await _telemetryClient.TrackCommandEventAsync<Handler>(-5, props, ct);
                     }
 
-                    result = await projectPublisher.PublishAsync(PathOrUrl, app, FlightId, outputDirectory, false, storePackagedAPI, ct);
+                    result = await projectPublisher.PublishAsync(PathOrUrl, app, FlightId, outputDirectory, false, PackageRolloutPercentage, storePackagedAPI, ct);
                 }
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(result, props, ct);

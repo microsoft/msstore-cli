@@ -28,5 +28,9 @@ namespace MSStore.API.Packaged
         Task<DevCenterFlightSubmission> UpdateFlightSubmissionAsync(string productId, string flightId, string submissionId, DevCenterFlightSubmissionUpdate updatedFlightSubmission, CancellationToken ct = default);
         Task<DevCenterCommitResponse?> CommitFlightSubmissionAsync(string productId, string flightId, string submissionId, CancellationToken ct = default);
         Task<DevCenterSubmissionStatusResponse> GetFlightSubmissionStatusAsync(string productId, string flightId, string submissionId, CancellationToken ct = default);
+        Task<PackageRollout> GetPackageRolloutAsync(string productId, string submissionId, string? flightId, CancellationToken ct = default);
+        Task<PackageRollout> UpdatePackageRolloutPercentageAsync(string productId, string submissionId, string? flightId, float percentage, CancellationToken ct = default);
+        Task<PackageRollout> HaltPackageRolloutAsync(string productId, string submissionId, string? flightId, CancellationToken ct = default);
+        Task<PackageRollout> FinalizePackageRolloutAsync(string productId, string submissionId, string? flightId, CancellationToken ct = default);
     }
 }

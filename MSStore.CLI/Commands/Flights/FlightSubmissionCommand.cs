@@ -16,6 +16,7 @@ namespace MSStore.CLI.Commands.Flights
             AddCommand(new Submission.PublishCommand());
             AddCommand(new Submission.PollCommand());
             AddCommand(new Submission.StatusCommand());
+            AddCommand(new Submission.RolloutCommand());
             this.SetDefaultHelpHandler();
         }
     }
