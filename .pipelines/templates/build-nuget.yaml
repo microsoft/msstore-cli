@@ -47,31 +47,32 @@ steps:
     CollectCoverage: true
     CoverletOutputFormat: cobertura
     DISPLAY: :0.0
-- script: sh -c "dotnet test MSStore.CLI.UnitTests/MSStore.CLI.UnitTests.csproj --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.dotnet_configuration }} & wait"
-  condition: startsWith(variables.AgentOS, 'Darwin')
-  displayName: Tests
-  env:
-    CollectCoverage: true
-    CoverletOutputFormat: cobertura
-    DISPLAY: :0.0
-- task: PublishTestResults@2
-  displayName: 'Publish Test Results'
-  inputs:
-    testResultsFormat: 'VSTest'
-    testResultsFiles: '$(Agent.TempDirectory)/*.trx'
-- task: DotNetCoreCLI@2
-  displayName: 'Install ReportGenerator'
-  inputs:
-    command: custom
-    custom: tool
-    arguments: 'install --global dotnet-reportgenerator-globaltool --version 5.3.6'
-- script: reportgenerator "-reports:$(Build.SourcesDirectory)/**/*coverage.*.cobertura.xml" "-targetdir:$(Build.SourcesDirectory)/report" "-reporttypes:Cobertura" "-filefilters:-*GenerationContext*.g.cs"
-  displayName: Merge code coverage files
-- task: PublishCodeCoverageResults@1
-  displayName: 'Publish code coverage results'
-  inputs:
-    codeCoverageTool: 'Cobertura'
-    summaryFileLocation: '$(Build.SourcesDirectory)/report/Cobertura.xml'
+- ${{ if ne(parameters['DoEsrp'], 'true') }}:
+  - script: sh -c "dotnet test MSStore.CLI.UnitTests/MSStore.CLI.UnitTests.csproj --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.dotnet_configuration }} & wait"
+    condition: startsWith(variables.AgentOS, 'Darwin')
+    displayName: Tests
+    env:
+      CollectCoverage: true
+      CoverletOutputFormat: cobertura
+      DISPLAY: :0.0
+  - task: PublishTestResults@2
+    displayName: 'Publish Test Results'
+    inputs:
+      testResultsFormat: 'VSTest'
+      testResultsFiles: '$(Agent.TempDirectory)/*.trx'
+  - task: DotNetCoreCLI@2
+    displayName: 'Install ReportGenerator'
+    inputs:
+      command: custom
+      custom: tool
+      arguments: 'install --global dotnet-reportgenerator-globaltool --version 5.3.6'
+  - script: reportgenerator "-reports:$(Build.SourcesDirectory)/**/*coverage.*.cobertura.xml" "-targetdir:$(Build.SourcesDirectory)/report" "-reporttypes:Cobertura" "-filefilters:-*GenerationContext*.g.cs"
+    displayName: Merge code coverage files
+  - task: PublishCodeCoverageResults@1
+    displayName: 'Publish code coverage results'
+    inputs:
+      codeCoverageTool: 'Cobertura'
+      summaryFileLocation: '$(Build.SourcesDirectory)/report/Cobertura.xml'
 - ${{ if eq(parameters['DoEsrp'], 'true') }}:
   - task: EsrpCodeSigning@5
     displayName: Code Sign ESRP - API DLL
