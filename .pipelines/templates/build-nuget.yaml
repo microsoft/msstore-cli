@@ -47,7 +47,7 @@ steps:
     CollectCoverage: true
     CoverletOutputFormat: cobertura
     DISPLAY: :0.0
-- script: dotnet test MSStore.CLI.UnitTests/MSStore.CLI.UnitTests.csproj --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.dotnet_configuration }} & wait
+- script: sh -c "dotnet test MSStore.CLI.UnitTests/MSStore.CLI.UnitTests.csproj --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.dotnet_configuration }} & wait"
   condition: startsWith(variables.AgentOS, 'Darwin')
   displayName: Tests
   env:
