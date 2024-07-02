@@ -464,6 +464,44 @@ namespace MSStore.CLI.UnitTests
                 .ReturnsAsync(fakeSubmission);
         }
 
+        protected void AddDefaultFakeFlightSubmission()
+        {
+            var fakeSubmission = new DevCenterFlightSubmission
+            {
+                Id = "123456789",
+                FileUploadUrl = "https://azureblob.com/fileupload",
+                FlightPackages = new List<ApplicationPackage>
+                    {
+                        new ApplicationPackage
+                        {
+                            Id = "123456789",
+                            Version = "1.0.0",
+                        }
+                    },
+                StatusDetails = new StatusDetails
+                {
+                    Warnings = new List<CodeAndDetail>
+                        {
+                            new CodeAndDetail
+                            {
+                                Code = "Code1",
+                                Details = "Detail1"
+                            }
+                        }
+                }
+            };
+
+            FakeStorePackagedAPI
+                .Setup(x => x.CreateFlightSubmissionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(fakeSubmission);
+            FakeStorePackagedAPI
+                .Setup(x => x.GetFlightSubmissionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(fakeSubmission);
+            FakeStorePackagedAPI
+                .Setup(x => x.UpdateFlightSubmissionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DevCenterFlightSubmissionUpdate>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(fakeSubmission);
+        }
+
         protected void AddFakeApps()
         {
             FakeStorePackagedAPI
@@ -505,6 +543,24 @@ namespace MSStore.CLI.UnitTests
         {
             FakeStorePackagedAPI
                 .SetupSequence(x => x.GetSubmissionStatusAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new DevCenterSubmissionStatusResponse
+                {
+                    Status = "CommitStarted"
+                })
+                .ReturnsAsync(new DevCenterSubmissionStatusResponse
+                {
+                    Status = "CommitStarted"
+                })
+                .ReturnsAsync(new DevCenterSubmissionStatusResponse
+                {
+                    Status = "Published"
+                });
+        }
+
+        internal void InitDefaultFlightSubmissionStatusResponseQueue()
+        {
+            FakeStorePackagedAPI
+                .SetupSequence(x => x.GetFlightSubmissionStatusAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new DevCenterSubmissionStatusResponse
                 {
                     Status = "CommitStarted"
