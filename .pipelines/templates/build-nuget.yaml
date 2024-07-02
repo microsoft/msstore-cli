@@ -40,17 +40,25 @@ steps:
   displayName: Set Version
 - script: dotnet build MSStore.CLI.sln --no-restore /p:Configuration=${{ parameters.dotnet_configuration }}
   displayName: Build
-- task: DotNetCoreCLI@2
-  displayName: 'Tests'
+- script: dotnet test MSStore.CLI.UnitTests/MSStore.CLI.UnitTests.csproj --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.dotnet_configuration }}
+  condition: not(startsWith(variables.AgentOS, 'Darwin'))
+  displayName: Tests
   env:
     CollectCoverage: true
     CoverletOutputFormat: cobertura
     DISPLAY: :0.0
+- script: dotnet test MSStore.CLI.UnitTests/MSStore.CLI.UnitTests.csproj --logger trx --results-directory $(Agent.TempDirectory) --configuration ${{ parameters.dotnet_configuration }} & wait
+  condition: startsWith(variables.AgentOS, 'Darwin')
+  displayName: Tests
+  env:
+    CollectCoverage: true
+    CoverletOutputFormat: cobertura
+    DISPLAY: :0.0
+- task: PublishTestResults@2
+  displayName: 'Publish Test Results'
   inputs:
-    command: 'test'
-    projects: '**/*[Tt]est*/*.csproj'
-    publishTestResults: true
-    arguments: '--configuration ${{ parameters.dotnet_configuration }}'
+    testResultsFormat: 'VSTest'
+    testResultsFiles: '$(Agent.TempDirectory)/*.trx'
 - task: DotNetCoreCLI@2
   displayName: 'Install ReportGenerator'
   inputs:
