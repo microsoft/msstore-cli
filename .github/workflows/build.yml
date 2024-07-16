@@ -42,28 +42,21 @@ jobs:
       run: dotnet restore MSStore.CLI.sln /p:Configuration=Release
     - name: Build
       run: dotnet build MSStore.CLI.sln --no-restore /p:Configuration=Release
-    - name: Test
-      if: ${{ matrix.os != 'macos-latest' }}
-      env:
-        CollectCoverage: true
-        CoverletOutputFormat: cobertura
-      run: dotnet test MSStore.CLI.sln --no-restore /p:Configuration=Release --logger trx
-    - name: Test
-      if: ${{ matrix.os == 'macos-latest' }}
-      env:
-        CollectCoverage: true
-        CoverletOutputFormat: cobertura
-      run: dotnet test MSStore.CLI.sln --no-restore /p:Configuration=Release --logger trx & wait
+    - name: Test net8.0
+      run: dotnet run --project MSStore.CLI.UnitTests -f net8.0 --no-build -c Release --coverage --coverage-output-format cobertura --report-trx --results-directory ./TestResults
+    - name: Test net8.0-windows10.0.17763.0
+      if: ${{ matrix.os == 'windows-latest' }}
+      run: dotnet run --project MSStore.CLI.UnitTests -f net8.0-windows10.0.17763.0 --no-build -c Release --coverage --coverage-output-format cobertura --report-trx --results-directory ./TestResults
     - name: Publish test results
       if: ${{ !cancelled() }}
       uses: actions/upload-artifact@v4
       with:
         name: test-results-${{ matrix.os }}
-        path: MSStore.CLI.UnitTests/TestResults/*.trx
+        path: TestResults/*.trx
     - name: Install ReportGenerator
       run: dotnet tool install --global dotnet-reportgenerator-globaltool --version 5.3.6
     - name: Merge code coverage files
-      run: reportgenerator "-reports:${{ github.workspace }}/**/*coverage.*.cobertura.xml" "-targetdir:${{ github.workspace }}/report" "-reporttypes:Cobertura" "-filefilters:-*GenerationContext*.g.cs"
+      run: reportgenerator "-reports:${{ github.workspace }}/**/*.cobertura.xml" "-targetdir:${{ github.workspace }}/report" "-reporttypes:Cobertura" "-filefilters:-*GenerationContext*.g.cs"
     - name: Publish code coverage results
       uses: actions/upload-artifact@v4
       with:
