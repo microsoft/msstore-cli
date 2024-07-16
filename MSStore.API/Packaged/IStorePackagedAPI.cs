@@ -20,10 +20,17 @@ namespace MSStore.API.Packaged
         Task<DevCenterSubmissionStatusResponse> GetSubmissionStatusAsync(string productId, string submissionId, CancellationToken ct = default);
         Task<List<DevCenterFlight>> GetFlightsAsync(string productId, CancellationToken ct = default);
         Task<DevCenterFlight> GetFlightAsync(string productId, string flightId, CancellationToken ct = default);
+        Task<DevCenterError?> DeleteFlightAsync(string productId, string flightId, CancellationToken ct = default);
+        Task<DevCenterFlight> CreateFlightAsync(string productId, string friendlyName, List<string>? groupIds, string? rankHigherThan, CancellationToken ct = default);
         Task<DevCenterFlightSubmission> GetFlightSubmissionAsync(string productId, string flightId, string submissionId, CancellationToken ct = default);
         Task<DevCenterError?> DeleteFlightSubmissionAsync(string productId, string flightId, string submissionId, CancellationToken ct = default);
         Task<DevCenterFlightSubmission> CreateFlightSubmissionAsync(string productId, string flightId, CancellationToken ct = default);
         Task<DevCenterFlightSubmission> UpdateFlightSubmissionAsync(string productId, string flightId, string submissionId, DevCenterFlightSubmissionUpdate updatedFlightSubmission, CancellationToken ct = default);
         Task<DevCenterCommitResponse?> CommitFlightSubmissionAsync(string productId, string flightId, string submissionId, CancellationToken ct = default);
+        Task<DevCenterSubmissionStatusResponse> GetFlightSubmissionStatusAsync(string productId, string flightId, string submissionId, CancellationToken ct = default);
+        Task<PackageRollout> GetPackageRolloutAsync(string productId, string submissionId, string? flightId, CancellationToken ct = default);
+        Task<PackageRollout> UpdatePackageRolloutPercentageAsync(string productId, string submissionId, string? flightId, float percentage, CancellationToken ct = default);
+        Task<PackageRollout> HaltPackageRolloutAsync(string productId, string submissionId, string? flightId, CancellationToken ct = default);
+        Task<PackageRollout> FinalizePackageRolloutAsync(string productId, string submissionId, string? flightId, CancellationToken ct = default);
     }
 }

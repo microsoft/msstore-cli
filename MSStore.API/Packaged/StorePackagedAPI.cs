@@ -30,11 +30,18 @@ namespace MSStore.API.Packaged
         private static readonly CompositeFormat DevCenterSubmissionStatusTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}/submissions/{2}/status");
         private static readonly CompositeFormat DevCenterListFlightsTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}/listflights?skip={2}&top={3}");
         private static readonly CompositeFormat DevCenterGetFlightTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}/flights/{2}");
+        private static readonly CompositeFormat DevCenterDeleteFlightTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}/flights/{2}");
+        private static readonly CompositeFormat DevCenterCreateFlightTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}/flights");
         private static readonly CompositeFormat DevCenterCreateFlightSubmissionTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}/flights/{2}/submissions");
         private static readonly CompositeFormat DevCenterPutFlightSubmissionTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}/flights/{2}/submissions/{3}");
         private static readonly CompositeFormat DevCenterGetFlightSubmissionTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}/flights/{2}/submissions/{3}");
         private static readonly CompositeFormat DevCenterDeleteFlightSubmissionTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}/flights/{2}/submissions/{3}");
         private static readonly CompositeFormat DevCenterCommitFlightSubmissionTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}/flights/{2}/submissions/{3}/commit");
+        private static readonly CompositeFormat DevCenterFlightSubmissionStatusTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}/flights/{2}/submissions/{3}/status");
+        private static readonly CompositeFormat DevCenterGetPackageRolloutTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}{2}/submissions/{3}/packagerollout");
+        private static readonly CompositeFormat DevCenterUpdatePackageRolloutPercentageTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}{2}/submissions/{3}/updatepackagerolloutpercentage?percentage={4}");
+        private static readonly CompositeFormat DevCenterHaltPackageRolloutTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}{2}/submissions/{3}/haltpackagerollout");
+        private static readonly CompositeFormat DevCenterFinalizePackageRolloutTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}{2}/submissions/{3}/finalizepackagerollout");
 
         private SubmissionClient? _devCenterClient;
 
@@ -377,6 +384,51 @@ namespace MSStore.API.Packaged
                 ct);
         }
 
+        public async Task<DevCenterError?> DeleteFlightAsync(string productId, string flightId, CancellationToken ct = default)
+        {
+            AssertClientInitialized();
+
+            var ret = await _devCenterClient.InvokeAsync<string>(
+                HttpMethod.Delete,
+                string.Format(
+                    CultureInfo.InvariantCulture,
+                    DevCenterDeleteFlightTemplate,
+                    DevCenterVersion,
+                    productId,
+                    flightId),
+                null,
+                ct);
+
+            if (string.IsNullOrEmpty(ret))
+            {
+                return null;
+            }
+
+            return JsonSerializer.Deserialize(ret, typeof(DevCenterError), SourceGenerationContext.GetCustom()) as DevCenterError;
+        }
+
+        public async Task<DevCenterFlight> CreateFlightAsync(string productId, string friendlyName, List<string>? groupIds, string? rankHigherThan, CancellationToken ct = default)
+        {
+            AssertClientInitialized();
+
+            var flight = new DevCenterFlight
+            {
+                FriendlyName = friendlyName,
+                GroupIds = groupIds,
+                RankHigherThan = rankHigherThan
+            };
+
+            return await _devCenterClient.InvokeAsync<DevCenterFlight>(
+                HttpMethod.Post,
+                string.Format(
+                    CultureInfo.InvariantCulture,
+                    DevCenterCreateFlightTemplate,
+                    DevCenterVersion,
+                    productId),
+                flight,
+                ct);
+        }
+
         public async Task<DevCenterFlightSubmission> GetFlightSubmissionAsync(string productId, string flightId, string submissionId, CancellationToken ct = default)
         {
             AssertClientInitialized();
@@ -468,6 +520,92 @@ namespace MSStore.API.Packaged
                     ct);
 
             return JsonSerializer.Deserialize(ret, typeof(DevCenterCommitResponse), SourceGenerationContext.GetCustom()) as DevCenterCommitResponse;
+        }
+
+        public async Task<DevCenterSubmissionStatusResponse> GetFlightSubmissionStatusAsync(string productId, string flightId, string submissionId, CancellationToken ct = default)
+        {
+            AssertClientInitialized();
+
+            return await _devCenterClient.InvokeAsync<DevCenterSubmissionStatusResponse>(
+                HttpMethod.Get,
+                string.Format(
+                    CultureInfo.InvariantCulture,
+                    DevCenterFlightSubmissionStatusTemplate,
+                    DevCenterVersion,
+                    productId,
+                    flightId,
+                    submissionId),
+                null,
+                ct);
+        }
+
+        public async Task<PackageRollout> GetPackageRolloutAsync(string productId, string submissionId, string? flightId, CancellationToken ct = default)
+        {
+            AssertClientInitialized();
+
+            return await _devCenterClient.InvokeAsync<PackageRollout>(
+                HttpMethod.Get,
+                string.Format(
+                    CultureInfo.InvariantCulture,
+                    DevCenterGetPackageRolloutTemplate,
+                    DevCenterVersion,
+                    productId,
+                    flightId == null ? string.Empty : $"/flights/{flightId}",
+                    submissionId),
+                null,
+                ct);
+        }
+
+        public async Task<PackageRollout> UpdatePackageRolloutPercentageAsync(string productId, string submissionId, string? flightId, float percentage, CancellationToken ct = default)
+        {
+            AssertClientInitialized();
+
+            return await _devCenterClient.InvokeAsync<PackageRollout>(
+                HttpMethod.Post,
+                string.Format(
+                    CultureInfo.InvariantCulture,
+                    DevCenterUpdatePackageRolloutPercentageTemplate,
+                    DevCenterVersion,
+                    productId,
+                    flightId == null ? string.Empty : $"/flights/{flightId}",
+                    submissionId,
+                    percentage),
+                null,
+                ct);
+        }
+
+        public async Task<PackageRollout> HaltPackageRolloutAsync(string productId, string submissionId, string? flightId, CancellationToken ct = default)
+        {
+            AssertClientInitialized();
+
+            return await _devCenterClient.InvokeAsync<PackageRollout>(
+                HttpMethod.Post,
+                string.Format(
+                    CultureInfo.InvariantCulture,
+                    DevCenterHaltPackageRolloutTemplate,
+                    DevCenterVersion,
+                    productId,
+                    flightId == null ? string.Empty : $"/flights/{flightId}",
+                    submissionId),
+                null,
+                ct);
+        }
+
+        public async Task<PackageRollout> FinalizePackageRolloutAsync(string productId, string submissionId, string? flightId, CancellationToken ct = default)
+        {
+            AssertClientInitialized();
+
+            return await _devCenterClient.InvokeAsync<PackageRollout>(
+                HttpMethod.Post,
+                string.Format(
+                    CultureInfo.InvariantCulture,
+                    DevCenterFinalizePackageRolloutTemplate,
+                    DevCenterVersion,
+                    productId,
+                    flightId == null ? string.Empty : $"/flights/{flightId}",
+                    submissionId),
+                null,
+                ct);
         }
     }
 }

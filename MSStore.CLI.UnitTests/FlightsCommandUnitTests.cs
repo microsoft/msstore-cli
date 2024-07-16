@@ -29,5 +29,55 @@ namespace MSStore.CLI.UnitTests
             result.Should().ContainAll(FakeFlights.Select(a => a.FlightId));
             result.Should().ContainAll(FakeFlights.Select(a => a.FriendlyName));
         }
+
+        [TestMethod]
+        public async Task FlightsGetCommandShouldReturnFlight()
+        {
+            var result = await ParseAndInvokeAsync(
+                new string[]
+                {
+                    "flights",
+                    "get",
+                    FakeApps[0].Id!,
+                    FakeFlights[0].FlightId!
+                });
+
+            result.Should().Contain(FakeFlights[0].FlightId);
+            result.Should().Contain(FakeFlights[0].FriendlyName);
+        }
+
+        [TestMethod]
+        public async Task FlightsDeleteCommandShouldDeleteFlight()
+        {
+            var result = await ParseAndInvokeAsync(
+                new string[]
+                {
+                    "flights",
+                    "delete",
+                    FakeApps[0].Id!,
+                    FakeFlights[0].FlightId!
+                });
+
+            result.Should().Contain("Deleted Flight");
+        }
+
+        [TestMethod]
+        public async Task FlightsCreateCommandShouldCreateFlight()
+        {
+            var result = await ParseAndInvokeAsync(
+                new string[]
+                {
+                    "flights",
+                    "create",
+                    FakeApps[0].Id!,
+                    "NewFlight",
+                    "--group-ids",
+                    "1",
+                });
+
+            result.Should().Contain("Created Flight");
+            result.Should().Contain("NewFlight");
+            result.Should().Contain("632B6A77-0E18-4B41-9033-3614D2174F2E");
+        }
     }
 }

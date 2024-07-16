@@ -38,6 +38,7 @@ namespace MSStore.CLI.Commands
             AddCommand(new PollCommand());
             AddCommand(new Submission.PublishCommand());
             AddCommand(new DeleteCommand());
+            AddCommand(new RolloutCommand());
             this.SetDefaultHelpHandler();
         }
     }

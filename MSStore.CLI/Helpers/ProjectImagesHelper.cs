@@ -18,7 +18,7 @@ namespace MSStore.CLI.Helpers
     {
         internal static List<string> GetDefaultImagesUsedByApp(List<string> appImagesFileList, List<string>? projectSpecificDefaultImagesFileList, IImageConverter imageConverter, ILogger logger)
         {
-            List<string> defaultImagesFileList = GetDefaultImagesList();
+            List<string> defaultImagesFileList = GetDefaultImagesList(logger);
             if (projectSpecificDefaultImagesFileList != null)
             {
                 defaultImagesFileList.AddRange(projectSpecificDefaultImagesFileList);
@@ -44,25 +44,34 @@ namespace MSStore.CLI.Helpers
             return failedImages;
         }
 
-        private static List<string> GetDefaultImagesList()
+        private static List<string> GetDefaultImagesList(ILogger logger)
         {
             var images = new List<string>();
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                images.AddRange(GetWindowsSdkDefaultImages());
+                images.AddRange(GetWindowsSdkDefaultImages(logger));
             }
 
             return images;
         }
 
         [SupportedOSPlatform("windows")]
-        private static string[] GetWindowsSdkDefaultImages()
+        private static string[] GetWindowsSdkDefaultImages(ILogger logger)
         {
             var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
             string defaultImagesDir = Path.Combine(programFiles, "Windows Kits", "10", "App Certification Kit", "DefaultAppImages");
+            if (Directory.Exists(defaultImagesDir))
+            {
+                return Directory.GetFiles(defaultImagesDir, "*.*", SearchOption.AllDirectories);
+            }
 
-            return Directory.GetFiles(defaultImagesDir, "*.*", SearchOption.AllDirectories);
+            logger.LogWarning(
+                "Default images directory not found: '{DefaultImagesDir}'. " +
+                "This may be because the Windows SDK is not installed. " +
+                "We won't be able to check for default images.", defaultImagesDir);
+
+            return Array.Empty<string>();
         }
 
         private static List<byte[]> GetHashesForImageFiles(List<string> imageFiles, IImageConverter imageConverter)

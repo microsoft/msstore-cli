@@ -78,7 +78,7 @@ namespace MSStore.CLI.Commands.Submission
                                 return -1;
                             }
 
-                            var lastSubmissionStatus = await storePackagedAPI.PollSubmissionStatusAsync(ProductId, submission.Id, false, _logger, ct: ct);
+                            var lastSubmissionStatus = await storePackagedAPI.PollSubmissionStatusAsync(ProductId, null, submission.Id, false, _logger, ct: ct);
 
                             ctx.SuccessStatus();
 
@@ -141,7 +141,7 @@ namespace MSStore.CLI.Commands.Submission
 
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(
                         ProductId,
-                        await storePackagedAPI.HandleLastSubmissionStatusAsync(lastSubmissionStatus, ProductId, submission.Id, _browserLauncher, _logger, ct),
+                        await storePackagedAPI.HandleLastSubmissionStatusAsync(lastSubmissionStatus, ProductId, null, submission.Id, _browserLauncher, _logger, ct),
                         ct);
                 }
                 else if (publishingStatus is ResponseWrapper<SubmissionStatus> lastSubmissionStatusWrapper)

@@ -17,6 +17,6 @@ namespace MSStore.CLI.ProjectConfigurators
         SearchOption PackageFilesSearchOption { get; }
         AllowTargetFutureDeviceFamily[] AllowTargetFutureDeviceFamilies { get; }
         Task<bool> CanPublishAsync(string pathOrUrl, CancellationToken ct);
-        Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, DirectoryInfo? inputDirectory, bool noCommit, IStorePackagedAPI storePackagedAPI, CancellationToken ct);
+        Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, string? flightId, DirectoryInfo? inputDirectory, bool noCommit, float? packageRolloutPercentage, IStorePackagedAPI storePackagedAPI, CancellationToken ct);
     }
 }

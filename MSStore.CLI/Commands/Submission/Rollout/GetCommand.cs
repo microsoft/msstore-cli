@@ -14,15 +14,24 @@ using MSStore.CLI.Helpers;
 using MSStore.CLI.Services;
 using Spectre.Console;
 
-namespace MSStore.CLI.Commands.Flights.Submission
+namespace MSStore.CLI.Commands.Submission.Rollout
 {
     internal class GetCommand : Command
     {
+        internal static readonly Option<string> SubmissionIdOption;
+
+        static GetCommand()
+        {
+            SubmissionIdOption = new Option<string>(
+                aliases: new string[] { "--submissionId", "-s" },
+                description: "The submission ID.");
+        }
+
         public GetCommand()
-            : base("get", "Retrieves the existing package flight submission, either the existing draft or the last published one.")
+            : base("get", "Retrieves the rollout status of a submission.")
         {
             AddArgument(SubmissionCommand.ProductIdArgument);
-            AddArgument(Flights.GetCommand.FlightIdArgument);
+            AddOption(SubmissionIdOption);
         }
 
         public new class Handler : ICommandHandler
@@ -32,7 +41,7 @@ namespace MSStore.CLI.Commands.Flights.Submission
             private readonly TelemetryClient _telemetryClient;
 
             public string ProductId { get; set; } = null!;
-            public string FlightId { get; set; } = null!;
+            public string? SubmissionId { get; set; }
 
             public Handler(ILogger<Handler> logger, IStoreAPIFactory storeAPIFactory, TelemetryClient telemetryClient)
             {
@@ -56,51 +65,62 @@ namespace MSStore.CLI.Commands.Flights.Submission
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
                 }
 
-                var flightSubmission = await AnsiConsole.Status().StartAsync("Retrieving Flight Submission", async ctx =>
+                var submissionRollout = await AnsiConsole.Status().StartAsync("Retrieving Submission Rollout", async ctx =>
                 {
                     try
                     {
                         var storePackagedAPI = await _storeAPIFactory.CreatePackagedAsync(ct: ct);
 
-                        var flight = await storePackagedAPI.GetFlightAsync(ProductId, FlightId, ct);
-
-                        if (flight?.FlightId == null)
+                        if (SubmissionId == null)
                         {
-                            ctx.ErrorStatus($"Could not find application flight with ID '{ProductId}'/'{FlightId}'");
-                            return null;
+                            var application = await storePackagedAPI.GetApplicationAsync(ProductId, ct);
+
+                            if (application?.Id == null)
+                            {
+                                ctx.ErrorStatus($"Could not find application with ID '{ProductId}'");
+                                return null;
+                            }
+
+                            SubmissionId = application.GetAnySubmissionId();
+
+                            if (SubmissionId == null)
+                            {
+                                ctx.ErrorStatus("Could not find the submission. Please check the ProductId.");
+                                return null;
+                            }
                         }
 
-                        return await storePackagedAPI.GetAnyFlightSubmissionAsync(ProductId, flight, ctx, _logger, ct);
+                        return await storePackagedAPI.GetPackageRolloutAsync(ProductId, SubmissionId, null, ct);
                     }
                     catch (MSStoreHttpException err)
                     {
                         if (err.Response.StatusCode == System.Net.HttpStatusCode.Forbidden)
                         {
-                            ctx.ErrorStatus("Could not find the flight submission. Please check the ProductId/FlightId.");
-                            _logger.LogError(err, "Could not find the flight submission. Please check the ProductId/FlightId.");
+                            ctx.ErrorStatus("Could not find the submission rollout. Please check the ProductId.");
+                            _logger.LogError(err, "Could not find the submission rollout. Please check the ProductId.");
                         }
                         else
                         {
-                            ctx.ErrorStatus("Error while retrieving flight submission.");
-                            _logger.LogError(err, "Error while retrieving flight submission for Application.");
+                            ctx.ErrorStatus("Error while retrieving submission rollout.");
+                            _logger.LogError(err, "Error while retrieving submission rollout for Application.");
                         }
 
                         return null;
                     }
                     catch (Exception err)
                     {
-                        _logger.LogError(err, "Error while retrieving flight submission.");
+                        _logger.LogError(err, "Error while retrieving submission rollout.");
                         ctx.ErrorStatus(err);
                         return null;
                     }
                 });
 
-                if (flightSubmission == null)
+                if (submissionRollout == null)
                 {
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
                 }
 
-                AnsiConsole.WriteLine(JsonSerializer.Serialize(flightSubmission, SourceGenerationContext.GetCustom(true).DevCenterFlightSubmission));
+                AnsiConsole.WriteLine(JsonSerializer.Serialize(submissionRollout, SourceGenerationContext.GetCustom(true).PackageRollout));
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, 0, ct);
             }
