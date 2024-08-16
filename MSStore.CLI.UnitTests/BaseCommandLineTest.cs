@@ -588,6 +588,19 @@ namespace MSStore.CLI.UnitTests
                 });
         }
 
+        protected void AddDefaultFakeSuccessfulFlightSubmission()
+        {
+            AddDefaultFakeFlightSubmission();
+            InitDefaultFlightSubmissionStatusResponseQueue();
+
+            FakeStorePackagedAPI
+                .Setup(x => x.CommitFlightSubmissionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new DevCenterCommitResponse
+                {
+                    Status = "CommitStarted",
+                });
+        }
+
         protected void SetupNpmInstall(DirectoryInfo dirInfo)
         {
             ExternalCommandExecutor

@@ -531,6 +531,7 @@ namespace MSStore.CLI.Helpers
                     {
                         FlightPackages = devCenterFlightSubmission.FlightPackages?.Select(p => new FlightPackageUpdate
                         {
+                            Id = p.Id,
                             FileName = p.FileName,
                             FileStatus = p.FileStatus,
                             MinimumDirectXVersion = p.MinimumDirectXVersion,
