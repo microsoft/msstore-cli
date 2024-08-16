@@ -296,5 +296,34 @@ namespace MSStore.CLI.UnitTests
 
             result.Should().Contain("Skipping submission commit.");
         }
+
+        [TestMethod]
+        public async Task PublishCommandShouldSucceedForFlights()
+        {
+            var path = CopyFilesRecursively("MSIXProject");
+
+            var msixPath = Path.Combine(path, "test.msix");
+
+            AddFakeFlights();
+            AddDefaultFakeSuccessfulFlightSubmission();
+
+            var result = await ParseAndInvokeAsync(
+                new string[]
+                {
+                    "publish",
+                    msixPath,
+                    "--appId",
+                    FakeApps[0].Id!,
+                    "--flightId",
+                    FakeFlights[0].FlightId!,
+                    "--verbose"
+                });
+
+            ZipFileManager
+                .Verify(x => x.ExtractZip(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+
+            result.Should().Contain("Submission commit success! Here is some data:");
+            result.Should().Contain("test.msix");
+        }
     }
 }
