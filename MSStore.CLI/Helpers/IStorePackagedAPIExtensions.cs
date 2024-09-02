@@ -489,6 +489,11 @@ namespace MSStore.CLI.Helpers
             }
 
             DevCenterSubmission? devCenterSubmission = submission as DevCenterSubmission;
+
+            if (devCenterSubmission.Pricing.IsAdvancedPricingModel) {
+                devCenterSubmission.Pricing.PriceId = null;
+            }
+
             DevCenterFlightSubmission? devCenterFlightSubmission = submission as DevCenterFlightSubmission;
             if ((devCenterSubmission != null && devCenterSubmission.ApplicationPackages == null) ||
                 (devCenterFlightSubmission != null && devCenterFlightSubmission.FlightPackages == null))
