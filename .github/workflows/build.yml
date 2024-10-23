@@ -54,7 +54,7 @@ jobs:
         name: test-results-${{ matrix.os }}
         path: TestResults/*.trx
     - name: Install ReportGenerator
-      run: dotnet tool install --global dotnet-reportgenerator-globaltool --version 5.3.6
+      run: dotnet tool install --global dotnet-reportgenerator-globaltool --version 5.3.11
     - name: Merge code coverage files
       run: reportgenerator "-reports:${{ github.workspace }}/**/*.cobertura.xml" "-targetdir:${{ github.workspace }}/report" "-reporttypes:Cobertura" "-filefilters:-*GenerationContext*.g.cs"
     - name: Publish code coverage results
