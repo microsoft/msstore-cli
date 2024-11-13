@@ -58,12 +58,11 @@ namespace MSStore.CLI.UnitTests
                 });
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "init",
                     path,
                     "--verbose"
-                });
+                ]);
 
             result = CleanResult(result);
 
@@ -124,12 +123,11 @@ namespace MSStore.CLI.UnitTests
                 });
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "init",
                     path,
                     "--verbose"
-                });
+                ]);
 
             result = CleanResult(result);
 
@@ -181,12 +179,11 @@ namespace MSStore.CLI.UnitTests
                 });
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "init",
                     path,
                     "--verbose"
-                });
+                ]);
 
             result = CleanResult(result);
 
@@ -225,12 +222,11 @@ namespace MSStore.CLI.UnitTests
                 });
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "init",
                     path,
                     "--verbose"
-                });
+                ]);
 
             result = CleanResult(result);
 
@@ -282,12 +278,11 @@ namespace MSStore.CLI.UnitTests
                 });
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "init",
                     path,
                     "--verbose"
-                });
+                ]);
 
             result = CleanResult(result);
 
@@ -326,12 +321,11 @@ namespace MSStore.CLI.UnitTests
                 });
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "init",
                     path,
                     "--verbose"
-                });
+                ]);
 
             result = CleanResult(result);
 
@@ -357,12 +351,11 @@ namespace MSStore.CLI.UnitTests
             SetupNpmInstall(dirInfo);
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "init",
                     path,
                     "--verbose"
-                });
+                ]);
 
             result = CleanResult(result);
 
@@ -386,12 +379,11 @@ namespace MSStore.CLI.UnitTests
             SetupNpmInstall(dirInfo);
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "init",
                     path,
                     "--verbose"
-                });
+                ]);
 
             result = CleanResult(result);
 
@@ -415,12 +407,11 @@ namespace MSStore.CLI.UnitTests
             SetupYarnInstall(dirInfo);
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "init",
                     path,
                     "--verbose"
-                });
+                ]);
 
             result = CleanResult(result);
 
@@ -444,12 +435,11 @@ namespace MSStore.CLI.UnitTests
             SetupYarnInstall(dirInfo);
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "init",
                     path,
                     "--verbose"
-                });
+                ]);
 
             result = CleanResult(result);
 
@@ -485,12 +475,11 @@ namespace MSStore.CLI.UnitTests
             DefaultMSBuildExecution(new DirectoryInfo(path));
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "init",
                     path,
                     "--verbose"
-                });
+                ]);
 
             result = CleanResult(result);
 
@@ -518,12 +507,11 @@ namespace MSStore.CLI.UnitTests
             SetupWinUI(dirInfo);
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "init",
                     path,
                     "--verbose"
-                });
+                ]);
 
             result = CleanResult(result);
 
@@ -547,12 +535,11 @@ namespace MSStore.CLI.UnitTests
             SetupMaui(dirInfo.GetFiles("*.csproj").First());
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "init",
                     path,
                     "--verbose"
-                });
+                ]);
 
             result = CleanResult(result);
 
@@ -601,15 +588,15 @@ namespace MSStore.CLI.UnitTests
                         Json = new WebManifestJson
                         {
                             Description = "Test description",
-                            Screenshots = new List<ScreenShot>
-                            {
+                            Screenshots =
+                            [
                                 new ScreenShot
                                 {
                                     Src = "https://www.microsoft.com/image1.png"
                                 }
-                            },
-                            Icons = new List<Icon>
-                            {
+                            ],
+                            Icons =
+                            [
                                 new Icon
                                 {
                                     Src = "https://www.microsoft.com/image2.png",
@@ -620,7 +607,7 @@ namespace MSStore.CLI.UnitTests
                                     Src = "https://www.microsoft.com/image3.png",
                                     Sizes = "6x5"
                                 }
-                            }
+                            ]
                         }
                     },
                 });
@@ -652,13 +639,12 @@ namespace MSStore.CLI.UnitTests
             SetupSuccessfullPWA();
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "init",
                     "https://microsoft.com",
                     "--publish",
                     "--verbose"
-                });
+                ]);
 
             TokenManager
                 .Verify(x => x.SelectAccountAsync(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -674,13 +660,12 @@ namespace MSStore.CLI.UnitTests
             SetupSuccessfullPWA(true);
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "init",
                     "https://microsoft.com",
                     "--publish",
                     "--verbose"
-                });
+                ]);
 
             TokenManager
                 .Verify(x => x.SelectAccountAsync(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -697,13 +682,12 @@ namespace MSStore.CLI.UnitTests
             SetupSuccessfullPWA();
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "init",
                     "https://microsoft.com",
                     "-o",
                     Path.GetTempPath()
-                });
+                ]);
 
             result.Should().Contain("You've provided a URL, so we'll use");
             result.Should().NotContain("Submission commit success!");
@@ -715,11 +699,10 @@ namespace MSStore.CLI.UnitTests
             SetupSuccessfullPWA();
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "init",
                     "https://microsoft.com"
-                }, -2);
+                ], -2);
 
             result.Should().Contain("For PWAs the init command should output to a specific directory (using the '--output' option), or publish directly to the store using the '--publish' option.");
         }
@@ -730,15 +713,14 @@ namespace MSStore.CLI.UnitTests
             SetupSuccessfullPWA();
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "init",
                     "https://microsoft.com",
                     "--publisherDisplayName",
                     "FAKE_PUBLISHER_DISPLAY_NAME",
                     "--publish",
                     "--verbose"
-                });
+                ]);
 
             TokenManager
                 .Verify(x => x.SelectAccountAsync(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);

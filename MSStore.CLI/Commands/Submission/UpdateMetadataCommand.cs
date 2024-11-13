@@ -30,22 +30,15 @@ namespace MSStore.CLI.Commands.Submission
             AddOption(SubmissionCommand.SkipInitialPolling);
         }
 
-        public new class Handler : ICommandHandler
+        public new class Handler(ILogger<UpdateMetadataCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, TelemetryClient telemetryClient) : ICommandHandler
         {
-            private readonly ILogger _logger;
-            private readonly IStoreAPIFactory _storeAPIFactory;
-            private readonly TelemetryClient _telemetryClient;
+            private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
+            private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
             public string Metadata { get; set; } = null!;
             public bool SkipInitialPolling { get; set; }
             public string ProductId { get; set; } = null!;
-
-            public Handler(ILogger<Handler> logger, IStoreAPIFactory storeAPIFactory, TelemetryClient telemetryClient)
-            {
-                _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-                _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
-                _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
-            }
 
             public int Invoke(InvocationContext context)
             {

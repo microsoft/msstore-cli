@@ -12,15 +12,10 @@ using MSStore.API;
 
 namespace MSStore.CLI.Services.PWABuilder
 {
-    internal class PWABuilderClient : IPWABuilderClient
+    internal class PWABuilderClient(IHttpClientFactory httpClientFactory) : IPWABuilderClient
     {
         private static readonly string JsonContentType = "application/json";
-        private readonly IHttpClientFactory _httpClientFactory;
-
-        public PWABuilderClient(IHttpClientFactory httpClientFactory)
-        {
-            _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
-        }
+        private readonly IHttpClientFactory _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
 
         protected virtual void SetRequest(HttpRequestMessage request, object? requestContent)
         {

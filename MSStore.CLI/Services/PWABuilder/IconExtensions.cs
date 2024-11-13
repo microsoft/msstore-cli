@@ -11,7 +11,7 @@ namespace MSStore.CLI.Services.PWABuilder
         public static Vector2 GetSize(this Icon icon)
         {
             var sizes = icon.Sizes;
-            if(string.IsNullOrEmpty(sizes))
+            if (string.IsNullOrEmpty(sizes))
             {
                 return default;
             }

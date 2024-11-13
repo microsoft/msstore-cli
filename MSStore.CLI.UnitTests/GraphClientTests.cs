@@ -54,7 +54,7 @@ namespace MSStore.CLI.UnitTests
         }
 
         private static AuthenticationResult CreateAuthenticationResult(string accessToken) =>
-            new AuthenticationResult(accessToken, true, null, DateTimeOffset.Now, DateTimeOffset.Now, string.Empty, null, null, null, Guid.Empty);
+            new(accessToken, true, null, DateTimeOffset.Now, DateTimeOffset.Now, string.Empty, null, null, null, Guid.Empty);
 
         private void SetupReturn(HttpResponseMessage httpResponseMessage)
         {

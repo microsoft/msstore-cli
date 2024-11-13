@@ -22,20 +22,13 @@ namespace MSStore.CLI.Commands.Flights
             AddArgument(SubmissionCommand.ProductIdArgument);
         }
 
-        public new class Handler : ICommandHandler
+        public new class Handler(ILogger<ListCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, TelemetryClient telemetryClient) : ICommandHandler
         {
-            private readonly ILogger _logger;
-            private readonly IStoreAPIFactory _storeAPIFactory;
-            private readonly TelemetryClient _telemetryClient;
+            private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
+            private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
             public string ProductId { get; set; } = null!;
-
-            public Handler(ILogger<Handler> logger, IStoreAPIFactory storeAPIFactory, TelemetryClient telemetryClient)
-            {
-                _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-                _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
-                _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
-            }
 
             public int Invoke(InvocationContext context)
             {
@@ -77,7 +70,7 @@ namespace MSStore.CLI.Commands.Flights
                                         $"[bold u]{f.FriendlyName}[/]",
                                         $"[bold u]{f.LastPublishedFlightSubmission?.Id}[/]",
                                         $"[bold u]{f.PendingFlightSubmission?.Id}[/]",
-                                        $"[bold u]{string.Join(", ", f.GroupIds ?? new())}[/]",
+                                        $"[bold u]{string.Join(", ", f.GroupIds ?? [])}[/]",
                                         $"[bold u]{f.RankHigherThan}[/]");
                                     i++;
                                 }

@@ -16,14 +16,14 @@ using Spectre.Console;
 
 namespace MSStore.CLI.ProjectConfigurators
 {
-    internal class MSIXProjectPublisher : IProjectPublisher
+    internal class MSIXProjectPublisher(IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, IEnvironmentInformationService environmentInformationService, IAppXManifestManager appXManifestManager, ILogger<MSIXProjectPublisher> logger) : IProjectPublisher
     {
-        public string[] PackageFilesExtensionInclude => new[]
-        {
+        public string[] PackageFilesExtensionInclude =>
+        [
             ".msix",
             ".msixbundle",
             ".msixupload"
-        };
+        ];
 
         public override string ToString() => "MSIX";
 
@@ -31,33 +31,21 @@ namespace MSStore.CLI.ProjectConfigurators
 
         public SearchOption PackageFilesSearchOption { get; } = SearchOption.TopDirectoryOnly;
 
-        public AllowTargetFutureDeviceFamily[] AllowTargetFutureDeviceFamilies { get; } = new[]
-        {
+        public AllowTargetFutureDeviceFamily[] AllowTargetFutureDeviceFamilies { get; } =
+        [
             AllowTargetFutureDeviceFamily.Desktop
-        };
+        ];
 
-        private readonly IBrowserLauncher _browserLauncher;
-        private readonly IConsoleReader _consoleReader;
-        private readonly IZipFileManager _zipFileManager;
-        private readonly IFileDownloader _fileDownloader;
-        private readonly IAzureBlobManager _azureBlobManager;
-        private readonly IEnvironmentInformationService _environmentInformationService;
-        private readonly IAppXManifestManager _appXManifestManager;
-        private readonly ILogger _logger;
+        private readonly IBrowserLauncher _browserLauncher = browserLauncher ?? throw new ArgumentNullException(nameof(browserLauncher));
+        private readonly IConsoleReader _consoleReader = consoleReader ?? throw new ArgumentNullException(nameof(consoleReader));
+        private readonly IZipFileManager _zipFileManager = zipFileManager ?? throw new ArgumentNullException(nameof(zipFileManager));
+        private readonly IFileDownloader _fileDownloader = fileDownloader ?? throw new ArgumentNullException(nameof(fileDownloader));
+        private readonly IAzureBlobManager _azureBlobManager = azureBlobManager ?? throw new ArgumentNullException(nameof(azureBlobManager));
+        private readonly IEnvironmentInformationService _environmentInformationService = environmentInformationService ?? throw new ArgumentNullException(nameof(environmentInformationService));
+        private readonly IAppXManifestManager _appXManifestManager = appXManifestManager ?? throw new ArgumentNullException(nameof(appXManifestManager));
+        private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         private DirectoryInfo? _tempExtractDir;
         private DevCenterApplication? _app;
-
-        public MSIXProjectPublisher(IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, IEnvironmentInformationService environmentInformationService, IAppXManifestManager appXManifestManager, ILogger<MSIXProjectPublisher> logger)
-        {
-            _browserLauncher = browserLauncher ?? throw new ArgumentNullException(nameof(browserLauncher));
-            _consoleReader = consoleReader ?? throw new ArgumentNullException(nameof(consoleReader));
-            _zipFileManager = zipFileManager ?? throw new ArgumentNullException(nameof(zipFileManager));
-            _fileDownloader = fileDownloader ?? throw new ArgumentNullException(nameof(fileDownloader));
-            _azureBlobManager = azureBlobManager ?? throw new ArgumentNullException(nameof(azureBlobManager));
-            _environmentInformationService = environmentInformationService ?? throw new ArgumentNullException(nameof(environmentInformationService));
-            _appXManifestManager = appXManifestManager ?? throw new ArgumentNullException(nameof(appXManifestManager));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        }
 
         public Task<bool> CanPublishAsync(string pathOrUrl, CancellationToken ct)
         {

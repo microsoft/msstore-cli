@@ -16,10 +16,9 @@ namespace MSStore.CLI.UnitTests
         public async Task InitCommandShouldUseDefaultDirectoryIfNoArgument()
         {
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "init"
-                }, -1);
+                ], -1);
 
             result.Should().Contain($"We could not find a project configurator for the project at '{Directory.GetCurrentDirectory()}'.");
         }
@@ -30,13 +29,12 @@ namespace MSStore.CLI.UnitTests
             AddFakeAccount(null);
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "init",
                     "https://www.microsoft.com/",
                     "--publish",
                     "--verbose"
-                }, -2);
+                ], -2);
 
             result.Should().Contain("I'll redirect you to the Microsoft Store Sign-up page.");
 

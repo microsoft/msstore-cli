@@ -418,7 +418,7 @@ dotnet_diagnostic.IDE0046.severity = suggestion
 dotnet_diagnostic.IDE0052.severity = warning
 
 # IDE0058: Expression value is never used
-dotnet_diagnostic.IDE0058.severity = suggestion
+dotnet_diagnostic.IDE0058.severity = none
 
 # IDE0060: Remove unused parameter
 dotnet_diagnostic.IDE0060.severity = warning
@@ -435,3 +435,12 @@ dotnet_diagnostic.IDE0005.severity = warning
 # IDE0073: File header
 dotnet_diagnostic.IDE0073.severity = warning
 file_header_template = Copyright (c) Microsoft Corporation. All rights reserved.\nLicensed under the MIT License.
+
+# IDE1006: Naming Styles
+dotnet_diagnostic.IDE1006.severity = suggestion
+
+# SA1513: Closing brace should be followed by blank line
+dotnet_diagnostic.SA1513.severity = none
+
+# SA1010: Opening square brackets should be spaced correctly
+dotnet_diagnostic.SA1010.severity = none

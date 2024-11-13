@@ -58,7 +58,7 @@ steps:
   displayName: 'Copy Artifacts - NuGet DLLs'
   condition: startsWith(variables.AgentOS, 'Linux')
   inputs:
-    contents: '$(System.DefaultWorkingDirectory)/MSStore.API/bin/${{ parameters.dotnet_configuration }}/net8.0/*'
+    contents: '$(System.DefaultWorkingDirectory)/MSStore.API/bin/${{ parameters.dotnet_configuration }}/net9.0/*'
     flattenFolders: true
     targetFolder: '$(Build.ArtifactStagingDirectory)/NuGetDLLs'
 - task: 1ES.PublishPipelineArtifact@1

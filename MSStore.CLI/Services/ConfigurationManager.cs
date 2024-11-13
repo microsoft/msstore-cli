@@ -16,7 +16,7 @@ using MSStore.CLI.Services.CredentialManager.Unix;
 
 namespace MSStore.CLI.Services
 {
-    internal class ConfigurationManager<T> : IConfigurationManager<T>
+    internal class ConfigurationManager<T>(JsonTypeInfo<T> jsonTypeInfo, string fileName, ILogger<ConfigurationManager<T>>? logger) : IConfigurationManager<T>
         where T : new()
     {
         private static readonly string SettingsDirectory = Path.Combine(GetSystemLocalApplicationDataPath(), "Microsoft", "MSStore.CLI");
@@ -43,18 +43,11 @@ namespace MSStore.CLI.Services
             return Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         }
 
-        private readonly string _settingsPath;
-        private readonly JsonTypeInfo<T> _jsonTypeInfo;
-        private readonly ILogger? _logger;
+        private readonly string _settingsPath = Path.Combine(SettingsDirectory, fileName);
+        private readonly JsonTypeInfo<T> _jsonTypeInfo = jsonTypeInfo ?? throw new ArgumentNullException(nameof(jsonTypeInfo));
+        private readonly ILogger? _logger = logger;
 
         public string ConfigPath => _settingsPath;
-
-        public ConfigurationManager(JsonTypeInfo<T> jsonTypeInfo, string fileName, ILogger<ConfigurationManager<T>>? logger)
-        {
-            _settingsPath = Path.Combine(SettingsDirectory, fileName);
-            _jsonTypeInfo = jsonTypeInfo ?? throw new ArgumentNullException(nameof(jsonTypeInfo));
-            _logger = logger;
-        }
 
         public async Task<T> LoadAsync(bool clearInvalidConfig, CancellationToken ct)
         {

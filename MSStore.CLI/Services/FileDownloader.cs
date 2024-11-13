@@ -10,14 +10,9 @@ using Microsoft.Extensions.Logging;
 
 namespace MSStore.CLI.Services
 {
-    internal class FileDownloader : IFileDownloader
+    internal class FileDownloader(IHttpClientFactory httpClientFactory) : IFileDownloader
     {
-        private readonly IHttpClientFactory _httpClientFactory = null!;
-
-        public FileDownloader(IHttpClientFactory httpClientFactory)
-        {
-            _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
-        }
+        private readonly IHttpClientFactory _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
 
         public async Task<bool> DownloadAsync(string url, string destinationFileName, IProgress<double> progress, ILogger? logger, CancellationToken ct = default)
         {

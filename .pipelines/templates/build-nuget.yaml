@@ -41,22 +41,22 @@ steps:
 - script: dotnet build MSStore.CLI.sln --no-restore /p:Configuration=${{ parameters.dotnet_configuration }}
   displayName: Build
 - task: DotNetCoreCLI@2
-  displayName: 'Tests net8.0'
+  displayName: 'Tests net9.0'
   env:
     DISPLAY: :0.0
   inputs:
     command: 'run'
     projects: '**/*[Tt]est*/*.csproj'
-    arguments: '-f net8.0 --no-build -c ${{ parameters.dotnet_configuration }} --coverage --coverage-output-format cobertura --report-trx'
+    arguments: '-f net9.0 --no-build -c ${{ parameters.dotnet_configuration }} --coverage --coverage-output-format cobertura --report-trx'
 - task: DotNetCoreCLI@2
-  displayName: 'Tests net8.0-windows10.0.17763.0'
+  displayName: 'Tests net9.0-windows10.0.17763.0'
   condition: startsWith(variables.AgentOS, 'Windows_NT')
   env:
     DISPLAY: :0.0
   inputs:
     command: 'run'
     projects: '**/*[Tt]est*/*.csproj'
-    arguments: '-f net8.0-windows10.0.17763.0 --no-build -c ${{ parameters.dotnet_configuration }} --coverage --coverage-output-format cobertura --report-trx'
+    arguments: '-f net9.0-windows10.0.17763.0 --no-build -c ${{ parameters.dotnet_configuration }} --coverage --coverage-output-format cobertura --report-trx'
 - task: PublishTestResults@2
   inputs:
     testResultsFormat: 'VSTest'
@@ -85,7 +85,7 @@ steps:
       AuthAKVName: ${{ parameters.signingIdentity.akvName }}
       AuthCertName: ${{ parameters.signingIdentity.authCertName }}
       AuthSignCertName: ${{ parameters.signingIdentity.signCertName }}
-      FolderPath: '$(System.DefaultWorkingDirectory)/MSStore.API/bin/${{ parameters.dotnet_configuration }}/net8.0'
+      FolderPath: '$(System.DefaultWorkingDirectory)/MSStore.API/bin/${{ parameters.dotnet_configuration }}/net9.0'
       Pattern: 'MSStore.API.dll'
       signConfigType: inlineSignParams
       inlineOperation: |

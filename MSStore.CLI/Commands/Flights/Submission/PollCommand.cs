@@ -24,23 +24,15 @@ namespace MSStore.CLI.Commands.Flights.Submission
             AddArgument(Flights.GetCommand.FlightIdArgument);
         }
 
-        public new class Handler : ICommandHandler
+        public new class Handler(ILogger<PollCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, TelemetryClient telemetryClient, IBrowserLauncher browserLauncher) : ICommandHandler
         {
-            private readonly ILogger _logger;
-            private readonly IStoreAPIFactory _storeAPIFactory;
-            private readonly TelemetryClient _telemetryClient;
-            private readonly IBrowserLauncher _browserLauncher;
+            private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
+            private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
+            private readonly IBrowserLauncher _browserLauncher = browserLauncher ?? throw new ArgumentNullException(nameof(browserLauncher));
 
             public string ProductId { get; set; } = null!;
             public string FlightId { get; set; } = null!;
-
-            public Handler(ILogger<Handler> logger, IStoreAPIFactory storeAPIFactory, TelemetryClient telemetryClient, IBrowserLauncher browserLauncher)
-            {
-                _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-                _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
-                _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
-                _browserLauncher = browserLauncher ?? throw new ArgumentNullException(nameof(browserLauncher));
-            }
 
             public int Invoke(InvocationContext context)
             {

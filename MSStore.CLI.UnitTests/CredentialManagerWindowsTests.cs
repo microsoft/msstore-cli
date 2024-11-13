@@ -15,9 +15,10 @@ namespace MSStore.CLI.UnitTests
         [TestInitialize]
         public void Initialize()
         {
-            _credentialManagerWindows = new CredentialManagerWindows();
-
-            _credentialManagerWindows.ApplicationName = TestApplicationName;
+            _credentialManagerWindows = new CredentialManagerWindows
+            {
+                ApplicationName = TestApplicationName
+            };
             _credentialManagerWindows.ClearCredentials("testUserName");
         }
 

@@ -20,18 +20,11 @@ namespace MSStore.CLI.Commands
         {
         }
 
-        public new class Handler : ICommandHandler
+        public new class Handler(IConfigurationManager<Configurations> configurationManager, TelemetryClient telemetryClient, ILogger<InfoCommand.Handler> logger) : ICommandHandler
         {
-            private readonly IConfigurationManager<Configurations> _configurationManager;
-            private readonly TelemetryClient _telemetryClient;
-            private readonly ILogger _logger;
-
-            public Handler(IConfigurationManager<Configurations> configurationManager, TelemetryClient telemetryClient, ILogger<Handler> logger)
-            {
-                _configurationManager = configurationManager ?? throw new ArgumentNullException(nameof(configurationManager));
-                _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
-                _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            }
+            private readonly IConfigurationManager<Configurations> _configurationManager = configurationManager ?? throw new ArgumentNullException(nameof(configurationManager));
+            private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
+            private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
             public int Invoke(InvocationContext context)
             {
@@ -44,8 +37,10 @@ namespace MSStore.CLI.Commands
 
                 var config = await _configurationManager.LoadAsync(ct: ct);
 
-                var table = new Table();
-                table.Title = new TableTitle($"[b]Current Config[/]");
+                var table = new Table
+                {
+                    Title = new TableTitle($"[b]Current Config[/]")
+                };
 
                 table.AddColumns("Config", "Value");
 

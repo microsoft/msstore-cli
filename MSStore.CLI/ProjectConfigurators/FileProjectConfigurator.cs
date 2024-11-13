@@ -16,29 +16,18 @@ using Spectre.Console;
 
 namespace MSStore.CLI.ProjectConfigurators
 {
-    internal abstract class FileProjectConfigurator : IProjectConfigurator, IProjectPackager, IProjectPublisher
+    internal abstract class FileProjectConfigurator(IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, IEnvironmentInformationService environmentInformationService, ILogger logger) : IProjectConfigurator, IProjectPackager, IProjectPublisher
     {
-        private readonly IBrowserLauncher _browserLauncher;
-        private readonly IConsoleReader _consoleReader;
-        private readonly IZipFileManager _zipFileManager;
-        private readonly IFileDownloader _fileDownloader;
-        private readonly IAzureBlobManager _azureBlobManager;
-        private readonly IEnvironmentInformationService _environmentInformationService;
+        private readonly IBrowserLauncher _browserLauncher = browserLauncher ?? throw new ArgumentNullException(nameof(browserLauncher));
+        private readonly IConsoleReader _consoleReader = consoleReader ?? throw new ArgumentNullException(nameof(consoleReader));
+        private readonly IZipFileManager _zipFileManager = zipFileManager ?? throw new ArgumentNullException(nameof(zipFileManager));
+        private readonly IFileDownloader _fileDownloader = fileDownloader ?? throw new ArgumentNullException(nameof(fileDownloader));
+        private readonly IAzureBlobManager _azureBlobManager = azureBlobManager ?? throw new ArgumentNullException(nameof(azureBlobManager));
+        private readonly IEnvironmentInformationService _environmentInformationService = environmentInformationService ?? throw new ArgumentNullException(nameof(environmentInformationService));
 
-        private readonly ILogger _logger;
+        private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         protected ILogger Logger => _logger;
-
-        public FileProjectConfigurator(IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, IEnvironmentInformationService environmentInformationService, ILogger logger)
-        {
-            _browserLauncher = browserLauncher ?? throw new ArgumentNullException(nameof(browserLauncher));
-            _consoleReader = consoleReader ?? throw new ArgumentNullException(nameof(consoleReader));
-            _zipFileManager = zipFileManager ?? throw new ArgumentNullException(nameof(zipFileManager));
-            _fileDownloader = fileDownloader ?? throw new ArgumentNullException(nameof(fileDownloader));
-            _azureBlobManager = azureBlobManager ?? throw new ArgumentNullException(nameof(azureBlobManager));
-            _environmentInformationService = environmentInformationService ?? throw new ArgumentNullException(nameof(environmentInformationService));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        }
 
         public abstract string[] SupportedProjectPattern { get; }
 

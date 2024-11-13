@@ -35,13 +35,12 @@ namespace MSStore.CLI.UnitTests
             var publisherDisplayName = "Test Publisher Display Name";
 
             var initResult = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                                 "init",
                                 "https://microsoft.com",
                                 "--publish",
                                 "--verbose"
-                }, -1);
+                ], -1);
 
             initResult.Should().Contain($"Using PublisherDisplayName: {publisherDisplayName}");
         }
@@ -52,12 +51,11 @@ namespace MSStore.CLI.UnitTests
             var publisherDisplayName = "New Test Publisher Display Name";
 
             await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "settings",
                     "setpdn",
                     publisherDisplayName
-                });
+                ]);
 
             FakeConfigurationManager
                 .Verify(x => x.SaveAsync(It.Is<Configurations>(c => c.PublisherDisplayName == publisherDisplayName), It.IsAny<CancellationToken>()));

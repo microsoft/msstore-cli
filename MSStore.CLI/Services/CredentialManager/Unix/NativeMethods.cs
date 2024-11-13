@@ -5,9 +5,6 @@ using System;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 
-// https://github.com/dotnet/roslyn-analyzers/issues/5479
-#pragma warning disable CA2101 // Specify marshaling for P/Invoke string arguments
-
 namespace MSStore.CLI.Services.CredentialManager.Unix
 {
     internal static class NativeMethods
@@ -155,7 +152,7 @@ namespace MSStore.CLI.Services.CredentialManager.Unix
 
         [SupportedOSPlatform("macos")]
         [DllImport(CoreFoundationFramework, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
-        private static unsafe extern char* CFStringGetCharactersPtr(IntPtr handle);
+        private static extern unsafe char* CFStringGetCharactersPtr(IntPtr handle);
 
         [SupportedOSPlatform("macos")]
         [DllImport(CoreFoundationFramework, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
@@ -180,7 +177,7 @@ namespace MSStore.CLI.Services.CredentialManager.Unix
             var c = (int)GetCount(handle);
             if (c == 0)
             {
-                return Array.Empty<T>();
+                return [];
             }
 
             var buffer = c <= 256 ? stackalloc IntPtr[c] : new IntPtr[c];
@@ -205,28 +202,18 @@ namespace MSStore.CLI.Services.CredentialManager.Unix
         [StructLayout(LayoutKind.Sequential)]
         private struct CFRange
         {
+#pragma warning disable IDE0044 // Add readonly modifier
             private nint loc; // defined as 'long' in native code
             private nint len; // defined as 'long' in native code
+#pragma warning restore IDE0044 // Add readonly modifier
 
-            public int Location
-            {
-                get { return (int)loc; }
-            }
+            public readonly int Location => (int)loc;
 
-            public int Length
-            {
-                get { return (int)len; }
-            }
+            public readonly int Length => (int)len;
 
-            public long LongLocation
-            {
-                get { return loc; }
-            }
+            public readonly long LongLocation => loc;
 
-            public long LongLength
-            {
-                get { return len; }
-            }
+            public readonly long LongLength => len;
 
             public CFRange(int loc, int len)
             {
@@ -246,7 +233,7 @@ namespace MSStore.CLI.Services.CredentialManager.Unix
                 this.len = len;
             }
 
-            public override string ToString()
+            public override readonly string ToString()
             {
                 return $"CFRange [Location: {loc} Length: {len}]";
             }
@@ -305,5 +292,3 @@ namespace MSStore.CLI.Services.CredentialManager.Unix
         }
     }
 }
-
-#pragma warning restore CA2101 // Specify marshaling for P/Invoke string arguments

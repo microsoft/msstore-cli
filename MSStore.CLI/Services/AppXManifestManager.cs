@@ -435,7 +435,7 @@ namespace MSStore.CLI.Services
 
         private static List<string> GetAllImagesFiles(string imageNodeText, FileInfo appxManifest, ILogger logger)
         {
-            List<string> imagePaths = new List<string>();
+            List<string> imagePaths = [];
             try
             {
                 string installLocation = appxManifest.Directory?.FullName ?? string.Empty;

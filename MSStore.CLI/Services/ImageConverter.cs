@@ -10,14 +10,9 @@ using SkiaSharp;
 
 namespace MSStore.CLI.Services
 {
-    internal class ImageConverter : IImageConverter
+    internal class ImageConverter(ILogger<ImageConverter> logger) : IImageConverter
     {
-        private ILogger<ImageConverter> _logger;
-
-        public ImageConverter(ILogger<ImageConverter> logger)
-        {
-            _logger = logger;
-        }
+        private ILogger<ImageConverter> _logger = logger;
 
         public async Task<bool> ConvertIcoToPngAsync(string sourceFilePath, string destinationFilePath, int destinationWidth, int destinationHeight, int paddingX, int paddingY, CancellationToken ct)
         {

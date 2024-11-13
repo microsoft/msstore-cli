@@ -30,13 +30,18 @@ namespace MSStore.CLI.Commands
             AddOption(InitCommand.Arch);
         }
 
-        public new class Handler : ICommandHandler
+        public new class Handler(
+            IProjectConfiguratorFactory projectConfiguratorFactory,
+            IStoreAPIFactory storeAPIFactory,
+            IImageConverter imageConverter,
+            ILogger<PackageCommand.Handler> logger,
+            TelemetryClient telemetryClient) : ICommandHandler
         {
-            private readonly IProjectConfiguratorFactory _projectConfiguratorFactory;
-            private readonly IStoreAPIFactory _storeAPIFactory;
-            private readonly IImageConverter _imageConverter;
-            private readonly ILogger _logger;
-            private readonly TelemetryClient _telemetryClient;
+            private readonly IProjectConfiguratorFactory _projectConfiguratorFactory = projectConfiguratorFactory ?? throw new ArgumentNullException(nameof(projectConfiguratorFactory));
+            private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
+            private readonly IImageConverter _imageConverter = imageConverter ?? throw new ArgumentNullException(nameof(imageConverter));
+            private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
             public string PathOrUrl { get; set; } = null!;
 
@@ -45,20 +50,6 @@ namespace MSStore.CLI.Commands
             public DirectoryInfo? Output { get; set; } = null!;
 
             public IEnumerable<BuildArch>? Arch { get; set; } = null!;
-
-            public Handler(
-                IProjectConfiguratorFactory projectConfiguratorFactory,
-                IStoreAPIFactory storeAPIFactory,
-                IImageConverter imageConverter,
-                ILogger<Handler> logger,
-                TelemetryClient telemetryClient)
-            {
-                _projectConfiguratorFactory = projectConfiguratorFactory ?? throw new ArgumentNullException(nameof(projectConfiguratorFactory));
-                _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
-                _imageConverter = imageConverter ?? throw new ArgumentNullException(nameof(imageConverter));
-                _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-                _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
-            }
 
             public int Invoke(InvocationContext context)
             {

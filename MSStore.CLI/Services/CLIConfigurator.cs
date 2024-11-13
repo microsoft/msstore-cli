@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -18,39 +17,26 @@ using Spectre.Console;
 
 namespace MSStore.CLI.Services
 {
-    internal class CLIConfigurator : ICLIConfigurator
+    internal class CLIConfigurator(
+        IStoreAPIFactory storeAPIFactory,
+        IConsoleReader consoleReader,
+        ICredentialManager credentialManager,
+        IConfigurationManager<Configurations> configurationManager,
+        IGraphClient graphClient,
+        IBrowserLauncher browserLauncher,
+        IPartnerCenterManager partnerCenterManager,
+        ITokenManager tokenManager,
+        ILogger<CLIConfigurator> logger) : ICLIConfigurator
     {
-        private readonly IStoreAPIFactory _storeAPIFactory;
-        private readonly IConsoleReader _consoleReader;
-        private readonly ICredentialManager _credentialManager;
-        private readonly IConfigurationManager<Configurations> _configurationManager;
-        private readonly IGraphClient _graphClient;
-        private readonly IBrowserLauncher _browserLauncher;
-        private readonly IPartnerCenterManager _partnerCenterManager;
-        private readonly ITokenManager _tokenManager;
-        private readonly ILogger _logger;
-
-        public CLIConfigurator(
-            IStoreAPIFactory storeAPIFactory,
-            IConsoleReader consoleReader,
-            ICredentialManager credentialManager,
-            IConfigurationManager<Configurations> configurationManager,
-            IGraphClient graphClient,
-            IBrowserLauncher browserLauncher,
-            IPartnerCenterManager partnerCenterManager,
-            ITokenManager tokenManager,
-            ILogger<CLIConfigurator> logger)
-        {
-            _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
-            _consoleReader = consoleReader ?? throw new ArgumentNullException(nameof(consoleReader));
-            _credentialManager = credentialManager ?? throw new ArgumentNullException(nameof(credentialManager));
-            _configurationManager = configurationManager ?? throw new ArgumentNullException(nameof(configurationManager));
-            _graphClient = graphClient ?? throw new ArgumentNullException(nameof(graphClient));
-            _browserLauncher = browserLauncher ?? throw new ArgumentNullException(nameof(browserLauncher));
-            _partnerCenterManager = partnerCenterManager ?? throw new ArgumentNullException(nameof(partnerCenterManager));
-            _tokenManager = tokenManager ?? throw new ArgumentNullException(nameof(tokenManager));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        }
+        private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
+        private readonly IConsoleReader _consoleReader = consoleReader ?? throw new ArgumentNullException(nameof(consoleReader));
+        private readonly ICredentialManager _credentialManager = credentialManager ?? throw new ArgumentNullException(nameof(credentialManager));
+        private readonly IConfigurationManager<Configurations> _configurationManager = configurationManager ?? throw new ArgumentNullException(nameof(configurationManager));
+        private readonly IGraphClient _graphClient = graphClient ?? throw new ArgumentNullException(nameof(graphClient));
+        private readonly IBrowserLauncher _browserLauncher = browserLauncher ?? throw new ArgumentNullException(nameof(browserLauncher));
+        private readonly IPartnerCenterManager _partnerCenterManager = partnerCenterManager ?? throw new ArgumentNullException(nameof(partnerCenterManager));
+        private readonly ITokenManager _tokenManager = tokenManager ?? throw new ArgumentNullException(nameof(tokenManager));
+        private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         public async Task<bool> ConfigureAsync(bool askConfirmation, Guid? tenantId = null, string? sellerId = null, Guid? clientId = null, string? clientSecret = null, string? certificateThumbprint = null, string? certificateFilePath = null, string? certificatePassword = null, CancellationToken ct = default)
         {
@@ -231,7 +217,7 @@ namespace MSStore.CLI.Services
 
                     var appUpdateRequest = new AppUpdateRequest
                     {
-                        IdentifierUris = new List<string> { $"https://{organization.Domain}/{clientApp.AppId}" },
+                        IdentifierUris = [$"https://{organization.Domain}/{clientApp.AppId}"],
                         SignInAudience = "AzureADMyOrg"
                     };
 

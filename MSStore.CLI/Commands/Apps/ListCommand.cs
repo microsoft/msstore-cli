@@ -21,18 +21,11 @@ namespace MSStore.CLI.Commands.Apps
         {
         }
 
-        public new class Handler : ICommandHandler
+        public new class Handler(ILogger<ListCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, TelemetryClient telemetryClient) : ICommandHandler
         {
-            private readonly ILogger _logger;
-            private readonly IStoreAPIFactory _storeAPIFactory;
-            private readonly TelemetryClient _telemetryClient;
-
-            public Handler(ILogger<Handler> logger, IStoreAPIFactory storeAPIFactory, TelemetryClient telemetryClient)
-            {
-                _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-                _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
-                _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
-            }
+            private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
+            private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
             public int Invoke(InvocationContext context)
             {

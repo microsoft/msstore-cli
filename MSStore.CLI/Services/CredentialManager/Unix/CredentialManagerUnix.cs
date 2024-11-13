@@ -13,7 +13,7 @@ namespace MSStore.CLI.Services.CredentialManager.Unix
     internal class CredentialManagerUnix : ICredentialManager
     {
         private static readonly string SchemaName = "com.microsoft.store.credentials";
-        private static readonly KeyValuePair<string, string> LinuxKeyRingAttr1 = new KeyValuePair<string, string>("Service", "msstore-cli");
+        private static readonly KeyValuePair<string, string> LinuxKeyRingAttr1 = new("Service", "msstore-cli");
         private static readonly string LinuxKeyRingAttr2Key = "Account";
         private static readonly string LinuxKeyRingCollection = "default";
 
@@ -35,7 +35,7 @@ namespace MSStore.CLI.Services.CredentialManager.Unix
                     passwordData: out passwordDataPtr,
                     itemRef: out itemPtr);
 
-                byte[] content = Array.Empty<byte>();
+                byte[] content = [];
                 switch (resultStatus)
                 {
                     case NativeMethods.SecResultCodes.ErrSecItemNotFound:
@@ -176,7 +176,7 @@ namespace MSStore.CLI.Services.CredentialManager.Unix
         }
 
         [SupportedOSPlatform("linux")]
-        private Lazy<IntPtr> _libsecretSchema = new Lazy<IntPtr>(() =>
+        private Lazy<IntPtr> _libsecretSchema = new(() =>
         {
             var libsecretSchema = NativeMethods.secret_schema_new(
                 name: SchemaName,

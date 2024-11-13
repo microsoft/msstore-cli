@@ -34,22 +34,14 @@ namespace MSStore.CLI.Commands
             });
         }
 
-        public new class Handler : ICommandHandler
+        public new class Handler(TelemetryClient telemetryClient, IConfigurationManager<TelemetryConfigurations> telemetryConfigurationManager, IConfigurationManager<Configurations> configurationManager, ILogger<SettingsCommand.Handler> logger) : ICommandHandler
         {
-            private readonly TelemetryClient _telemetryClient;
-            private readonly IConfigurationManager<TelemetryConfigurations> _telemetryConfigurationManager;
-            private readonly IConfigurationManager<Configurations> _configurationManager;
-            private readonly ILogger _logger;
+            private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
+            private readonly IConfigurationManager<TelemetryConfigurations> _telemetryConfigurationManager = telemetryConfigurationManager ?? throw new ArgumentNullException(nameof(telemetryConfigurationManager));
+            private readonly IConfigurationManager<Configurations> _configurationManager = configurationManager ?? throw new ArgumentNullException(nameof(configurationManager));
+            private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
             public bool? EnableTelemetry { get; set; }
-
-            public Handler(TelemetryClient telemetryClient, IConfigurationManager<TelemetryConfigurations> telemetryConfigurationManager, IConfigurationManager<Configurations> configurationManager, ILogger<Handler> logger)
-            {
-                _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
-                _telemetryConfigurationManager = telemetryConfigurationManager ?? throw new ArgumentNullException(nameof(telemetryConfigurationManager));
-                _configurationManager = configurationManager ?? throw new ArgumentNullException(nameof(configurationManager));
-                _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            }
 
             public int Invoke(InvocationContext context)
             {

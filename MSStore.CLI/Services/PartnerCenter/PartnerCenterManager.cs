@@ -13,22 +13,16 @@ using MSStore.CLI.Services.TokenManager;
 
 namespace MSStore.CLI.Services.PartnerCenter
 {
-    internal class PartnerCenterManager : IPartnerCenterManager
+    internal class PartnerCenterManager(ITokenManager tokenManager, IHttpClientFactory httpClientFactory) : IPartnerCenterManager
     {
         private static readonly string JsonContentType = "application/json";
 
-        private static readonly string[] PartnerCenterUserImpersonationScope = new[] { "https://api.partnercenter.microsoft.com/user_impersonation" };
+        private static readonly string[] PartnerCenterUserImpersonationScope = ["https://api.partnercenter.microsoft.com/user_impersonation"];
 
-        private readonly ITokenManager _tokenManager;
-        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly ITokenManager _tokenManager = tokenManager ?? throw new ArgumentNullException(nameof(tokenManager));
+        private readonly IHttpClientFactory _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
 
         public bool Enabled => false;
-
-        public PartnerCenterManager(ITokenManager tokenManager, IHttpClientFactory httpClientFactory)
-        {
-            _tokenManager = tokenManager ?? throw new ArgumentNullException(nameof(tokenManager));
-            _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
-        }
 
         private async Task<T> InvokeAsync<T>(
             HttpMethod httpMethod,

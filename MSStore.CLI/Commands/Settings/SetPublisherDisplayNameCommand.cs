@@ -21,20 +21,14 @@ namespace MSStore.CLI.Commands.Settings
             AddArgument(publisherDisplayName);
         }
 
-        public new class Handler : ICommandHandler
+        public new class Handler(
+            IConfigurationManager<Configurations> configurationManager,
+            TelemetryClient telemetryClient) : ICommandHandler
         {
-            private readonly IConfigurationManager<Configurations> _configurationManager;
-            private readonly TelemetryClient _telemetryClient;
+            private readonly IConfigurationManager<Configurations> _configurationManager = configurationManager ?? throw new ArgumentNullException(nameof(configurationManager));
+            private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
             public string? PublisherDisplayName { get; set; }
-
-            public Handler(
-                IConfigurationManager<Configurations> configurationManager,
-                TelemetryClient telemetryClient)
-            {
-                _configurationManager = configurationManager ?? throw new ArgumentNullException(nameof(configurationManager));
-                _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
-            }
 
             public int Invoke(InvocationContext context)
             {

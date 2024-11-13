@@ -27,11 +27,11 @@ namespace MSStore.CLI.Commands.Flights
 
             AddArgument(new Argument<string>("friendlyName", "The friendly name of the flight."));
             var groupIdsOption = new Option<IEnumerable<string>>(
-                aliases: new string[]
-                {
+                aliases:
+                [
                     "--group-ids",
                     "-g"
-                },
+                ],
                 getDefaultValue: Array.Empty<string>,
                 description: "The group IDs to associate with the flight.")
             {
@@ -48,26 +48,19 @@ namespace MSStore.CLI.Commands.Flights
 
             AddOption(groupIdsOption);
 
-            AddOption(new Option<string>(new[] { "--rank-higher-than", "-r" }, "The flight ID to rank higher than."));
+            AddOption(new Option<string>(["--rank-higher-than", "-r"], "The flight ID to rank higher than."));
         }
 
-        public new class Handler : ICommandHandler
+        public new class Handler(ILogger<CreateCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, TelemetryClient telemetryClient) : ICommandHandler
         {
-            private readonly ILogger _logger;
-            private readonly IStoreAPIFactory _storeAPIFactory;
-            private readonly TelemetryClient _telemetryClient;
+            private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
+            private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
             public string ProductId { get; set; } = null!;
             public string FriendlyName { get; set; } = null!;
             public IEnumerable<string> GroupIds { get; set; } = null!;
             public string? RankHigherThan { get; set; }
-
-            public Handler(ILogger<Handler> logger, IStoreAPIFactory storeAPIFactory, TelemetryClient telemetryClient)
-            {
-                _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-                _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
-                _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
-            }
 
             public int Invoke(InvocationContext context)
             {

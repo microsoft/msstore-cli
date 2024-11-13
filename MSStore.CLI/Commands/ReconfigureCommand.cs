@@ -19,35 +19,35 @@ namespace MSStore.CLI.Commands
             : base("reconfigure", "Re-configure the Microsoft Store Developer CLI.")
         {
             var tenantId = new Option<Guid>(
-                aliases: new string[] { "--tenantId", "-t" },
+                aliases: ["--tenantId", "-t"],
                 description: "Specify the tenant Id that should be used.");
 
             var sellerId = new Option<string>(
-                aliases: new string[] { "--sellerId", "-s" },
+                aliases: ["--sellerId", "-s"],
                 description: "Specify the seller Id that should be used.");
 
             var clientId = new Option<Guid>(
-                aliases: new string[] { "--clientId", "-c" },
+                aliases: ["--clientId", "-c"],
                 description: "Specify the client Id that should be used.");
 
             var clientSecret = new Option<string>(
-                aliases: new string[] { "--clientSecret", "-cs" },
+                aliases: ["--clientSecret", "-cs"],
                 description: "Specify the client Secret that should be used.");
 
             var certificateThumbprint = new Option<string>(
-                aliases: new string[] { "--certificateThumbprint", "-ct" },
+                aliases: ["--certificateThumbprint", "-ct"],
                 description: "Specify the certificate Thumbprint that should be used.");
 
             var certificateFilePath = new Option<FileInfo?>(
-                aliases: new string[] { "--certificateFilePath", "-cfp" },
+                aliases: ["--certificateFilePath", "-cfp"],
                 description: "Specify the certificate file path that should be used.");
 
             var certificatePassword = new Option<string>(
-                aliases: new string[] { "--certificatePassword", "-cp" },
+                aliases: ["--certificatePassword", "-cp"],
                 description: "Specify the certificate password that should be used.");
 
             var reset = new Option<bool>(
-                aliases: new string[] { "--reset" },
+                aliases: ["--reset"],
                 description: "Only reset the credentials, without starting over.");
 
             AddOption(tenantId);
@@ -60,10 +60,10 @@ namespace MSStore.CLI.Commands
             AddOption(reset);
         }
 
-        public new class Handler : ICommandHandler
+        public new class Handler(ICLIConfigurator cliConfigurator, TelemetryClient telemetryClient) : ICommandHandler
         {
-            private readonly ICLIConfigurator _cliConfigurator;
-            private readonly TelemetryClient _telemetryClient;
+            private readonly ICLIConfigurator _cliConfigurator = cliConfigurator;
+            private readonly TelemetryClient _telemetryClient = telemetryClient;
 
             public Guid? TenantId { get; set; }
             public string? SellerId { get; set; }
@@ -73,12 +73,6 @@ namespace MSStore.CLI.Commands
             public FileInfo? CertificateFilePath { get; set; }
             public string? CertificatePassword { get; set; }
             public bool? Reset { get; set; }
-
-            public Handler(ICLIConfigurator cliConfigurator, TelemetryClient telemetryClient)
-            {
-                _cliConfigurator = cliConfigurator;
-                _telemetryClient = telemetryClient;
-            }
 
             public int Invoke(InvocationContext context)
             {

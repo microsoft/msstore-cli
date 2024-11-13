@@ -26,7 +26,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 8.0.x
+        dotnet-version: 9.0.x
     - name: Install and Configure Keyring
       if: ${{ matrix.os == 'ubuntu-latest' }}
       run: |
@@ -42,11 +42,11 @@ jobs:
       run: dotnet restore MSStore.CLI.sln /p:Configuration=Release
     - name: Build
       run: dotnet build MSStore.CLI.sln --no-restore /p:Configuration=Release
-    - name: Test net8.0
-      run: dotnet run --project MSStore.CLI.UnitTests -f net8.0 --no-build -c Release --coverage --coverage-output-format cobertura --report-trx --results-directory ./TestResults
-    - name: Test net8.0-windows10.0.17763.0
+    - name: Test net9.0
+      run: dotnet run --project MSStore.CLI.UnitTests -f net9.0 --no-build -c Release --coverage --coverage-output-format cobertura --report-trx --results-directory ./TestResults
+    - name: Test net9.0-windows10.0.17763.0
       if: ${{ matrix.os == 'windows-latest' }}
-      run: dotnet run --project MSStore.CLI.UnitTests -f net8.0-windows10.0.17763.0 --no-build -c Release --coverage --coverage-output-format cobertura --report-trx --results-directory ./TestResults
+      run: dotnet run --project MSStore.CLI.UnitTests -f net9.0-windows10.0.17763.0 --no-build -c Release --coverage --coverage-output-format cobertura --report-trx --results-directory ./TestResults
     - name: Publish test results
       if: ${{ !cancelled() }}
       uses: actions/upload-artifact@v4
@@ -83,13 +83,13 @@ jobs:
         include:
           - os: windows-latest
             dotnet-os: win
-            dotnet-framework: net8.0-windows10.0.17763.0
+            dotnet-framework: net9.0-windows10.0.17763.0
           - os: ubuntu-latest
             dotnet-os: linux
-            dotnet-framework: net8.0
+            dotnet-framework: net9.0
           - os: macos-latest
             dotnet-os: osx
-            dotnet-framework: net8.0
+            dotnet-framework: net9.0
     runs-on: ${{ matrix.os }}
 
     name: Build CLI - ${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }}
@@ -101,7 +101,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 8.0.x
+        dotnet-version: 9.0.x
     - name: Add msbuild to PATH
       if: ${{ matrix.os == 'windows-latest' }}
       uses: microsoft/setup-msbuild@v2

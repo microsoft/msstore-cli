@@ -12,14 +12,9 @@ using Spectre.Console;
 
 namespace MSStore.CLI.Services
 {
-    internal class ExternalCommandExecutor : IExternalCommandExecutor
+    internal class ExternalCommandExecutor(ILogger<ExternalCommandExecutor> logger) : IExternalCommandExecutor
     {
-        private ILogger _logger;
-
-        public ExternalCommandExecutor(ILogger<ExternalCommandExecutor> logger)
-        {
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        }
+        private ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         public async Task<ExternalCommandExecutionResult> RunAsync(string command, string arguments, string workingDirectory, CancellationToken ct)
         {
@@ -123,7 +118,7 @@ namespace MSStore.CLI.Services
             }
 
             var toolPaths = result.StdOut.Trim();
-            var toolPathList = toolPaths.Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
+            var toolPathList = toolPaths.Split([Environment.NewLine], StringSplitOptions.RemoveEmptyEntries);
             return toolPathList.Length == 0 ? string.Empty : toolPathList[0];
         }
     }

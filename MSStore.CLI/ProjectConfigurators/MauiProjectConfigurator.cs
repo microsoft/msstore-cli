@@ -18,41 +18,33 @@ using Spectre.Console;
 
 namespace MSStore.CLI.ProjectConfigurators
 {
-    internal class MauiProjectConfigurator : FileProjectConfigurator
+    internal class MauiProjectConfigurator(IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, INuGetPackageManager nuGetPackageManager, IExternalCommandExecutor externalCommandExecutor, IAppXManifestManager appXManifestManager, IEnvironmentInformationService environmentInformationService, ILogger<MauiProjectConfigurator> logger) : FileProjectConfigurator(browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, environmentInformationService, logger)
     {
-        private readonly INuGetPackageManager _nuGetPackageManager;
-        private readonly IExternalCommandExecutor _externalCommandExecutor;
-        private readonly IAppXManifestManager _appXManifestManager;
-
-        public MauiProjectConfigurator(IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, INuGetPackageManager nuGetPackageManager, IExternalCommandExecutor externalCommandExecutor, IAppXManifestManager appXManifestManager, IEnvironmentInformationService environmentInformationService, ILogger<MauiProjectConfigurator> logger)
-            : base(browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, environmentInformationService, logger)
-        {
-            _nuGetPackageManager = nuGetPackageManager ?? throw new ArgumentNullException(nameof(nuGetPackageManager));
-            _externalCommandExecutor = externalCommandExecutor ?? throw new ArgumentNullException(nameof(externalCommandExecutor));
-            _appXManifestManager = appXManifestManager ?? throw new ArgumentNullException(nameof(appXManifestManager));
-        }
+        private readonly INuGetPackageManager _nuGetPackageManager = nuGetPackageManager ?? throw new ArgumentNullException(nameof(nuGetPackageManager));
+        private readonly IExternalCommandExecutor _externalCommandExecutor = externalCommandExecutor ?? throw new ArgumentNullException(nameof(externalCommandExecutor));
+        private readonly IAppXManifestManager _appXManifestManager = appXManifestManager ?? throw new ArgumentNullException(nameof(appXManifestManager));
 
         public override string ToString() => "Maui";
 
-        public override string[] SupportedProjectPattern => new[] { "*.csproj" };
+        public override string[] SupportedProjectPattern => ["*.csproj"];
 
-        public override string[] PackageFilesExtensionInclude => new[] { ".msix" };
+        public override string[] PackageFilesExtensionInclude => [".msix"];
         public override string[]? PackageFilesExtensionExclude { get; }
         public override SearchOption PackageFilesSearchOption { get; } = SearchOption.AllDirectories;
         public override PublishFileSearchFilterStrategy PublishFileSearchFilterStrategy { get; } = PublishFileSearchFilterStrategy.OneLevelDown;
         public override string OutputSubdirectory { get; } = Path.Combine("obj", "MSStore.CLI");
         public override string DefaultInputSubdirectory { get; } = "AppPackages";
 
-        public override IEnumerable<BuildArch>? DefaultBuildArchs => new[] { BuildArch.X64 };
+        public override IEnumerable<BuildArch>? DefaultBuildArchs => [BuildArch.X64];
 
         public override bool PackageOnlyOnWindows => true;
 
-        public override AllowTargetFutureDeviceFamily[] AllowTargetFutureDeviceFamilies { get; } = new[]
-        {
+        public override AllowTargetFutureDeviceFamily[] AllowTargetFutureDeviceFamilies { get; } =
+        [
             AllowTargetFutureDeviceFamily.Desktop,
             AllowTargetFutureDeviceFamily.Mobile,
             AllowTargetFutureDeviceFamily.Holographic
-        };
+        ];
 
         public override async Task<bool> CanConfigureAsync(string pathOrUrl, CancellationToken ct)
         {
@@ -167,7 +159,7 @@ namespace MSStore.CLI.ProjectConfigurators
             return Task.FromResult<List<string>?>(null);
         }
 
-        private Dictionary<string, bool> _nugetRestoreExecuted = new Dictionary<string, bool>();
+        private Dictionary<string, bool> _nugetRestoreExecuted = [];
         private async Task RestorePackagesAsync(string workingDirectory, CancellationToken ct)
         {
             if (_nugetRestoreExecuted.TryGetValue(workingDirectory, out var value) && value)

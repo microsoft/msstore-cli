@@ -28,10 +28,9 @@ namespace MSStore.CLI.UnitTests
             AddDefaultFakeAccount();
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "reconfigure"
-                });
+                ]);
 
             result.Should().Contain("Awesome! It seems to be working!");
         }
@@ -83,10 +82,9 @@ namespace MSStore.CLI.UnitTests
                 });
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "reconfigure"
-                });
+                ]);
 
             result.Should().Contain("Awesome! It seems to be working!");
         }
@@ -106,14 +104,13 @@ namespace MSStore.CLI.UnitTests
                 .ReturnsAsync("ClientSecret");
 
             return ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "reconfigure",
                     "--tenantId",
                     DefaultOrganization.Id!.Value.ToString(),
                     "--sellerId",
                     "12345"
-                });
+                ]);
         }
 
         [TestMethod]
@@ -153,8 +150,7 @@ namespace MSStore.CLI.UnitTests
         public async Task ReconfigureCommandWithAllInfoShouldReturnZero()
         {
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "reconfigure",
                     "--tenantId",
                     DefaultOrganization.Id!.Value.ToString(),
@@ -164,7 +160,7 @@ namespace MSStore.CLI.UnitTests
                     "3F0BCAEF-6334-48CF-837F-81CB0F1F2C45",
                     "--clientSecret",
                     "ClientSecret",
-                });
+                ]);
 
             TokenManager
                 .Verify(x => x.SelectAccountAsync(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -178,8 +174,7 @@ namespace MSStore.CLI.UnitTests
         public async Task ReconfigureCommandWithAllInfoAndCertPathShouldReturnZero()
         {
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "reconfigure",
                     "--tenantId",
                     DefaultOrganization.Id!.Value.ToString(),
@@ -189,7 +184,7 @@ namespace MSStore.CLI.UnitTests
                     "3F0BCAEF-6334-48CF-837F-81CB0F1F2C45",
                     "--certificateFilePath",
                     "C:\\x.pfx"
-                });
+                ]);
 
             TokenManager
                 .Verify(x => x.SelectAccountAsync(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -203,8 +198,7 @@ namespace MSStore.CLI.UnitTests
         public async Task ReconfigureCommandWithAllInfoAndCertThumbprintShouldReturnZero()
         {
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "reconfigure",
                     "--tenantId",
                     DefaultOrganization.Id!.Value.ToString(),
@@ -214,7 +208,7 @@ namespace MSStore.CLI.UnitTests
                     "3F0BCAEF-6334-48CF-837F-81CB0F1F2C45",
                     "--certificateThumbprint",
                     "abc"
-                });
+                ]);
 
             TokenManager
                 .Verify(x => x.SelectAccountAsync(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);

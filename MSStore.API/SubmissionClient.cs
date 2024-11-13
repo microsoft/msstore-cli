@@ -9,6 +9,7 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -41,8 +42,8 @@ namespace MSStore.API
         private static readonly string LinuxKeyRingSchema = "com.microsoft.store.tokencache";
         private static readonly string LinuxKeyRingCollection = MsalCacheHelper.LinuxKeyRingDefaultCollection;
         private static readonly string LinuxKeyRingLabel = "MSAL token cache for all Microsoft Store Apps.";
-        private static readonly KeyValuePair<string, string> LinuxKeyRingAttr1 = new KeyValuePair<string, string>("Version", "1");
-        private static readonly KeyValuePair<string, string> LinuxKeyRingAttr2 = new KeyValuePair<string, string>("ProductGroup", "msstore-api");
+        private static readonly KeyValuePair<string, string> LinuxKeyRingAttr1 = new("Version", "1");
+        private static readonly KeyValuePair<string, string> LinuxKeyRingAttr2 = new("ProductGroup", "msstore-api");
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SubmissionClient" /> class.
@@ -83,7 +84,7 @@ namespace MSStore.API
 
             this.httpClient.BaseAddress = new Uri(serviceUrl);
 
-            DefaultHeaders = new Dictionary<string, string>();
+            DefaultHeaders = [];
         }
 
         /// <summary>
@@ -178,7 +179,7 @@ namespace MSStore.API
 
                 try
                 {
-                    authenticationResult = await app.AcquireTokenForClient(new[] { scope })
+                    authenticationResult = await app.AcquireTokenForClient([scope])
                                            .WithTenantId(tenantId)
                                            .ExecuteAsync(ct);
                 }
@@ -227,12 +228,14 @@ namespace MSStore.API
         /// <param name="httpMethod">The HTTP method.</param>
         /// <param name="relativeUrl">The relative URL.</param>
         /// <param name="requestContent">Content of the request.</param>
+        /// <param name="jsonTypeInfo">The type information for JSON serialization.</param>
         /// <param name="ct">Cancelation token.</param>
         /// <returns>instance of the type T</returns>
         public async Task<T> InvokeAsync<T>(
             HttpMethod httpMethod,
             string relativeUrl,
             object? requestContent,
+            JsonTypeInfo<T> jsonTypeInfo,
             CancellationToken ct = default)
             where T : class
         {
@@ -247,13 +250,13 @@ namespace MSStore.API
                 return (T)(object)await response.Content.ReadAsStringAsync(ct);
             }
 
-            object? resource = null;
+            T? resource = null;
 
             if (!response.IsSuccessStatusCode)
             {
                 try
                 {
-                    resource = JsonSerializer.Deserialize(await response.Content.ReadAsStringAsync(ct), typeof(T), SourceGenerationContext.GetCustom());
+                    resource = await JsonSerializer.DeserializeAsync(await response.Content.ReadAsStreamAsync(ct), jsonTypeInfo, ct);
                 }
                 catch
                 {
@@ -263,25 +266,19 @@ namespace MSStore.API
                 {
                 }
 
-                if (resource?.GetType()?.IsGenericType == true &&
-                    resource?.GetType()?.GetGenericTypeDefinition() == typeof(ResponseWrapper<>))
+                if (typeof(T).IsGenericType &&
+                    typeof(T).GetGenericTypeDefinition() == typeof(ResponseWrapper<>))
                 {
-                    var errorsProp = resource.GetType().GetProperty(nameof(ResponseWrapper<object>.Errors));
-                    var isSuccessProp = resource.GetType().GetProperty(nameof(ResponseWrapper<object>.IsSuccess));
-                    if (errorsProp != null && isSuccessProp != null)
+                    if (resource is ResponseWrapper responseWrapper &&
+                        responseWrapper.Errors?.Count > 0 &&
+                        !responseWrapper.IsSuccess)
                     {
-                        var errors = (List<ResponseError>?)errorsProp.GetValue(resource);
-                        var isSuccess = (bool?)isSuccessProp.GetValue(resource);
-                        if (errors?.Count > 0
-                            && isSuccess == false)
+                        if (resource is T t)
                         {
-                            if (resource is T t)
-                            {
-                                return t;
-                            }
-
-                            throw new MSStoreWrappedErrorException("REST error", errors);
+                            return t;
                         }
+
+                        throw new MSStoreWrappedErrorException("REST error", responseWrapper.Errors);
                     }
                 }
 
@@ -295,10 +292,10 @@ namespace MSStore.API
                 }
             }
 
-            resource = JsonSerializer.Deserialize(await response.Content.ReadAsStringAsync(ct), typeof(T), SourceGenerationContext.GetCustom());
-            if (resource is T result)
+            resource = await JsonSerializer.DeserializeAsync(await response.Content.ReadAsStreamAsync(ct), jsonTypeInfo, ct);
+            if (resource != null)
             {
-                return result;
+                return resource;
             }
             else
             {

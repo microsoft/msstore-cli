@@ -24,7 +24,7 @@ namespace MSStore.CLI.Helpers
                 defaultImagesFileList.AddRange(projectSpecificDefaultImagesFileList);
             }
 
-            List<string> failedImages = new List<string>();
+            List<string> failedImages = [];
             List<byte[]> defaultImages = GetHashesForImageFiles(defaultImagesFileList, imageConverter);
             List<byte[]> appImages = GetHashesForImageFiles(appImagesFileList, imageConverter);
 
@@ -71,12 +71,12 @@ namespace MSStore.CLI.Helpers
                 "This may be because the Windows SDK is not installed. " +
                 "We won't be able to check for default images.", defaultImagesDir);
 
-            return Array.Empty<string>();
+            return [];
         }
 
         private static List<byte[]> GetHashesForImageFiles(List<string> imageFiles, IImageConverter imageConverter)
         {
-            List<byte[]> hashes = new List<byte[]>();
+            List<byte[]> hashes = [];
 
             foreach (string image in imageFiles)
             {

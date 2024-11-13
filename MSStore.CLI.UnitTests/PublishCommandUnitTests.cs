@@ -21,10 +21,9 @@ namespace MSStore.CLI.UnitTests
         public async Task PublishCommandShouldUseDefaultDirectoryIfNoArgument()
         {
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "publish"
-                }, -1);
+                ], -1);
 
             result.Should().Contain($"We could not find a project publisher for the project at '{Directory.GetCurrentDirectory()}'.");
         }
@@ -48,12 +47,11 @@ namespace MSStore.CLI.UnitTests
             AddDefaultFakeSuccessfulSubmission();
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "publish",
                     path,
                     "--verbose"
-                });
+                ]);
 
             result.Should().Contain("Submission commit success! Here is some data:");
             result.Should().Contain("test.msixupload");
@@ -83,12 +81,11 @@ namespace MSStore.CLI.UnitTests
             AddDefaultFakeSuccessfulSubmission();
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "publish",
                     path,
                     "--verbose"
-                });
+                ]);
 
             result.Should().Contain("Submission commit success! Here is some data:");
             result.Should().Contain("test_x64.msix");
@@ -121,12 +118,11 @@ namespace MSStore.CLI.UnitTests
             AddDefaultFakeSuccessfulSubmission();
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "publish",
                     path,
                     "--verbose"
-                });
+                ]);
 
             result.Should().Contain("Submission commit success! Here is some data:");
             result.Should().Contain("test_x64.msix");
@@ -153,12 +149,11 @@ namespace MSStore.CLI.UnitTests
             AddDefaultFakeSuccessfulSubmission();
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "publish",
                     path,
                     "--verbose"
-                });
+                ]);
 
             result.Should().Contain("Submission commit success! Here is some data:");
             result.Should().Contain("test.msix");
@@ -195,12 +190,11 @@ namespace MSStore.CLI.UnitTests
             }
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "publish",
                     path,
                     "--verbose"
-                });
+                ]);
 
             result.Should().Contain("Submission commit success! Here is some data:");
             result.Should().Contain("test.appx");
@@ -234,12 +228,11 @@ namespace MSStore.CLI.UnitTests
             }
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "publish",
                     path,
                     "--verbose"
-                });
+                ]);
 
             result.Should().Contain("Submission commit success! Here is some data:");
             result.Should().Contain("test.appxupload");
@@ -255,14 +248,13 @@ namespace MSStore.CLI.UnitTests
             AddDefaultFakeSuccessfulSubmission();
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "publish",
                     msixPath,
                     "--appId",
                     FakeApps[0].Id!,
                     "--verbose"
-                });
+                ]);
 
             ZipFileManager
                 .Verify(x => x.ExtractZip(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
@@ -281,15 +273,14 @@ namespace MSStore.CLI.UnitTests
             AddDefaultFakeSuccessfulSubmission();
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "publish",
                     msixPath,
                     "--appId",
                     FakeApps[0].Id!,
                     "--verbose",
                     "--noCommit"
-                });
+                ]);
 
             ZipFileManager
                 .Verify(x => x.ExtractZip(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
@@ -308,8 +299,7 @@ namespace MSStore.CLI.UnitTests
             AddDefaultFakeSuccessfulFlightSubmission();
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "publish",
                     msixPath,
                     "--appId",
@@ -317,7 +307,7 @@ namespace MSStore.CLI.UnitTests
                     "--flightId",
                     FakeFlights[0].FlightId!,
                     "--verbose"
-                });
+                ]);
 
             ZipFileManager
                 .Verify(x => x.ExtractZip(It.IsAny<string>(), It.IsAny<string>()), Times.Never);

@@ -18,40 +18,32 @@ using Spectre.Console;
 
 namespace MSStore.CLI.ProjectConfigurators
 {
-    internal class UWPProjectConfigurator : FileProjectConfigurator
+    internal class UWPProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, INuGetPackageManager nuGetPackageManager, IAppXManifestManager appXManifestManager, IEnvironmentInformationService environmentInformationService, ILogger<UWPProjectConfigurator> logger) : FileProjectConfigurator(browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, environmentInformationService, logger)
     {
-        protected IExternalCommandExecutor ExternalCommandExecutor { get; }
-        protected IAppXManifestManager AppXManifestManager { get; }
-        protected INuGetPackageManager NuGetPackageManager { get; }
-
-        public UWPProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, INuGetPackageManager nuGetPackageManager, IAppXManifestManager appXManifestManager, IEnvironmentInformationService environmentInformationService, ILogger<UWPProjectConfigurator> logger)
-            : base(browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, environmentInformationService, logger)
-        {
-            ExternalCommandExecutor = externalCommandExecutor ?? throw new ArgumentNullException(nameof(externalCommandExecutor));
-            NuGetPackageManager = nuGetPackageManager ?? throw new ArgumentNullException(nameof(nuGetPackageManager));
-            AppXManifestManager = appXManifestManager ?? throw new ArgumentNullException(nameof(appXManifestManager));
-        }
+        protected IExternalCommandExecutor ExternalCommandExecutor { get; } = externalCommandExecutor ?? throw new ArgumentNullException(nameof(externalCommandExecutor));
+        protected IAppXManifestManager AppXManifestManager { get; } = appXManifestManager ?? throw new ArgumentNullException(nameof(appXManifestManager));
+        protected INuGetPackageManager NuGetPackageManager { get; } = nuGetPackageManager ?? throw new ArgumentNullException(nameof(nuGetPackageManager));
 
         public override string ToString() => "UWP";
 
-        public override string[] SupportedProjectPattern { get; } = new[] { "Package.appxmanifest" };
+        public override string[] SupportedProjectPattern { get; } = ["Package.appxmanifest"];
 
-        public override string[] PackageFilesExtensionInclude => new[] { ".msixupload", ".appxupload" };
+        public override string[] PackageFilesExtensionInclude => [".msixupload", ".appxupload"];
         public override string[]? PackageFilesExtensionExclude { get; }
         public override SearchOption PackageFilesSearchOption { get; } = SearchOption.TopDirectoryOnly;
         public override PublishFileSearchFilterStrategy PublishFileSearchFilterStrategy { get; } = PublishFileSearchFilterStrategy.Newest;
         public override string OutputSubdirectory { get; } = Path.Combine("obj", "MSStore.CLI");
         public override string DefaultInputSubdirectory { get; } = "AppPackages";
-        public override IEnumerable<BuildArch>? DefaultBuildArchs => new[] { BuildArch.X64, BuildArch.Arm64 };
+        public override IEnumerable<BuildArch>? DefaultBuildArchs => [BuildArch.X64, BuildArch.Arm64];
 
         public override bool PackageOnlyOnWindows => true;
 
-        public override AllowTargetFutureDeviceFamily[] AllowTargetFutureDeviceFamilies { get; } = new[]
-        {
+        public override AllowTargetFutureDeviceFamily[] AllowTargetFutureDeviceFamilies { get; } =
+        [
             AllowTargetFutureDeviceFamily.Desktop,
             AllowTargetFutureDeviceFamily.Mobile,
             AllowTargetFutureDeviceFamily.Holographic
-        };
+        ];
 
         public override Task<(int returnCode, DirectoryInfo? outputDirectory)> ConfigureAsync(string pathOrUrl, DirectoryInfo? output, string publisherDisplayName, DevCenterApplication app, Version? version, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
@@ -245,7 +237,7 @@ namespace MSStore.CLI.ProjectConfigurators
             });
         }
 
-        private static Dictionary<string, bool> _nugetRestoreExecuted = new Dictionary<string, bool>();
+        private static Dictionary<string, bool> _nugetRestoreExecuted = [];
         [SupportedOSPlatform("windows")]
         protected static async Task RestorePackagesAsync(IExternalCommandExecutor externalCommandExecutor, ILogger logger, string workingDirectory, string msbuildPath, CancellationToken ct)
         {
@@ -278,7 +270,7 @@ namespace MSStore.CLI.ProjectConfigurators
             });
         }
 
-        private static Dictionary<string, bool> _nuGetExistsExecuted = new Dictionary<string, bool>();
+        private static Dictionary<string, bool> _nuGetExistsExecuted = [];
 
         [SupportedOSPlatform("windows")]
         internal static async Task<bool> IsWinUI3Async(FileInfo appxManifestFile, IExternalCommandExecutor externalCommandExecutor, INuGetPackageManager nuGetPackageManager, ILogger logger, CancellationToken ct)

@@ -27,7 +27,7 @@ namespace MSStore.CLI.UnitTests
                 .Setup(x => x.YesNoConfirmationAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
 
-            var result = await ParseAndInvokeAsync(Array.Empty<string>(), null);
+            var result = await ParseAndInvokeAsync([], null);
 
             result.Should().Contain("https://aka.ms/privacy");
         }
@@ -37,7 +37,7 @@ namespace MSStore.CLI.UnitTests
         {
             FakeLogin();
 
-            var result = await ParseAndInvokeAsync(Array.Empty<string>(), null);
+            var result = await ParseAndInvokeAsync([], null);
 
             result.Should().Contain("https://aka.ms/privacy");
         }

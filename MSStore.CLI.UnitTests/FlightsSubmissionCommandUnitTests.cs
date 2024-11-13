@@ -22,11 +22,10 @@ namespace MSStore.CLI.UnitTests
         public async Task FlightSubmissionCommandWithNoParameter()
         {
             var result = await ParseAndInvokeAsync(
-                new[]
-                {
+                [
                     "flights",
                     "submission"
-                });
+                ]);
 
             result.Should().Contain("Execute flight submissions related tasks.");
         }
@@ -42,14 +41,13 @@ namespace MSStore.CLI.UnitTests
             InitDefaultFlightSubmissionStatusResponseQueue();
 
             var result = await ParseAndInvokeAsync(
-                new[]
-                {
+                [
                     "flights",
                     "submission",
                     "status",
                     FakeApps[0].Id!,
                     FakeFlights[0].FlightId!
-                });
+                ]);
 
             result.Should().Contain("Code1");
             result.Should().Contain("Detail1");
@@ -64,14 +62,13 @@ namespace MSStore.CLI.UnitTests
             };
 
             var result = await ParseAndInvokeAsync(
-                new[]
-                {
+                [
                     "flights",
                     "submission",
                     "get",
                     FakeApps[0].Id!,
                     FakeFlights[0].FlightId!
-                });
+                ]);
 
             result.Should().Contain("\"Id\": \"123456789\"");
             result.Should().Contain("\"FileUploadUrl\": \"https://azureblob.com/fileupload\"");
@@ -81,8 +78,7 @@ namespace MSStore.CLI.UnitTests
         public async Task PackagedFlightSubmissionUpdateCommand()
         {
             var result = await ParseAndInvokeAsync(
-                new[]
-                {
+                [
                     "flights",
                     "submission",
                     "update",
@@ -97,7 +93,7 @@ namespace MSStore.CLI.UnitTests
         }
     ]
 }"
-                });
+                ]);
 
             result.Should().Contain("Updating flight submission product");
             result.Should().Contain("\"FileUploadUrl\": \"https://azureblob.com/fileupload\"");
@@ -119,14 +115,13 @@ namespace MSStore.CLI.UnitTests
                 });
 
             var result = await ParseAndInvokeAsync(
-                new[]
-                {
+                [
                     "flights",
                     "submission",
                     "publish",
                     FakeApps[0].Id!,
                     FakeFlights[0].FlightId!
-                });
+                ]);
 
             result.Should().Contain("Flight Submission Commited with status");
         }
@@ -142,14 +137,13 @@ namespace MSStore.CLI.UnitTests
             InitDefaultFlightSubmissionStatusResponseQueue();
 
             var result = await ParseAndInvokeAsync(
-                new[]
-                {
+                [
                     "flights",
                     "submission",
                     "poll",
                     FakeApps[0].Id!,
                     FakeFlights[0].FlightId!
-                });
+                ]);
 
             result.Should().Contain("Submission commit success!");
         }
@@ -167,14 +161,13 @@ namespace MSStore.CLI.UnitTests
                 .ReturnsAsync(true);
 
             var result = await ParseAndInvokeAsync(
-                new[]
-                {
+                [
                     "flights",
                     "submission",
                     "delete",
                     FakeApps[0].Id!,
                     FakeFlights[0].FlightId!
-                });
+                ]);
 
             FakeConsole.Verify(x => x.YesNoConfirmationAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
 
