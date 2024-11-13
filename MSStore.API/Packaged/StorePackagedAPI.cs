@@ -186,7 +186,7 @@ namespace MSStore.API.Packaged
             try
             {
                 var devCenterApplicationsResponse = await GetDevCenterApplicationsAsync(0, 100, ct); // TODO: pagination
-                return devCenterApplicationsResponse.Value ?? new();
+                return devCenterApplicationsResponse.Value ?? [];
             }
             catch (Exception error)
             {
@@ -216,6 +216,7 @@ namespace MSStore.API.Packaged
                     skip,
                     top),
                 null,
+                SourceGenerationContext.GetCustom().PagedResponseDevCenterApplication,
                 ct);
         }
 
@@ -232,6 +233,7 @@ namespace MSStore.API.Packaged
                     productId,
                     submissionId),
                 null,
+                SourceGenerationContext.GetCustom().String,
                 ct);
 
             if (string.IsNullOrEmpty(ret))
@@ -239,7 +241,7 @@ namespace MSStore.API.Packaged
                 return null;
             }
 
-            return JsonSerializer.Deserialize(ret, typeof(DevCenterError), SourceGenerationContext.GetCustom()) as DevCenterError;
+            return JsonSerializer.Deserialize(ret, SourceGenerationContext.GetCustom().DevCenterError);
         }
 
         public async Task<DevCenterApplication> GetApplicationAsync(string productId, CancellationToken ct = default)
@@ -254,6 +256,7 @@ namespace MSStore.API.Packaged
                     DevCenterVersion,
                     productId),
                 null,
+                SourceGenerationContext.GetCustom().DevCenterApplication,
                 ct);
         }
 
@@ -269,6 +272,7 @@ namespace MSStore.API.Packaged
                     DevCenterVersion,
                     productId),
                 null,
+                SourceGenerationContext.GetCustom().DevCenterSubmission,
                 ct);
         }
 
@@ -285,6 +289,7 @@ namespace MSStore.API.Packaged
                     productId,
                     submissionId),
                 null,
+                SourceGenerationContext.GetCustom().DevCenterSubmission,
                 ct);
         }
 
@@ -301,6 +306,7 @@ namespace MSStore.API.Packaged
                     productId,
                     submissionId),
                 updatedSubmission,
+                SourceGenerationContext.GetCustom().DevCenterSubmission,
                 ct);
         }
 
@@ -317,9 +323,10 @@ namespace MSStore.API.Packaged
                         productId,
                         submissionId),
                     null,
+                    SourceGenerationContext.GetCustom().String,
                     ct);
 
-            return JsonSerializer.Deserialize(ret, typeof(DevCenterCommitResponse), SourceGenerationContext.GetCustom()) as DevCenterCommitResponse;
+            return JsonSerializer.Deserialize(ret, SourceGenerationContext.GetCustom().DevCenterCommitResponse);
         }
 
         public async Task<DevCenterSubmissionStatusResponse> GetSubmissionStatusAsync(string productId, string submissionId, CancellationToken ct = default)
@@ -335,6 +342,7 @@ namespace MSStore.API.Packaged
                     productId,
                     submissionId),
                 null,
+                SourceGenerationContext.GetCustom().DevCenterSubmissionStatusResponse,
                 ct);
         }
 
@@ -343,7 +351,7 @@ namespace MSStore.API.Packaged
             try
             {
                 var devCenterFlightsResponse = await GetFlightsAsync(productId, 0, 100, ct); // TODO: pagination
-                return devCenterFlightsResponse.Value ?? new();
+                return devCenterFlightsResponse.Value ?? [];
             }
             catch (Exception error)
             {
@@ -365,6 +373,7 @@ namespace MSStore.API.Packaged
                     skip,
                     top),
                 null,
+                SourceGenerationContext.GetCustom().PagedResponseDevCenterFlight,
                 ct);
         }
 
@@ -381,6 +390,7 @@ namespace MSStore.API.Packaged
                     productId,
                     flightId),
                 null,
+                SourceGenerationContext.GetCustom().DevCenterFlight,
                 ct);
         }
 
@@ -397,6 +407,7 @@ namespace MSStore.API.Packaged
                     productId,
                     flightId),
                 null,
+                SourceGenerationContext.GetCustom().String,
                 ct);
 
             if (string.IsNullOrEmpty(ret))
@@ -426,6 +437,7 @@ namespace MSStore.API.Packaged
                     DevCenterVersion,
                     productId),
                 flight,
+                SourceGenerationContext.GetCustom().DevCenterFlight,
                 ct);
         }
 
@@ -443,6 +455,7 @@ namespace MSStore.API.Packaged
                     flightId,
                     submissionId),
                 null,
+                SourceGenerationContext.GetCustom().DevCenterFlightSubmission,
                 ct);
         }
 
@@ -460,6 +473,7 @@ namespace MSStore.API.Packaged
                     flightId,
                     submissionId),
                 null,
+                SourceGenerationContext.GetCustom().String,
                 ct);
 
             if (string.IsNullOrEmpty(ret))
@@ -483,6 +497,7 @@ namespace MSStore.API.Packaged
                     productId,
                     flightId),
                 null,
+                SourceGenerationContext.GetCustom().DevCenterFlightSubmission,
                 ct);
         }
 
@@ -500,6 +515,7 @@ namespace MSStore.API.Packaged
                     flightId,
                     submissionId),
                 updatedFlightSubmission,
+                SourceGenerationContext.GetCustom().DevCenterFlightSubmission,
                 ct);
         }
 
@@ -517,6 +533,7 @@ namespace MSStore.API.Packaged
                         flightId,
                         submissionId),
                     null,
+                    SourceGenerationContext.GetCustom().String,
                     ct);
 
             return JsonSerializer.Deserialize(ret, typeof(DevCenterCommitResponse), SourceGenerationContext.GetCustom()) as DevCenterCommitResponse;
@@ -536,6 +553,7 @@ namespace MSStore.API.Packaged
                     flightId,
                     submissionId),
                 null,
+                SourceGenerationContext.GetCustom().DevCenterSubmissionStatusResponse,
                 ct);
         }
 
@@ -553,6 +571,7 @@ namespace MSStore.API.Packaged
                     flightId == null ? string.Empty : $"/flights/{flightId}",
                     submissionId),
                 null,
+                SourceGenerationContext.GetCustom().PackageRollout,
                 ct);
         }
 
@@ -571,6 +590,7 @@ namespace MSStore.API.Packaged
                     submissionId,
                     percentage),
                 null,
+                SourceGenerationContext.GetCustom().PackageRollout,
                 ct);
         }
 
@@ -588,6 +608,7 @@ namespace MSStore.API.Packaged
                     flightId == null ? string.Empty : $"/flights/{flightId}",
                     submissionId),
                 null,
+                SourceGenerationContext.GetCustom().PackageRollout,
                 ct);
         }
 
@@ -605,6 +626,7 @@ namespace MSStore.API.Packaged
                     flightId == null ? string.Empty : $"/flights/{flightId}",
                     submissionId),
                 null,
+                SourceGenerationContext.GetCustom().PackageRollout,
                 ct);
         }
     }

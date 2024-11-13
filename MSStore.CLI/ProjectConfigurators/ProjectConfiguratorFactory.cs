@@ -9,14 +9,9 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace MSStore.CLI.ProjectConfigurators
 {
-    internal class ProjectConfiguratorFactory : IProjectConfiguratorFactory
+    internal class ProjectConfiguratorFactory(IServiceProvider serviceProvider) : IProjectConfiguratorFactory
     {
-        private IServiceProvider _serviceProvider;
-
-        public ProjectConfiguratorFactory(IServiceProvider serviceProvider)
-        {
-            _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
-        }
+        private IServiceProvider _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
 
         public async Task<IProjectConfigurator?> FindProjectConfiguratorAsync(string pathOrUrl, CancellationToken ct)
         {

@@ -19,23 +19,17 @@ using Spectre.Console;
 
 namespace MSStore.CLI.ProjectConfigurators
 {
-    internal class ElectronProjectConfigurator : NodeBaseProjectConfigurator
+    internal class ElectronProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IElectronManifestManager electronManifestManager, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, IEnvironmentInformationService environmentInformationService, ILogger<ElectronProjectConfigurator> logger) : NodeBaseProjectConfigurator(externalCommandExecutor, browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, environmentInformationService, logger)
     {
-        private readonly IElectronManifestManager _electronManifestManager;
+        private readonly IElectronManifestManager _electronManifestManager = electronManifestManager ?? throw new ArgumentNullException(nameof(electronManifestManager));
         private ElectronManifest? _electronManifest;
-
-        public ElectronProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IElectronManifestManager electronManifestManager, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, IEnvironmentInformationService environmentInformationService, ILogger<ElectronProjectConfigurator> logger)
-            : base(externalCommandExecutor, browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, environmentInformationService, logger)
-        {
-            _electronManifestManager = electronManifestManager ?? throw new ArgumentNullException(nameof(electronManifestManager));
-        }
 
         public override string ToString() => "Electron";
 
-        public override string[] PackageFilesExtensionInclude => new[]
-        {
+        public override string[] PackageFilesExtensionInclude =>
+        [
             ".appx"
-        };
+        ];
         public override string[]? PackageFilesExtensionExclude { get; }
         public override SearchOption PackageFilesSearchOption { get; } = SearchOption.TopDirectoryOnly;
         public override PublishFileSearchFilterStrategy PublishFileSearchFilterStrategy { get; } = PublishFileSearchFilterStrategy.All;
@@ -56,18 +50,18 @@ namespace MSStore.CLI.ProjectConfigurators
             }
         }
 
-        public override IEnumerable<BuildArch>? DefaultBuildArchs => new[]
-        {
+        public override IEnumerable<BuildArch>? DefaultBuildArchs =>
+        [
             BuildArch.X64,
             BuildArch.Arm64
-        };
+        ];
 
         public override bool PackageOnlyOnWindows => true;
 
-        public override AllowTargetFutureDeviceFamily[] AllowTargetFutureDeviceFamilies { get; } = new[]
-        {
+        public override AllowTargetFutureDeviceFamily[] AllowTargetFutureDeviceFamilies { get; } =
+        [
             AllowTargetFutureDeviceFamily.Desktop
-        };
+        ];
 
         public override async Task<bool> CanConfigureAsync(string pathOrUrl, CancellationToken ct)
         {
@@ -359,11 +353,10 @@ namespace MSStore.CLI.ProjectConfigurators
                     var cleanedStdOut = System.Text.RegularExpressions.Regex.Replace(result.StdOut, @"\e([^\[\]]|\[.*?[a-zA-Z]|\].*?\a)", string.Empty);
 
                     var msixLine = cleanedStdOut.Split(
-                        new string[]
-                        {
+                        [
                             "\n",
                             Environment.NewLine
-                        }, StringSplitOptions.None).LastOrDefault(line => line.Contains("target=AppX"));
+                        ], StringSplitOptions.None).LastOrDefault(line => line.Contains("target=AppX"));
                     int index;
                     var search = "file=";
                     if (msixLine == null || (index = msixLine.IndexOf(search, StringComparison.OrdinalIgnoreCase)) == -1)
@@ -371,7 +364,7 @@ namespace MSStore.CLI.ProjectConfigurators
                         throw new MSStoreException("Failed to find the path to the packaged msix file.");
                     }
 
-                    var msixPath = msixLine.Substring(index + search.Length).Trim();
+                    var msixPath = msixLine[(index + search.Length)..].Trim();
 
                     FileInfo? msixFile = null;
                     if (msixPath != null)

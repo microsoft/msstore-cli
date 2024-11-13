@@ -794,7 +794,7 @@ namespace MSStore.CLI.Helpers
                 }
                 else
                 {
-                    var categories = Enum.GetNames(typeof(DevCenterApplicationCategory))
+                    var categories = Enum.GetNames<DevCenterApplicationCategory>()
                         .Where(c => c != nameof(DevCenterApplicationCategory.NotSet))
                         .ToArray();
 
@@ -804,13 +804,13 @@ namespace MSStore.CLI.Helpers
                         20,
                         ct: ct);
 
-                    submission.ApplicationCategory = (DevCenterApplicationCategory)Enum.Parse(typeof(DevCenterApplicationCategory), categoryString);
+                    submission.ApplicationCategory = Enum.Parse<DevCenterApplicationCategory>(categoryString);
                 }
             }
 
             if (submission.Listings.IsNullOrEmpty())
             {
-                submission.Listings = new Dictionary<string, DevCenterListing>();
+                submission.Listings = [];
 
                 int listingCount;
                 if (environmentInformationService.IsRunningOnCI)
@@ -869,7 +869,7 @@ namespace MSStore.CLI.Helpers
 
                     if (listing.BaseListing.Images.IsNullOrEmpty())
                     {
-                        listing.BaseListing.Images = new List<Image>();
+                        listing.BaseListing.Images = [];
 
                         foreach (var image in submissionData.Images)
                         {
@@ -888,7 +888,7 @@ namespace MSStore.CLI.Helpers
 
             if (submission.AllowTargetFutureDeviceFamilies == null)
             {
-                submission.AllowTargetFutureDeviceFamilies = new Dictionary<string, bool>();
+                submission.AllowTargetFutureDeviceFamilies = [];
             }
 
             void UpdateKeyIfNotSet(string key, bool value)

@@ -343,6 +343,7 @@ namespace MSStore.API
                     "properties",
                     languages),
                 null,
+                SourceGenerationContext.GetCustom().ResponseWrapperPropertiesMetadataResponse,
                 ct);
         }
 
@@ -360,6 +361,7 @@ namespace MSStore.API
                     "availability",
                     languages),
                 null,
+                SourceGenerationContext.GetCustom().ResponseWrapperAvailabilityMetadataResponse,
                 ct);
         }
 
@@ -377,6 +379,7 @@ namespace MSStore.API
                     "listings",
                     languages),
                 null,
+                SourceGenerationContext.GetCustom().ResponseWrapperListingsMetadataResponse,
                 ct);
         }
 
@@ -392,6 +395,7 @@ namespace MSStore.API
                     Version,
                     productId),
                 null,
+                SourceGenerationContext.GetCustom().ResponseWrapperPackagesMetadataResponse,
                 ct);
         }
 
@@ -407,6 +411,7 @@ namespace MSStore.API
                     Version,
                     productId),
                 submissionMetadata,
+                SourceGenerationContext.GetCustom().ResponseWrapperUpdateMetadataResponse,
                 ct);
         }
 
@@ -422,6 +427,7 @@ namespace MSStore.API
                     Version,
                     productId),
                 submission,
+                SourceGenerationContext.GetCustom().ResponseWrapperUpdateMetadataResponse,
                 ct);
         }
 
@@ -437,6 +443,7 @@ namespace MSStore.API
                     Version,
                     productId),
                 null,
+                SourceGenerationContext.GetCustom().ResponseWrapperUpdateMetadataResponse,
                 ct);
         }
 
@@ -452,6 +459,7 @@ namespace MSStore.API
                     Version,
                     productId),
                 null,
+                SourceGenerationContext.GetCustom().ResponseWrapperModuleStatus,
                 ct);
         }
 
@@ -468,6 +476,7 @@ namespace MSStore.API
                     productId,
                     submissionId),
                 null,
+                SourceGenerationContext.GetCustom().ResponseWrapperSubmissionStatus,
                 ct);
         }
 
@@ -483,6 +492,7 @@ namespace MSStore.API
                     Version,
                     productId),
                 null,
+                SourceGenerationContext.GetCustom().ResponseWrapperCreateSubmissionResponse,
                 ct);
         }
 
@@ -499,6 +509,7 @@ namespace MSStore.API
                     productId,
                     languages),
                 null,
+                SourceGenerationContext.GetCustom().ResponseWrapperListingAssetsResponse,
                 ct);
         }
 

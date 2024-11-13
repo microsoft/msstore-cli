@@ -11,14 +11,9 @@ using Microsoft.Extensions.Logging;
 
 namespace MSStore.CLI.Services
 {
-    internal class NuGetPackageManager : INuGetPackageManager
+    internal class NuGetPackageManager(ILogger<NuGetPackageManager> logger) : INuGetPackageManager
     {
-        private readonly ILogger _logger;
-
-        public NuGetPackageManager(ILogger<NuGetPackageManager> logger)
-        {
-            _logger = logger;
-        }
+        private readonly ILogger _logger = logger;
 
         public virtual bool IsMaui(FileInfo fileInfo)
         {

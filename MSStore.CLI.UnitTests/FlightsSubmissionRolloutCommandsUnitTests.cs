@@ -22,15 +22,14 @@ namespace MSStore.CLI.UnitTests
         public async Task FlightSubmissionRolloutGetCommandDoesntWorkIfNoSubmission()
         {
             var result = await ParseAndInvokeAsync(
-                new[]
-                {
+                [
                     "flights",
                     "submission",
                     "rollout",
                     "get",
                     FakeApps[0].Id!,
                     FakeFlights[0].FlightId!
-                }, -1);
+                ], -1);
 
             result.Should().Contain("Could not find the flight submission. Please check the ProductId/FlightId");
         }
@@ -54,15 +53,14 @@ namespace MSStore.CLI.UnitTests
                 });
 
             var result = await ParseAndInvokeAsync(
-                new[]
-                {
+                [
                     "flights",
                     "submission",
                     "rollout",
                     "get",
                     FakeApps[0].Id!,
                     FakeFlights[0].FlightId!
-                });
+                ]);
 
             result.Should().Contain("\"PackageRolloutStatus\": \"PackageRolloutNotStarted\"");
         }
@@ -86,8 +84,7 @@ namespace MSStore.CLI.UnitTests
                 });
 
             var result = await ParseAndInvokeAsync(
-                new[]
-                {
+                [
                     "flights",
                     "submission",
                     "rollout",
@@ -95,7 +92,7 @@ namespace MSStore.CLI.UnitTests
                     FakeApps[0].Id!,
                     FakeFlights[0].FlightId!,
                     "100"
-                });
+                ]);
 
             result.Should().Contain("\"PackageRolloutPercentage\": 100");
         }
@@ -119,15 +116,14 @@ namespace MSStore.CLI.UnitTests
                 });
 
             var result = await ParseAndInvokeAsync(
-                new[]
-                {
+                [
                     "flights",
                     "submission",
                     "rollout",
                     "halt",
                     FakeApps[0].Id!,
                     FakeFlights[0].FlightId!
-                });
+                ]);
 
             result.Should().Contain("\"PackageRolloutStatus\": \"PackageRolloutStopped\"");
         }
@@ -151,15 +147,14 @@ namespace MSStore.CLI.UnitTests
                 });
 
             var result = await ParseAndInvokeAsync(
-                new[]
-                {
+                [
                     "flights",
                     "submission",
                     "rollout",
                     "finalize",
                     FakeApps[0].Id!,
                     FakeFlights[0].FlightId!
-                });
+                ]);
 
             result.Should().Contain("\"PackageRolloutStatus\": \"PackageRolloutComplete\"");
         }

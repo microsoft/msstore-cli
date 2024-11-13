@@ -14,14 +14,9 @@ using MSStore.API;
 
 namespace MSStore.CLI.Services
 {
-    internal class AzureBlobManager : IAzureBlobManager
+    internal class AzureBlobManager(TelemetryClient telemetryClient) : IAzureBlobManager
     {
-        private readonly TelemetryClient _telemetryClient = null!;
-
-        public AzureBlobManager(TelemetryClient telemetryClient)
-        {
-            _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
-        }
+        private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
         public async Task<string> UploadFileAsync(string blobUri, string localFilePath, IProgress<double> progress, CancellationToken ct)
         {
@@ -53,18 +48,11 @@ namespace MSStore.CLI.Services
             }
         }
 
-        public class AddCorrelationIdHeaderPolicy : HttpPipelineSynchronousPolicy
+        public class AddCorrelationIdHeaderPolicy(TelemetryClient telemetryClient) : HttpPipelineSynchronousPolicy
         {
-            private readonly TelemetryClient _telemetryClient;
-
-            public AddCorrelationIdHeaderPolicy(TelemetryClient telemetryClient)
-            {
-                _telemetryClient = telemetryClient;
-            }
-
             public override void OnSendingRequest(HttpMessage message)
             {
-                message.Request.Headers.Add("ms-correlationid", _telemetryClient.Context.Session.Id);
+                message.Request.Headers.Add("ms-correlationid", telemetryClient.Context.Session.Id);
                 base.OnSendingRequest(message);
             }
         }

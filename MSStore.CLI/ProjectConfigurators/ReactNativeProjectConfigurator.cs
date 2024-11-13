@@ -16,19 +16,13 @@ using Spectre.Console;
 
 namespace MSStore.CLI.ProjectConfigurators
 {
-    internal class ReactNativeProjectConfigurator : NodeBaseProjectConfigurator
+    internal class ReactNativeProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, IAppXManifestManager appXManifestManager, IEnvironmentInformationService environmentInformationService, ILogger<ReactNativeProjectConfigurator> logger) : NodeBaseProjectConfigurator(externalCommandExecutor, browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, environmentInformationService, logger)
     {
-        private readonly IAppXManifestManager _appXManifestManager;
-
-        public ReactNativeProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, IAppXManifestManager appXManifestManager, IEnvironmentInformationService environmentInformationService, ILogger<ReactNativeProjectConfigurator> logger)
-            : base(externalCommandExecutor, browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, environmentInformationService, logger)
-        {
-            _appXManifestManager = appXManifestManager ?? throw new ArgumentNullException(nameof(appXManifestManager));
-        }
+        private readonly IAppXManifestManager _appXManifestManager = appXManifestManager ?? throw new ArgumentNullException(nameof(appXManifestManager));
 
         public override string ToString() => "React Native";
 
-        public override string[] PackageFilesExtensionInclude => new[] { ".msixupload", ".appxupload" };
+        public override string[] PackageFilesExtensionInclude => [".msixupload", ".appxupload"];
         public override string[]? PackageFilesExtensionExclude { get; }
         public override SearchOption PackageFilesSearchOption { get; } = SearchOption.TopDirectoryOnly;
         public override PublishFileSearchFilterStrategy PublishFileSearchFilterStrategy { get; } = PublishFileSearchFilterStrategy.Newest;
@@ -46,16 +40,16 @@ namespace MSStore.CLI.ProjectConfigurators
                 : windowsDirectory;
         }
 
-        public override IEnumerable<BuildArch>? DefaultBuildArchs => new[] { BuildArch.X64, BuildArch.Arm64 };
+        public override IEnumerable<BuildArch>? DefaultBuildArchs => [BuildArch.X64, BuildArch.Arm64];
 
         public override bool PackageOnlyOnWindows => true;
 
-        public override AllowTargetFutureDeviceFamily[] AllowTargetFutureDeviceFamilies { get; } = new[]
-        {
+        public override AllowTargetFutureDeviceFamily[] AllowTargetFutureDeviceFamilies { get; } =
+        [
             AllowTargetFutureDeviceFamily.Desktop,
             AllowTargetFutureDeviceFamily.Mobile,
             AllowTargetFutureDeviceFamily.Holographic
-        };
+        ];
 
         public override async Task<bool> CanConfigureAsync(string pathOrUrl, CancellationToken ct)
         {

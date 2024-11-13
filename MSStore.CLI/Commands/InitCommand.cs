@@ -67,30 +67,30 @@ namespace MSStore.CLI.Commands
             });
 
             Output = new Option<DirectoryInfo?>(
-                aliases: new string[]
-                {
+                aliases:
+                [
                     "--output",
                     "-o"
-                },
+                ],
                 description: "The output directory where the packaged app will be stored. If not provided, the default directory for each different type of app will be used.");
 
             Arch = new Option<IEnumerable<BuildArch>>(
-                aliases: new string[]
-                {
+                aliases:
+                [
                     "--arch",
                     "-a"
-                },
+                ],
                 description: "The architecture(s) to build for. If not provided, the default architecture for the current OS, and project type, will be used.")
             {
                 AllowMultipleArgumentsPerToken = true,
             };
 
             Version = new Option<Version?>(
-                aliases: new string[]
-                {
+                aliases:
+                [
                     "--version",
                     "-ver"
-                },
+                ],
                 parseArgument: result =>
                 {
                     var version = result.Tokens.Single().Value;
@@ -111,29 +111,29 @@ namespace MSStore.CLI.Commands
             AddArgument(PathOrUrl);
 
             var publisherDisplayName = new Option<string>(
-                aliases: new string[]
-                {
+                aliases:
+                [
                     "--publisherDisplayName",
                     "-n"
-                },
+                ],
                 description: "The Publisher Display Name used to configure the application. If provided, avoids an extra APIs call.");
 
             AddOption(publisherDisplayName);
 
             var package = new Option<bool>(
-                aliases: new string[]
-                {
+                aliases:
+                [
                     "--package"
-                },
+                ],
                 description: "If supported by the app type, automatically packs the project.");
 
             AddOption(package);
 
             var publish = new Option<bool>(
-                aliases: new string[]
-                {
+                aliases:
+                [
                     "--publish"
-                },
+                ],
                 description: "If supported by the app type, automatically publishes the project. Implies '--package true'");
 
             AddOption(publish);
@@ -149,18 +149,28 @@ namespace MSStore.CLI.Commands
             AddOption(PublishCommand.PackageRolloutPercentageOption);
         }
 
-        public new class Handler : ICommandHandler
+        public new class Handler(
+            ILogger<InitCommand.Handler> logger,
+            IBrowserLauncher browserLauncher,
+            IConsoleReader consoleReader,
+            IProjectConfiguratorFactory projectConfiguratorFactory,
+            IStoreAPIFactory storeAPIFactory,
+            ITokenManager tokenManager,
+            IPartnerCenterManager partnerCenterManager,
+            IImageConverter imageConverter,
+            IConfigurationManager<Configurations> configurationManager,
+            TelemetryClient telemetryClient) : ICommandHandler
         {
-            private readonly ILogger _logger;
-            private readonly IBrowserLauncher _browserLauncher;
-            private readonly IConsoleReader _consoleReader;
-            private readonly IProjectConfiguratorFactory _projectConfiguratorFactory;
-            private readonly IStoreAPIFactory _storeAPIFactory;
-            private readonly ITokenManager _tokenManager;
-            private readonly IPartnerCenterManager _partnerCenterManager;
-            private readonly IImageConverter _imageConverter;
-            private readonly IConfigurationManager<Configurations> _configurationManager;
-            private readonly TelemetryClient _telemetryClient;
+            private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            private readonly IBrowserLauncher _browserLauncher = browserLauncher ?? throw new ArgumentNullException(nameof(browserLauncher));
+            private readonly IConsoleReader _consoleReader = consoleReader ?? throw new ArgumentNullException(nameof(consoleReader));
+            private readonly IProjectConfiguratorFactory _projectConfiguratorFactory = projectConfiguratorFactory ?? throw new ArgumentNullException(nameof(projectConfiguratorFactory));
+            private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
+            private readonly ITokenManager _tokenManager = tokenManager ?? throw new ArgumentNullException(nameof(tokenManager));
+            private readonly IPartnerCenterManager _partnerCenterManager = partnerCenterManager ?? throw new ArgumentNullException(nameof(partnerCenterManager));
+            private readonly IImageConverter _imageConverter = imageConverter ?? throw new ArgumentNullException(nameof(imageConverter));
+            private readonly IConfigurationManager<Configurations> _configurationManager = configurationManager ?? throw new ArgumentNullException(nameof(configurationManager));
+            private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
             public string PathOrUrl { get; set; } = null!;
 
@@ -179,30 +189,6 @@ namespace MSStore.CLI.Commands
             public DirectoryInfo? Output { get; set; } = null!;
 
             public IEnumerable<BuildArch>? Arch { get; set; } = null!;
-
-            public Handler(
-                ILogger<Handler> logger,
-                IBrowserLauncher browserLauncher,
-                IConsoleReader consoleReader,
-                IProjectConfiguratorFactory projectConfiguratorFactory,
-                IStoreAPIFactory storeAPIFactory,
-                ITokenManager tokenManager,
-                IPartnerCenterManager partnerCenterManager,
-                IImageConverter imageConverter,
-                IConfigurationManager<Configurations> configurationManager,
-                TelemetryClient telemetryClient)
-            {
-                _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-                _browserLauncher = browserLauncher ?? throw new ArgumentNullException(nameof(browserLauncher));
-                _consoleReader = consoleReader ?? throw new ArgumentNullException(nameof(consoleReader));
-                _projectConfiguratorFactory = projectConfiguratorFactory ?? throw new ArgumentNullException(nameof(projectConfiguratorFactory));
-                _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
-                _tokenManager = tokenManager ?? throw new ArgumentNullException(nameof(tokenManager));
-                _partnerCenterManager = partnerCenterManager ?? throw new ArgumentNullException(nameof(partnerCenterManager));
-                _imageConverter = imageConverter ?? throw new ArgumentNullException(nameof(imageConverter));
-                _configurationManager = configurationManager ?? throw new ArgumentNullException(nameof(configurationManager));
-                _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
-            }
 
             public int Invoke(InvocationContext context)
             {

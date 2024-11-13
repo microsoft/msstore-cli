@@ -26,10 +26,10 @@ namespace MSStore.CLI.Commands
         static PublishCommand()
         {
             FlightIdOption = new Option<string>(
-                aliases: new string[] { "--flightId", "-f" },
+                aliases: ["--flightId", "-f"],
                 description: "Specifies the Flight Id where the package will be published.");
             PackageRolloutPercentageOption = new Option<float>(
-                aliases: new string[] { "--packageRolloutPercentage", "-prp" },
+                aliases: ["--packageRolloutPercentage", "-prp"],
                 description: "Specifies the rollout percentage of the package. The value must be between 0 and 100.",
                 isDefault: false,
                 parseArgument: result =>
@@ -63,11 +63,11 @@ namespace MSStore.CLI.Commands
             AddArgument(InitCommand.PathOrUrl);
 
             var inputDirectory = new Option<DirectoryInfo?>(
-                aliases: new string[]
-                {
+                aliases:
+                [
                     "--inputDirectory",
                     "-i"
-                },
+                ],
                 description: "The directory where the '.msix' or '.msixupload' file to be used for the publishing command. If not provided, the cli will try to find the best candidate based on the 'pathOrUrl' argument.",
                 parseArgument: result =>
                 {
@@ -91,21 +91,21 @@ namespace MSStore.CLI.Commands
             AddOption(inputDirectory);
 
             var appIdOption = new Option<string>(
-                aliases: new string[]
-                {
+                aliases:
+                [
                     "--appId",
                     "-id"
-                },
+                ],
                 description: "Specifies the Application Id. Only needed if the project has not been initialized before with the 'init' command.");
 
             AddOption(appIdOption);
 
             var noCommitOption = new Option<bool>(
-                aliases: new string[]
-                {
+                aliases:
+                [
                     "--noCommit",
                     "-nc"
-                },
+                ],
                 description: "Disables committing the submission, keeping it in draft state.",
                 getDefaultValue: () => false);
 
@@ -116,12 +116,16 @@ namespace MSStore.CLI.Commands
             AddOption(PackageRolloutPercentageOption);
         }
 
-        public new class Handler : ICommandHandler
+        public new class Handler(
+            IProjectConfiguratorFactory projectConfiguratorFactory,
+            IStoreAPIFactory storeAPIFactory,
+            TelemetryClient telemetryClient,
+            ILogger<PublishCommand.Handler> logger) : ICommandHandler
         {
-            private readonly IProjectConfiguratorFactory _projectConfiguratorFactory;
-            private readonly IStoreAPIFactory _storeAPIFactory;
-            private readonly TelemetryClient _telemetryClient;
-            private readonly ILogger _logger;
+            private readonly IProjectConfiguratorFactory _projectConfiguratorFactory = projectConfiguratorFactory ?? throw new ArgumentNullException(nameof(projectConfiguratorFactory));
+            private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
+            private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
+            private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
             public string PathOrUrl { get; set; } = null!;
 
@@ -133,18 +137,6 @@ namespace MSStore.CLI.Commands
             public DirectoryInfo? InputDirectory { get; set; } = null!;
 
             public bool NoCommit { get; set; }
-
-            public Handler(
-                IProjectConfiguratorFactory projectConfiguratorFactory,
-                IStoreAPIFactory storeAPIFactory,
-                TelemetryClient telemetryClient,
-                ILogger<Handler> logger)
-            {
-                _projectConfiguratorFactory = projectConfiguratorFactory ?? throw new ArgumentNullException(nameof(projectConfiguratorFactory));
-                _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
-                _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
-                _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            }
 
             public int Invoke(InvocationContext context)
             {

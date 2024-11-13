@@ -13,20 +13,12 @@ using MSStore.CLI.Services.CredentialManager;
 
 namespace MSStore.CLI.Services
 {
-    internal class StoreAPIFactory : IStoreAPIFactory
+    internal class StoreAPIFactory(IConfigurationManager<Configurations> configurationManager, ICredentialManager credentialManager, IHttpClientFactory httpClientFactory, ILogger<StoreAPI> logger) : IStoreAPIFactory
     {
-        private readonly IConfigurationManager<Configurations> _configurationManager;
-        private readonly ICredentialManager _credentialManager;
-        private readonly IHttpClientFactory _httpClientFactory;
-        private readonly ILogger<StoreAPI> _logger;
-
-        public StoreAPIFactory(IConfigurationManager<Configurations> configurationManager, ICredentialManager credentialManager, IHttpClientFactory httpClientFactory, ILogger<StoreAPI> logger)
-        {
-            _configurationManager = configurationManager ?? throw new ArgumentNullException(nameof(configurationManager));
-            _credentialManager = credentialManager ?? throw new ArgumentNullException(nameof(credentialManager));
-            _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        }
+        private readonly IConfigurationManager<Configurations> _configurationManager = configurationManager ?? throw new ArgumentNullException(nameof(configurationManager));
+        private readonly ICredentialManager _credentialManager = credentialManager ?? throw new ArgumentNullException(nameof(credentialManager));
+        private readonly IHttpClientFactory _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
+        private readonly ILogger<StoreAPI> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         public async Task<IStoreAPI> CreateAsync(Configurations? config = null, CancellationToken ct = default)
         {
@@ -132,7 +124,7 @@ namespace MSStore.CLI.Services
             }
             else if (config.CertificateFilePath != null)
             {
-                return new X509Certificate2(config.CertificateFilePath, string.IsNullOrEmpty(secret) ? null : secret);
+                return X509CertificateLoader.LoadPkcs12FromFile(config.CertificateFilePath, string.IsNullOrEmpty(secret) ? null : secret);
             }
 
             return null;

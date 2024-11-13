@@ -14,22 +14,16 @@ using MSStore.CLI.Services.TokenManager;
 
 namespace MSStore.CLI.Services.Graph
 {
-    internal class GraphClient : IGraphClient
+    internal class GraphClient(ITokenManager tokenManager, IHttpClientFactory httpClientFactory) : IGraphClient
     {
-        internal static readonly string[] GraphApplicationReadWriteScope = new[] { "https://graph.microsoft.com/Application.ReadWrite.All" };
+        internal static readonly string[] GraphApplicationReadWriteScope = ["https://graph.microsoft.com/Application.ReadWrite.All"];
 
         private static readonly string JsonContentType = "application/json";
 
-        private readonly ITokenManager _tokenManager;
-        private readonly IHttpClientFactory _httpClientFactory = null!;
+        private readonly ITokenManager _tokenManager = tokenManager ?? throw new ArgumentNullException(nameof(tokenManager));
+        private readonly IHttpClientFactory _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
 
         public bool Enabled => true;
-
-        public GraphClient(ITokenManager tokenManager, IHttpClientFactory httpClientFactory)
-        {
-            _tokenManager = tokenManager ?? throw new ArgumentNullException(nameof(tokenManager));
-            _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
-        }
 
         private async Task<T> InvokeAsync<T>(
             HttpMethod httpMethod,

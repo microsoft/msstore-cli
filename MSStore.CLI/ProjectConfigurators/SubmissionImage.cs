@@ -3,15 +3,9 @@
 
 namespace MSStore.CLI.ProjectConfigurators
 {
-    internal class SubmissionImage
+    internal class SubmissionImage(string fileName, SubmissionImageType imageType)
     {
-        public SubmissionImage(string fileName, SubmissionImageType imageType)
-        {
-            FileName = fileName;
-            ImageType = imageType;
-        }
-
-        public string FileName { get; private set; }
-        public SubmissionImageType ImageType { get; private set; }
+        public string FileName { get; private set; } = fileName;
+        public SubmissionImageType ImageType { get; private set; } = imageType;
     }
 }

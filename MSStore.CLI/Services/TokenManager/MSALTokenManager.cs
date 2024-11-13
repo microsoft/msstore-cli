@@ -17,7 +17,7 @@ using Spectre.Console;
 
 namespace MSStore.CLI.Services.TokenManager
 {
-    internal class MSALTokenManager : ITokenManager
+    internal class MSALTokenManager(IConsoleReader consoleReader) : ITokenManager
     {
         private const string MSATenantId = "9188040d-6c67-4c5b-b112-36a304b66dad";
 
@@ -29,23 +29,18 @@ namespace MSStore.CLI.Services.TokenManager
         private static readonly string LinuxKeyRingSchema = "com.microsoft.store.tokencache";
         private static readonly string LinuxKeyRingCollection = MsalCacheHelper.LinuxKeyRingDefaultCollection;
         private static readonly string LinuxKeyRingLabel = "MSAL token cache for all Microsoft Store Apps.";
-        private static readonly KeyValuePair<string, string> LinuxKeyRingAttr1 = new KeyValuePair<string, string>("Version", "1");
-        private static readonly KeyValuePair<string, string> LinuxKeyRingAttr2 = new KeyValuePair<string, string>("ProductGroup", "msstore-cli");
+        private static readonly KeyValuePair<string, string> LinuxKeyRingAttr1 = new("Version", "1");
+        private static readonly KeyValuePair<string, string> LinuxKeyRingAttr2 = new("ProductGroup", "msstore-cli");
 
         // Microsoft Store CLI
         private static readonly string ClientId = "76b1a1a3-44ef-4bb8-bbe3-cb462ebaeee4";
 
-        private readonly IConsoleReader _consoleReader;
+        private readonly IConsoleReader _consoleReader = consoleReader ?? throw new ArgumentNullException(nameof(consoleReader));
 
         private IPublicClientApplication? _app;
         private IAccount? _selectedAccount;
 
         public IAccount? CurrentUser => _selectedAccount;
-
-        public MSALTokenManager(IConsoleReader consoleReader)
-        {
-            _consoleReader = consoleReader ?? throw new ArgumentNullException(nameof(consoleReader));
-        }
 
         [MemberNotNull(nameof(_app))]
         private async Task InitAppAsync()

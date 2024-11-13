@@ -29,12 +29,11 @@ namespace MSStore.CLI.UnitTests
                 });
 
             var result = await ParseAndInvokeAsync(
-                new[]
-                {
+                [
                     "submission",
                     "status",
                     Guid.Empty.ToString()
-                });
+                ]);
 
             result.Should().Contain("\"IsReady\": true,");
         }
@@ -49,23 +48,22 @@ namespace MSStore.CLI.UnitTests
                     IsSuccess = true,
                     ResponseData = new PackagesMetadataResponse
                     {
-                        Packages = new List<Package>
-                            {
+                        Packages =
+                            [
                                 new Package
                                 {
                                     PackageId = "12345"
                                 }
-                            }
+                            ]
                     }
                 });
 
             var result = await ParseAndInvokeAsync(
-                new[]
-                {
+                [
                     "submission",
                     "get",
                     Guid.Empty.ToString()
-                });
+                ]);
 
             result.Should().Contain("\"PackageId\": \"12345\"");
         }
@@ -78,13 +76,13 @@ namespace MSStore.CLI.UnitTests
                 .ReturnsAsync(
                     new ListingAssetsResponse
                     {
-                        ListingAssets = new List<ListingAsset>
-                        {
+                        ListingAssets =
+                        [
                             new ListingAsset
                             {
                                 Language = "en-us",
-                                Screenshots = new List<Screenshot>
-                                {
+                                Screenshots =
+                                [
                                     new Screenshot
                                     {
                                         AssetUrl = "https://www.example.com/screenshot.png",
@@ -95,18 +93,17 @@ namespace MSStore.CLI.UnitTests
                                             Width = 100
                                         }
                                     }
-                                }
+                                ]
                             }
-                        }
+                        ]
                     });
 
             var result = await ParseAndInvokeAsync(
-                new[]
-                {
+                [
                     "submission",
                     "getListingAssets",
                     Guid.Empty.ToString()
-                });
+                ]);
 
             result.Should().Contain("\"AssetUrl\": \"https://www.example.com/screenshot.png\",");
         }
@@ -123,8 +120,7 @@ namespace MSStore.CLI.UnitTests
                 });
 
             var result = await ParseAndInvokeAsync(
-                new[]
-                {
+                [
                     "submission",
                     "update",
                     Guid.Empty.ToString(),
@@ -137,7 +133,7 @@ namespace MSStore.CLI.UnitTests
         }
     ]
 }"
-                });
+                ]);
 
             result.Should().Contain("Updating submission product");
             result.Should().Contain("\"PollingUrl\": \"https://www.example.com/polling\"");
@@ -156,8 +152,7 @@ namespace MSStore.CLI.UnitTests
                 });
 
             var result = await ParseAndInvokeAsync(
-                new[]
-                {
+                [
                     "submission",
                     "updateMetadata",
                     Guid.Empty.ToString(),
@@ -168,7 +163,7 @@ namespace MSStore.CLI.UnitTests
         ""Pricing"":""1""
     }
 }"
-                });
+                ]);
 
             result.Should().Contain("Updating submission metadata");
             result.Should().Contain("\"PollingUrl\": \"https://www.example.com/polling\"");
@@ -183,12 +178,11 @@ namespace MSStore.CLI.UnitTests
                 .ReturnsAsync("12345");
 
             var result = await ParseAndInvokeAsync(
-                new[]
-                {
+                [
                     "submission",
                     "publish",
                     Guid.Empty.ToString()
-                });
+                ]);
 
             result.Should().Contain("Published with Id");
         }
@@ -238,12 +232,11 @@ namespace MSStore.CLI.UnitTests
                 });
 
             var result = await ParseAndInvokeAsync(
-                new[]
-                {
+                [
                     "submission",
                     "poll",
                     Guid.Empty.ToString()
-                });
+                ]);
 
             result.Should().Contain("INPROGRESS");
             result.Should().Contain("PUBLISHED");
@@ -253,12 +246,11 @@ namespace MSStore.CLI.UnitTests
         public async Task UnpackagedSubmissionDeleteCommand()
         {
             var result = await ParseAndInvokeAsync(
-                new[]
-                {
+                [
                     "submission",
                     "delete",
                     Guid.Empty.ToString()
-                }, -1);
+                ], -1);
 
             result.Should().Contain("This command is not supported for unpackaged applications.");
         }

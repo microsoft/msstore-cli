@@ -20,10 +20,9 @@ namespace MSStore.CLI.UnitTests
             AddDefaultFakeAccount();
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "settings"
-                });
+                ]);
 
             result.Should().Contain("Usage:");
             result.Should().Contain("settings [command] [options]");
@@ -35,11 +34,10 @@ namespace MSStore.CLI.UnitTests
             AddDefaultFakeAccount();
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "settings",
                     "-t"
-                });
+                ]);
 
             FakeTelemetryConfigurationManager
                 .Verify(x => x.SaveAsync(It.Is<TelemetryConfigurations>(tc => tc.TelemetryEnabled == true), It.IsAny<CancellationToken>()));
@@ -51,12 +49,11 @@ namespace MSStore.CLI.UnitTests
             AddDefaultFakeAccount();
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "settings",
                     "-t",
                     "false"
-                });
+                ]);
 
             FakeTelemetryConfigurationManager
                 .Verify(x => x.SaveAsync(It.Is<TelemetryConfigurations>(tc => tc.TelemetryEnabled == false), It.IsAny<CancellationToken>()));

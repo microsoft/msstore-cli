@@ -40,17 +40,17 @@ parameters:
       image: windows-latest
       os: windows
       dotnet_runtime: win
-      dotnet_framework: net8.0-windows10.0.17763.0
+      dotnet_framework: net9.0-windows10.0.17763.0
     - name: Azure-Pipelines-1ESPT-ExDShared
       image: ubuntu-latest
       os: linux
       dotnet_runtime: linux
-      dotnet_framework: net8.0
+      dotnet_framework: net9.0
     - name: Azure Pipelines
       image: macos-latest
       os: macOS
       dotnet_runtime: osx
-      dotnet_framework: net8.0
+      dotnet_framework: net9.0
 
 name: 0.0.$(Date:yyMM).$(Date:dd)$(Rev:rr)
 
@@ -69,7 +69,7 @@ extends:
       credscan:
         suppressionsFile: '$(System.DefaultWorkingDirectory)/.pipelines/CredScanSuppressions.json'
       binSkim:
-        AnalyzeTargetGlob: '$(System.DefaultWorkingDirectory)\MSStore.API\bin\**\net8.0\MSStore.API.dll'
+        AnalyzeTargetGlob: '$(System.DefaultWorkingDirectory)\MSStore.API\bin\**\net9.0\MSStore.API.dll'
     stages:
       - stage: NuGet
         jobs:
@@ -84,9 +84,9 @@ extends:
               steps:
               - checkout: self
               - task: UseDotNet@2
-                displayName: Setup .NET 8
+                displayName: Setup .NET 9
                 inputs:
-                  version: 8.0.x
+                  version: 9.0.x
               - ${{ if eq(parameters.DoEsrp, 'true') }}:
                 - task: UseDotNet@2
                   displayName: Setup .NET 6.0 (For ESRP Task)
@@ -128,9 +128,9 @@ extends:
                 - checkout: self
                   persistCredentials: true
                 - task: UseDotNet@2
-                  displayName: Setup .NET 8
+                  displayName: Setup .NET 9
                   inputs:
-                    version: 8.0.x
+                    version: 9.0.x
                 - ${{ if eq(parameters.DoEsrp, 'true') }}:
                   - task: UseDotNet@2
                     displayName: Setup .NET 6.0 (For ESRP Task)

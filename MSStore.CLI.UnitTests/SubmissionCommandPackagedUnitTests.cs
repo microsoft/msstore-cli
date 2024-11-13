@@ -21,10 +21,9 @@ namespace MSStore.CLI.UnitTests
         public async Task SubmissionCommandWithNoParameter()
         {
             var result = await ParseAndInvokeAsync(
-                new[]
-                {
+                [
                     "submission"
-                });
+                ]);
 
             result.Should().Contain("Executes commands to a store submission.");
         }
@@ -40,12 +39,11 @@ namespace MSStore.CLI.UnitTests
             InitDefaultSubmissionStatusResponseQueue();
 
             var result = await ParseAndInvokeAsync(
-                new[]
-                {
+                [
                     "submission",
                     "status",
                     FakeApps[0].Id!
-                });
+                ]);
 
             result.Should().Contain("Code1");
             result.Should().Contain("Detail1");
@@ -60,12 +58,11 @@ namespace MSStore.CLI.UnitTests
             };
 
             var result = await ParseAndInvokeAsync(
-                new[]
-                {
+                [
                     "submission",
                     "get",
                     FakeApps[0].Id!
-                });
+                ]);
 
             result.Should().Contain("\"Id\": \"123456789\"");
             result.Should().Contain("\"FileUploadUrl\": \"https://azureblob.com/fileupload\"");
@@ -80,12 +77,11 @@ namespace MSStore.CLI.UnitTests
             };
 
             var result = await ParseAndInvokeAsync(
-                new[]
-                {
+                [
                     "submission",
                     "getListingAssets",
                     FakeApps[0].Id!
-                });
+                ]);
 
             result.Should().Contain("\"Description\": \"BaseListingDescription\"");
         }
@@ -94,8 +90,7 @@ namespace MSStore.CLI.UnitTests
         public async Task PackagedSubmissionUpdateCommand()
         {
             var result = await ParseAndInvokeAsync(
-                new[]
-                {
+                [
                     "submission",
                     "update",
                     FakeApps[0].Id!,
@@ -108,7 +103,7 @@ namespace MSStore.CLI.UnitTests
         }
     ]
 }"
-                });
+                ]);
 
             result.Should().Contain("Updating submission product");
             result.Should().Contain("\"FileUploadUrl\": \"https://azureblob.com/fileupload\"");
@@ -118,8 +113,7 @@ namespace MSStore.CLI.UnitTests
         public async Task PackagedSubmissionUpdateMetadataCommand()
         {
             var result = await ParseAndInvokeAsync(
-                new[]
-                {
+                [
                     "submission",
                     "updateMetadata",
                     FakeApps[0].Id!,
@@ -136,7 +130,7 @@ namespace MSStore.CLI.UnitTests
         }
     }
 }"
-                });
+                ]);
 
             result.Should().Contain("Updating submission product");
             result.Should().Contain("\"FileUploadUrl\": \"https://azureblob.com/fileupload\"");
@@ -158,12 +152,11 @@ namespace MSStore.CLI.UnitTests
                 });
 
             var result = await ParseAndInvokeAsync(
-                new[]
-                {
+                [
                     "submission",
                     "publish",
                     FakeApps[0].Id!
-                });
+                ]);
 
             result.Should().Contain("Submission Commited with status");
         }
@@ -179,12 +172,11 @@ namespace MSStore.CLI.UnitTests
             InitDefaultSubmissionStatusResponseQueue();
 
             var result = await ParseAndInvokeAsync(
-                new[]
-                {
+                [
                     "submission",
                     "poll",
                     FakeApps[0].Id!
-                });
+                ]);
 
             result.Should().Contain("Submission commit success!");
         }
@@ -202,12 +194,11 @@ namespace MSStore.CLI.UnitTests
                 .ReturnsAsync(true);
 
             var result = await ParseAndInvokeAsync(
-                new[]
-                {
+                [
                     "submission",
                     "delete",
                     FakeApps[0].Id!
-                });
+                ]);
 
             FakeConsole.Verify(x => x.YesNoConfirmationAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
 

@@ -34,7 +34,7 @@ namespace MSStore.CLI
             : base(description: "CLI tool to automate Microsoft Store Developer tasks.")
         {
             VerboseOption = new Option<bool>(
-                aliases: new string[] { "--verbose", "-v" },
+                aliases: ["--verbose", "-v"],
                 getDefaultValue: () => false,
                 description: "Verbose output");
             AddGlobalOption(VerboseOption);
@@ -54,18 +54,11 @@ namespace MSStore.CLI
             });
         }
 
-        public new class Handler : ICommandHandler
+        public new class Handler(IConfigurationManager<Configurations> configurationManager, ICLIConfigurator cliConfigurator, TelemetryClient telemetryClient) : ICommandHandler
         {
-            private readonly IConfigurationManager<Configurations> _configurationManager;
-            private readonly ICLIConfigurator _cliConfigurator;
-            private readonly TelemetryClient _telemetryClient;
-
-            public Handler(IConfigurationManager<Configurations> configurationManager, ICLIConfigurator cliConfigurator, TelemetryClient telemetryClient)
-            {
-                _configurationManager = configurationManager ?? throw new ArgumentNullException(nameof(configurationManager));
-                _cliConfigurator = cliConfigurator ?? throw new ArgumentNullException(nameof(cliConfigurator));
-                _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
-            }
+            private readonly IConfigurationManager<Configurations> _configurationManager = configurationManager ?? throw new ArgumentNullException(nameof(configurationManager));
+            private readonly ICLIConfigurator _cliConfigurator = cliConfigurator ?? throw new ArgumentNullException(nameof(cliConfigurator));
+            private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
             public int Invoke(InvocationContext context)
             {

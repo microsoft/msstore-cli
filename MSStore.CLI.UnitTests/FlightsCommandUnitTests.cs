@@ -19,12 +19,11 @@ namespace MSStore.CLI.UnitTests
         public async Task FlightsListCommandShouldReturnZero()
         {
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "flights",
                     "list",
                     FakeApps[0].Id!
-                });
+                ]);
 
             result.Should().ContainAll(FakeFlights.Select(a => a.FlightId));
             result.Should().ContainAll(FakeFlights.Select(a => a.FriendlyName));
@@ -34,13 +33,12 @@ namespace MSStore.CLI.UnitTests
         public async Task FlightsGetCommandShouldReturnFlight()
         {
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "flights",
                     "get",
                     FakeApps[0].Id!,
                     FakeFlights[0].FlightId!
-                });
+                ]);
 
             result.Should().Contain(FakeFlights[0].FlightId);
             result.Should().Contain(FakeFlights[0].FriendlyName);
@@ -50,13 +48,12 @@ namespace MSStore.CLI.UnitTests
         public async Task FlightsDeleteCommandShouldDeleteFlight()
         {
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "flights",
                     "delete",
                     FakeApps[0].Id!,
                     FakeFlights[0].FlightId!
-                });
+                ]);
 
             result.Should().Contain("Deleted Flight");
         }
@@ -65,15 +62,14 @@ namespace MSStore.CLI.UnitTests
         public async Task FlightsCreateCommandShouldCreateFlight()
         {
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "flights",
                     "create",
                     FakeApps[0].Id!,
                     "NewFlight",
                     "--group-ids",
                     "1",
-                });
+                ]);
 
             result.Should().Contain("Created Flight");
             result.Should().Contain("NewFlight");

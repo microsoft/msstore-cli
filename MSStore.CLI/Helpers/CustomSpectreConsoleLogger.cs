@@ -10,21 +10,13 @@ using Spectre.Console;
 
 namespace MSStore.CLI.Helpers
 {
-    internal class CustomSpectreConsoleLogger : ILogger
+    internal class CustomSpectreConsoleLogger(string name, ConsoleFormatter formatter, IExternalScopeProvider? scopeProvider) : ILogger
     {
-        private readonly string _name;
-        internal ConsoleFormatter Formatter { get; set; }
-        internal IExternalScopeProvider? ScopeProvider { get; set; }
+        internal ConsoleFormatter Formatter { get; set; } = formatter;
+        internal IExternalScopeProvider? ScopeProvider { get; set; } = scopeProvider;
 
         [ThreadStatic]
         private static StringWriter? _stringWriter;
-
-        public CustomSpectreConsoleLogger(string name, ConsoleFormatter formatter, IExternalScopeProvider? scopeProvider)
-        {
-            _name = name;
-            Formatter = formatter;
-            ScopeProvider = scopeProvider;
-        }
 
         public IDisposable? BeginScope<TState>(TState state)
             where TState : notnull
@@ -45,7 +37,7 @@ namespace MSStore.CLI.Helpers
             }
 
             _stringWriter ??= new StringWriter();
-            LogEntry<TState> logEntry = new LogEntry<TState>(logLevel, _name, eventId, state, exception, formatter);
+            LogEntry<TState> logEntry = new LogEntry<TState>(logLevel, name, eventId, state, exception, formatter);
             Formatter.Write(in logEntry, ScopeProvider, _stringWriter);
 
             var sb = _stringWriter.GetStringBuilder();

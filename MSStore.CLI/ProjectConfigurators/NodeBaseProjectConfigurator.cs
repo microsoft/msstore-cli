@@ -13,24 +13,18 @@ using Spectre.Console;
 
 namespace MSStore.CLI.ProjectConfigurators
 {
-    internal abstract class NodeBaseProjectConfigurator : FileProjectConfigurator
+    internal abstract class NodeBaseProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, IEnvironmentInformationService environmentInformationService, ILogger<NodeBaseProjectConfigurator> logger) : FileProjectConfigurator(browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, environmentInformationService, logger)
     {
-        public override string[] SupportedProjectPattern { get; } = new[] { "package.json" };
+        public override string[] SupportedProjectPattern { get; } = ["package.json"];
 
-        protected IExternalCommandExecutor ExternalCommandExecutor { get; }
-
-        protected NodeBaseProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, IEnvironmentInformationService environmentInformationService, ILogger<NodeBaseProjectConfigurator> logger)
-            : base(browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, environmentInformationService, logger)
-        {
-            ExternalCommandExecutor = externalCommandExecutor ?? throw new ArgumentNullException(nameof(externalCommandExecutor));
-        }
+        protected IExternalCommandExecutor ExternalCommandExecutor { get; } = externalCommandExecutor ?? throw new ArgumentNullException(nameof(externalCommandExecutor));
 
         protected static bool IsYarn(DirectoryInfo projectRootPath)
         {
             return projectRootPath.GetFiles("yarn.lock", SearchOption.TopDirectoryOnly).Length != 0;
         }
 
-        private static Dictionary<string, bool> _npmInstallExecuted = new Dictionary<string, bool>();
+        private static Dictionary<string, bool> _npmInstallExecuted = [];
         protected async Task<bool> RunNpmInstallAsync(DirectoryInfo projectRootPath, CancellationToken ct)
         {
             if (_npmInstallExecuted.TryGetValue(projectRootPath.FullName, out var value) && value)
@@ -63,7 +57,7 @@ namespace MSStore.CLI.ProjectConfigurators
             });
         }
 
-        private static Dictionary<string, bool> _yarnInstallExecuted = new Dictionary<string, bool>();
+        private static Dictionary<string, bool> _yarnInstallExecuted = [];
         protected async Task<bool> RunYarnInstallAsync(DirectoryInfo projectRootPath, CancellationToken ct)
         {
             if (_yarnInstallExecuted.TryGetValue(projectRootPath.FullName, out var value) && value)
@@ -96,7 +90,7 @@ namespace MSStore.CLI.ProjectConfigurators
             });
         }
 
-        private static Dictionary<(string rootPath, string packageName), bool> _npmListExecuted = new Dictionary<(string rootPath, string packageName), bool>();
+        private static Dictionary<(string rootPath, string packageName), bool> _npmListExecuted = [];
         protected async Task<bool> NpmPackageExistsAsync(DirectoryInfo projectRootPath, string packageName, bool useCache = true, CancellationToken ct = default)
         {
             if (useCache && _npmListExecuted.TryGetValue((projectRootPath.FullName, packageName), out var value))
@@ -129,7 +123,7 @@ namespace MSStore.CLI.ProjectConfigurators
             });
         }
 
-        private static Dictionary<(string rootPath, string packageName), bool> _yarnWhyExecuted = new Dictionary<(string rootPath, string packageName), bool>();
+        private static Dictionary<(string rootPath, string packageName), bool> _yarnWhyExecuted = [];
         protected async Task<bool> YarnPackageExistsAsync(DirectoryInfo projectRootPath, string packageName, bool useCache = true, CancellationToken ct = default)
         {
             if (useCache && _yarnWhyExecuted.TryGetValue((projectRootPath.FullName, packageName), out var value))

@@ -15,7 +15,7 @@ namespace MSStore.CLI.Helpers
     internal sealed class CustomSpectreConsoleFormatter : ConsoleFormatter
     {
         private const string LoglevelPadding = ": ";
-        private static readonly string _messagePadding = new string(' ', GetLogLevelString(LogLevel.Information).Length + LoglevelPadding.Length);
+        private static readonly string _messagePadding = new(' ', GetLogLevelString(LogLevel.Information).Length + LoglevelPadding.Length);
         private static readonly string _newLineWithMessagePadding = Environment.NewLine + _messagePadding;
         internal SimpleConsoleFormatterOptions? FormatterOptions { get; set; }
 
@@ -93,7 +93,7 @@ namespace MSStore.CLI.Helpers
                 textWriter.Write(timestamp);
             }
 
-            void WriteColoredMessage(TextWriter textWriter, string message, ConsoleColor? background, ConsoleColor? foreground)
+            static void WriteColoredMessage(TextWriter textWriter, string message, ConsoleColor? background, ConsoleColor? foreground)
             {
                 if (background.HasValue || foreground.HasValue)
                 {
@@ -238,17 +238,11 @@ namespace MSStore.CLI.Helpers
             }
         }
 
-        private readonly struct ConsoleColors
+        private readonly struct ConsoleColors(ConsoleColor? foreground, ConsoleColor? background)
         {
-            public ConsoleColors(ConsoleColor? foreground, ConsoleColor? background)
-            {
-                Foreground = foreground;
-                Background = background;
-            }
+            public ConsoleColor? Foreground { get; } = foreground;
 
-            public ConsoleColor? Foreground { get; }
-
-            public ConsoleColor? Background { get; }
+            public ConsoleColor? Background { get; } = background;
         }
     }
 }

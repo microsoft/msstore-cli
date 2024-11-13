@@ -25,7 +25,7 @@ namespace MSStore.CLI
                     var message = ex.Message + Environment.NewLine + string.Join(Environment.NewLine, ex.ResponseErrors);
                     ErrorStatus(_, message);
                     break;
-                case Exception _:
+                case Exception:
                     ErrorStatus(_, "Error!");
                     break;
             }

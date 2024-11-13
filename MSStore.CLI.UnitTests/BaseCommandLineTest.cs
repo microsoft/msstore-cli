@@ -51,16 +51,16 @@ namespace MSStore.CLI.UnitTests
         internal Mock<INuGetPackageManager> NuGetPackageManager { get; private set; } = null!;
         internal Mock<IZipFileManager> ZipFileManager { get; private set; } = null!;
         internal Mock<IEnvironmentInformationService> EnvironmentInformationService { get; private set; } = null!;
-        internal List<string> UserNames { get; } = new List<string>();
-        internal List<string> Secrets { get; } = new List<string>();
+        internal List<string> UserNames { get; } = [];
+        internal List<string> Secrets { get; } = [];
 
         internal Mock<IExternalCommandExecutor> ExternalCommandExecutor { get; private set; } = null!;
         internal Mock<IStoreAPIFactory> FakeStoreAPIFactory { get; private set; } = null!;
         internal Mock<IStoreAPI> FakeStoreAPI { get; private set; } = null!;
         internal Mock<IStorePackagedAPI> FakeStorePackagedAPI { get; private set; } = null!;
 
-        protected List<DevCenterApplication> FakeApps { get; } = new List<DevCenterApplication>
-            {
+        protected List<DevCenterApplication> FakeApps { get; } =
+            [
                 new DevCenterApplication
                 {
                     Id = "9PN3ABCDEFGA",
@@ -76,10 +76,10 @@ namespace MSStore.CLI.UnitTests
                     Id = "9PN3ABCDEFGC",
                     PrimaryName = "Fake App 3"
                 }
-            };
+            ];
 
-        protected List<DevCenterFlight> FakeFlights { get; } = new List<DevCenterFlight>
-            {
+        protected List<DevCenterFlight> FakeFlights { get; } =
+            [
                 new DevCenterFlight
                 {
                     FlightId = "632B6A77-0E18-4B41-9033-3614D2174F2C",
@@ -90,7 +90,7 @@ namespace MSStore.CLI.UnitTests
                     FlightId = "632B6A77-0E18-4B41-9033-3614D2174F2D",
                     FriendlyName = "FakeFlight2"
                 }
-            };
+            ];
 
         internal static Organization DefaultOrganization { get; } = new Organization
         {
@@ -140,9 +140,7 @@ namespace MSStore.CLI.UnitTests
                 .Setup(x => x.GetEnrollmentAccountsAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new AccountEnrollments
                 {
-                    Items = new List<AccountEnrollment>
-                    {
-                    }
+                    Items = []
                 });
             PartnerCenterManager
                 .Setup(x => x.Enabled)
@@ -205,7 +203,7 @@ namespace MSStore.CLI.UnitTests
                 .Setup(fac => fac.CreatePackagedAsync(It.IsAny<Configurations>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(FakeStorePackagedAPI.Object);
 
-            Cli = new MicrosoftStoreCLI();
+            Cli = [];
 
             StorePackagedAPI.DefaultSubmissionPollDelay = TimeSpan.Zero;
 
@@ -419,24 +417,24 @@ namespace MSStore.CLI.UnitTests
                 Id = "123456789",
                 ApplicationCategory = DevCenterApplicationCategory.NotSet,
                 FileUploadUrl = "https://azureblob.com/fileupload",
-                ApplicationPackages = new List<ApplicationPackage>
-                    {
+                ApplicationPackages =
+                    [
                         new ApplicationPackage
                         {
                             Id = "123456789",
                             Version = "1.0.0",
                         }
-                    },
+                    ],
                 StatusDetails = new StatusDetails
                 {
-                    Warnings = new List<CodeAndDetail>
-                        {
+                    Warnings =
+                        [
                             new CodeAndDetail
                             {
                                 Code = "Code1",
                                 Details = "Detail1"
                             }
-                        }
+                        ]
                 },
                 Listings = new Dictionary<string, DevCenterListing>
                     {
@@ -470,24 +468,24 @@ namespace MSStore.CLI.UnitTests
             {
                 Id = "123456789",
                 FileUploadUrl = "https://azureblob.com/fileupload",
-                FlightPackages = new List<ApplicationPackage>
-                    {
+                FlightPackages =
+                    [
                         new ApplicationPackage
                         {
                             Id = "123456789",
                             Version = "1.0.0",
                         }
-                    },
+                    ],
                 StatusDetails = new StatusDetails
                 {
-                    Warnings = new List<CodeAndDetail>
-                        {
+                    Warnings =
+                        [
                             new CodeAndDetail
                             {
                                 Code = "Code1",
                                 Details = "Detail1"
                             }
-                        }
+                        ]
                 }
             };
 
@@ -531,7 +529,7 @@ namespace MSStore.CLI.UnitTests
             {
                 FlightId = "632B6A77-0E18-4B41-9033-3614D2174F2E",
                 FriendlyName = "NewFlight",
-                GroupIds = new List<string> { "1" }
+                GroupIds = ["1"]
             };
 
             FakeStorePackagedAPI
@@ -796,7 +794,7 @@ namespace MSStore.CLI.UnitTests
         {
             _testCallback = testCallback;
 
-            return ParseAndInvokeAsync(new[] { "test" });
+            return ParseAndInvokeAsync(["test"]);
         }
 
         protected async Task<string> ParseAndInvokeAsync(string[] args, int? expectedResult = 0)
@@ -854,7 +852,7 @@ namespace MSStore.CLI.UnitTests
 
         private sealed class TestCommand : Command
         {
-            private BaseCommandLineTest _baseCommandLineTest;
+            private readonly BaseCommandLineTest _baseCommandLineTest;
 
             public TestCommand(BaseCommandLineTest baseCommandLineTest)
                 : base("test")
@@ -866,13 +864,13 @@ namespace MSStore.CLI.UnitTests
 
         internal sealed class OutputCapture : TextWriter, IStandardStreamWriter, IDisposable
         {
-            private TextWriter stdOutWriter;
+            private readonly TextWriter _stdOutWriter;
             public TextWriter Captured { get; private set; }
             public override Encoding Encoding => Encoding.ASCII;
 
             public OutputCapture()
             {
-                stdOutWriter = Console.Out;
+                _stdOutWriter = Console.Out;
                 Console.SetOut(this);
                 Captured = new StringWriter();
             }
@@ -880,42 +878,31 @@ namespace MSStore.CLI.UnitTests
             public override void Write(string? value)
             {
                 Captured.Write(value);
-                stdOutWriter.Write(value);
+                _stdOutWriter.Write(value);
             }
 
             public override void WriteLine(string? value)
             {
                 Captured.WriteLine(value);
-                stdOutWriter.WriteLine(value);
+                _stdOutWriter.WriteLine(value);
             }
         }
 
-        internal sealed class TestConsole : IConsole
+        internal sealed class TestConsole(BaseCommandLineTest.OutputCapture outputCapture) : IConsole
         {
-            public TestConsole(OutputCapture outputCapture)
-            {
-                Out = outputCapture;
-                Error = outputCapture;
-            }
-
-            public IStandardStreamWriter Error { get; set; }
-            public IStandardStreamWriter Out { get; set; }
+            public IStandardStreamWriter Error { get; set; } = outputCapture;
+            public IStandardStreamWriter Out { get; set; } = outputCapture;
             public bool IsOutputRedirected { get; set; }
             public bool IsErrorRedirected { get; set; }
             public bool IsInputRedirected { get; set; }
         }
 
-        internal sealed class CustomAnsiConsoleOutput : IAnsiConsoleOutput
+        internal sealed class CustomAnsiConsoleOutput(TextWriter writer) : IAnsiConsoleOutput
         {
-            public TextWriter Writer { get; }
+            public TextWriter Writer { get; } = writer ?? throw new ArgumentNullException(nameof(writer));
             public bool IsTerminal => false;
             public int Width => 260;
             public int Height => 80;
-
-            public CustomAnsiConsoleOutput(TextWriter writer)
-            {
-                Writer = writer ?? throw new ArgumentNullException(nameof(writer));
-            }
 
             public void SetEncoding(Encoding encoding)
             {

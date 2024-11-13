@@ -5,13 +5,8 @@ using System.Net.Http;
 
 namespace MSStore.API
 {
-    public class MSStoreHttpException : MSStoreException
+    public class MSStoreHttpException(HttpResponseMessage response) : MSStoreException
     {
-        public HttpResponseMessage Response { get; private set; }
-
-        public MSStoreHttpException(HttpResponseMessage response)
-        {
-            Response = response;
-        }
+        public HttpResponseMessage Response { get; private set; } = response;
     }
 }

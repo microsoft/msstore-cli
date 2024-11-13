@@ -15,11 +15,11 @@ namespace MSStore.CLI.Commands
         static SubmissionCommand()
         {
             LanguageOption = new Option<string>(
-                aliases: new string[] { "--language", "-l" },
+                aliases: ["--language", "-l"],
                 getDefaultValue: () => "en",
                 description: "Select which language you want to retrieve.");
             SkipInitialPolling = new Option<bool>(
-                aliases: new string[] { "--skipInitialPolling", "-s" },
+                aliases: ["--skipInitialPolling", "-s"],
                 getDefaultValue: () => false,
                 description: "Skip the initial polling before executing the action.");
             ProductIdArgument = new Argument<string>(

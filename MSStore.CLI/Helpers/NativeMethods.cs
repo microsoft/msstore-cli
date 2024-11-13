@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-#if WINDOWS
 using System;
 using System.Runtime.InteropServices;
 
@@ -31,4 +30,3 @@ namespace MSStore.CLI.Helpers
         }
     }
 }
-#endif

@@ -19,25 +19,20 @@ using Spectre.Console;
 
 namespace MSStore.CLI.ProjectConfigurators
 {
-    internal class WinUIProjectConfigurator : UWPProjectConfigurator
+    internal class WinUIProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, INuGetPackageManager nuGetPackageManager, IAppXManifestManager appXManifestManager, IEnvironmentInformationService environmentInformationService, ILogger<WinUIProjectConfigurator> logger) : UWPProjectConfigurator(externalCommandExecutor, browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, nuGetPackageManager, appXManifestManager, environmentInformationService, logger)
     {
-        public WinUIProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, INuGetPackageManager nuGetPackageManager, IAppXManifestManager appXManifestManager, IEnvironmentInformationService environmentInformationService, ILogger<WinUIProjectConfigurator> logger)
-            : base(externalCommandExecutor, browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, nuGetPackageManager, appXManifestManager, environmentInformationService, logger)
-        {
-        }
-
         public override string ToString() => "Windows App SDK/WinUI";
 
-        public override string[] PackageFilesExtensionInclude => new[] { ".msixupload", ".appxupload", ".msix" };
+        public override string[] PackageFilesExtensionInclude => [".msixupload", ".appxupload", ".msix"];
         public override SearchOption PackageFilesSearchOption { get; } = SearchOption.AllDirectories;
         public override PublishFileSearchFilterStrategy PublishFileSearchFilterStrategy { get; } = PublishFileSearchFilterStrategy.OneLevelDown;
 
-        public override AllowTargetFutureDeviceFamily[] AllowTargetFutureDeviceFamilies { get; } = new[]
-        {
+        public override AllowTargetFutureDeviceFamily[] AllowTargetFutureDeviceFamilies { get; } =
+        [
             AllowTargetFutureDeviceFamily.Desktop,
             AllowTargetFutureDeviceFamily.Mobile,
             AllowTargetFutureDeviceFamily.Holographic
-        };
+        ];
 
         public override async Task<bool> CanConfigureAsync(string pathOrUrl, CancellationToken ct)
         {

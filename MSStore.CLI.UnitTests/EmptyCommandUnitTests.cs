@@ -11,7 +11,7 @@ namespace MSStore.CLI.UnitTests
         {
             FakeLogin();
 
-            var result = await ParseAndInvokeAsync(Array.Empty<string>());
+            var result = await ParseAndInvokeAsync([]);
 
             result.Should().Contain("CLI tool to automate Microsoft Store Developer tasks.");
         }
@@ -35,7 +35,7 @@ namespace MSStore.CLI.UnitTests
 
             AddDefaultGraphOrg();
 
-            var result = await ParseAndInvokeAsync(Array.Empty<string>());
+            var result = await ParseAndInvokeAsync([]);
 
             result.Should().Contain("Awesome! It seems to be working!");
         }
@@ -45,7 +45,7 @@ namespace MSStore.CLI.UnitTests
         {
             FakeLogin();
 
-            var result = await ParseAndInvokeAsync(new[] { "info" });
+            var result = await ParseAndInvokeAsync(["info"]);
 
             result.Should().Contain("Current Config");
         }
@@ -55,7 +55,7 @@ namespace MSStore.CLI.UnitTests
         {
             FakeLoginWithCert();
 
-            var result = await ParseAndInvokeAsync(new[] { "info" });
+            var result = await ParseAndInvokeAsync(["info"]);
 
             result.Should().Contain("Current Config");
         }

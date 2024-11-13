@@ -12,7 +12,7 @@ namespace MSStore.API.Packaged.Models
         {
             if (applicationPackages == null)
             {
-                return new List<ApplicationPackage>();
+                return [];
             }
 
             return applicationPackages.Where(p =>

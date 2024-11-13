@@ -19,63 +19,50 @@ using Spectre.Console;
 
 namespace MSStore.CLI.ProjectConfigurators
 {
-    internal class PWAProjectConfigurator : IProjectConfigurator, IProjectPackager, IProjectPublisher
+    internal class PWAProjectConfigurator(
+        IConsoleReader consoleReader,
+        IBrowserLauncher browserLauncher,
+        IPWABuilderClient pwaBuilderClient,
+        IZipFileManager zipFileManager,
+        IAzureBlobManager azureBlobManager,
+        IFileDownloader fileDownloader,
+        IPWAAppInfoManager pwaAppInfoManager,
+        IEnvironmentInformationService environmentInformationService,
+        ILogger<PWAProjectConfigurator> logger) : IProjectConfigurator, IProjectPackager, IProjectPublisher
     {
-        private readonly IConsoleReader _consoleReader;
-        private readonly IBrowserLauncher _browserLauncher;
-        private readonly IPWABuilderClient _pwaBuilderClient;
-        private readonly IZipFileManager _zipFileManager;
-        private readonly IAzureBlobManager _azureBlobManager;
-        private readonly IFileDownloader _fileDownloader;
-        private readonly IPWAAppInfoManager _pwaAppInfoManager;
-        private readonly IEnvironmentInformationService _environmentInformationService;
-        private readonly ILogger _logger;
-
-        public PWAProjectConfigurator(
-            IConsoleReader consoleReader,
-            IBrowserLauncher browserLauncher,
-            IPWABuilderClient pwaBuilderClient,
-            IZipFileManager zipFileManager,
-            IAzureBlobManager azureBlobManager,
-            IFileDownloader fileDownloader,
-            IPWAAppInfoManager pwaAppInfoManager,
-            IEnvironmentInformationService environmentInformationService,
-            ILogger<PWAProjectConfigurator> logger)
-        {
-            _consoleReader = consoleReader ?? throw new ArgumentNullException(nameof(consoleReader));
-            _browserLauncher = browserLauncher ?? throw new ArgumentNullException(nameof(browserLauncher));
-            _pwaBuilderClient = pwaBuilderClient ?? throw new ArgumentNullException(nameof(pwaBuilderClient));
-            _zipFileManager = zipFileManager ?? throw new ArgumentNullException(nameof(zipFileManager));
-            _azureBlobManager = azureBlobManager ?? throw new ArgumentNullException(nameof(azureBlobManager));
-            _fileDownloader = fileDownloader ?? throw new ArgumentNullException(nameof(fileDownloader));
-            _pwaAppInfoManager = pwaAppInfoManager ?? throw new ArgumentNullException(nameof(pwaAppInfoManager));
-            _environmentInformationService = environmentInformationService ?? throw new ArgumentNullException(nameof(environmentInformationService));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        }
+        private readonly IConsoleReader _consoleReader = consoleReader ?? throw new ArgumentNullException(nameof(consoleReader));
+        private readonly IBrowserLauncher _browserLauncher = browserLauncher ?? throw new ArgumentNullException(nameof(browserLauncher));
+        private readonly IPWABuilderClient _pwaBuilderClient = pwaBuilderClient ?? throw new ArgumentNullException(nameof(pwaBuilderClient));
+        private readonly IZipFileManager _zipFileManager = zipFileManager ?? throw new ArgumentNullException(nameof(zipFileManager));
+        private readonly IAzureBlobManager _azureBlobManager = azureBlobManager ?? throw new ArgumentNullException(nameof(azureBlobManager));
+        private readonly IFileDownloader _fileDownloader = fileDownloader ?? throw new ArgumentNullException(nameof(fileDownloader));
+        private readonly IPWAAppInfoManager _pwaAppInfoManager = pwaAppInfoManager ?? throw new ArgumentNullException(nameof(pwaAppInfoManager));
+        private readonly IEnvironmentInformationService _environmentInformationService = environmentInformationService ?? throw new ArgumentNullException(nameof(environmentInformationService));
+        private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         public override string ToString() => "PWA";
 
-        public string[] PackageFilesExtensionInclude => new[]
-        {
+        public string[] PackageFilesExtensionInclude =>
+        [
             ".appxbundle",
             ".msixbundle",
             ".msix",
             ".appx"
-        };
-        public string[]? PackageFilesExtensionExclude { get; } = new[]
-        {
+        ];
+        public string[]? PackageFilesExtensionExclude { get; } =
+        [
             ".sideload.msix"
-        };
+        ];
         public SearchOption PackageFilesSearchOption { get; } = SearchOption.AllDirectories;
         public IEnumerable<BuildArch>? DefaultBuildArchs { get; }
 
         public bool PackageOnlyOnWindows => false;
 
-        public AllowTargetFutureDeviceFamily[] AllowTargetFutureDeviceFamilies { get; } = new[]
-        {
+        public AllowTargetFutureDeviceFamily[] AllowTargetFutureDeviceFamilies { get; } =
+        [
             AllowTargetFutureDeviceFamily.Desktop,
             AllowTargetFutureDeviceFamily.Holographic
-        };
+        ];
 
         public Task<bool> CanConfigureAsync(string pathOrUrl, CancellationToken ct)
         {
@@ -238,11 +225,13 @@ namespace MSStore.CLI.ProjectConfigurators
                                 AllowSigning = true,
                                 ClassicPackage = new ClassicPackage
                                 {
-                                    Generate = true, Version = classicVersion.ToString()
+                                    Generate = true,
+                                    Version = classicVersion.ToString()
                                 },
                                 Publisher = new Publisher
                                 {
-                                    DisplayName = publisherDisplayName, CommonName = app.PublisherName
+                                    DisplayName = publisherDisplayName,
+                                    CommonName = app.PublisherName
                                 },
                                 ResourceLanguage = "en-us", // TODO: parametrize this
                             },
@@ -291,7 +280,8 @@ namespace MSStore.CLI.ProjectConfigurators
             await _pwaAppInfoManager.SaveAsync(
                 new PWAAppInfo
                 {
-                    AppId = app.Id, Uri = uri,
+                    AppId = app.Id,
+                    Uri = uri,
                 },
                 zipDir,
                 ct);
@@ -302,7 +292,7 @@ namespace MSStore.CLI.ProjectConfigurators
         public Task<List<string>?> GetAppImagesAsync(string pathOrUrl, CancellationToken ct)
         {
             // TODO: implement
-            return Task.FromResult<List<string>?>(new List<string>());
+            return Task.FromResult<List<string>?>([]);
         }
 
         public Task<List<string>?> GetDefaultImagesAsync(string pathOrUrl, CancellationToken ct)

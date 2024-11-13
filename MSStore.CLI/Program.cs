@@ -266,7 +266,7 @@ namespace MSStore.CLI
                 }
             }
 
-            args = argList.ToArray();
+            args = [.. argList];
 
             var result = await parser.InvokeAsync(args);
 
@@ -278,14 +278,14 @@ namespace MSStore.CLI
         private static async Task<TelemetryClient> CreateTelemetryClientAsync(ConfigurationManager<TelemetryConfigurations> telemetryConfigurationManager, TelemetryConfigurations telemetryConfigurations)
         {
             var changed = false;
-            if (telemetryConfigurations.TelemetryEnabled.HasValue == false)
+            if (!telemetryConfigurations.TelemetryEnabled.HasValue)
             {
                 telemetryConfigurations.TelemetryEnabled = true;
                 changed = true;
             }
 
             if (string.IsNullOrEmpty(telemetryConfigurations.TelemetryGuid)
-                || telemetryConfigurations.TelemetryGuidDateTime.HasValue == false
+                || !telemetryConfigurations.TelemetryGuidDateTime.HasValue
                 || (DateTime.Now - telemetryConfigurations.TelemetryGuidDateTime) >= TimeSpan.FromHours(24))
             {
                 telemetryConfigurations.TelemetryGuid = Guid.NewGuid().ToString();

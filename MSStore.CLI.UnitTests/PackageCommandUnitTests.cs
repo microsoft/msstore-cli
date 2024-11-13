@@ -19,10 +19,9 @@ namespace MSStore.CLI.UnitTests
         public async Task PackageCommandShouldUseDefaultDirectoryIfNoArgument()
         {
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "package"
-                }, -1);
+                ], -1);
 
             result.Should().Contain($"We could not find a project configurator for the project at '{Directory.GetCurrentDirectory()}'.");
         }
@@ -58,12 +57,11 @@ namespace MSStore.CLI.UnitTests
                 });
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "package",
                     path,
                     "--verbose"
-                });
+                ]);
 
             ExternalCommandExecutor.VerifyAll();
         }
@@ -102,14 +100,13 @@ namespace MSStore.CLI.UnitTests
                 });
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "package",
                     path,
                     "--output",
                     customPath,
                     "--verbose"
-                });
+                ]);
 
             result.Should().Contain("The packaged app is here:");
             result.Should().Contain(customPath);
@@ -165,12 +162,11 @@ namespace MSStore.CLI.UnitTests
                 });
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "package",
                     path,
                     "--verbose"
-                });
+                ]);
 
             ExternalCommandExecutor.VerifyAll();
         }
@@ -229,14 +225,13 @@ namespace MSStore.CLI.UnitTests
                 });
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "package",
                     path,
                     "--output",
                     customPath,
                     "--verbose"
-                });
+                ]);
 
             result.Should().Contain("The packaged app is here:");
             result.Should().Contain(customPath);
@@ -263,7 +258,7 @@ namespace MSStore.CLI.UnitTests
             ExternalCommandExecutor
                 .Setup(x => x.RunAsync(
                     It.Is<string>(s => s == "dotnet"),
-                    It.Is<string>(s => s.Contains("publish -f net8.0-windows10.0.19041.0 -p:RuntimeIdentifierOverride=win10-x64 --self-contained -c Release")),
+                    It.Is<string>(s => s.Contains("publish -f net9.0-windows10.0.19041.0 -p:RuntimeIdentifierOverride=win10-x64 --self-contained -c Release")),
                     It.Is<string>(s => s == dirInfo.FullName),
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Services.ExternalCommandExecutionResult
@@ -274,12 +269,11 @@ namespace MSStore.CLI.UnitTests
                 });
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "package",
                     path,
                     "--verbose"
-                });
+                ]);
 
             ExternalCommandExecutor.VerifyAll();
         }
@@ -305,7 +299,7 @@ namespace MSStore.CLI.UnitTests
             ExternalCommandExecutor
                 .Setup(x => x.RunAsync(
                     It.Is<string>(s => s == "dotnet"),
-                    It.Is<string>(s => s.Contains("publish -f net8.0-windows10.0.19041.0 -p:RuntimeIdentifierOverride=win10-x64 --self-contained -c Release")
+                    It.Is<string>(s => s.Contains("publish -f net9.0-windows10.0.19041.0 -p:RuntimeIdentifierOverride=win10-x64 --self-contained -c Release")
                         && s.Contains($"AppxPackageDir={customPath}\\")
                         && s.EndsWith($"AppxPackageTestDir={customPath}\\MauiProject_1.0.0.0_X64_Test\\")),
                     It.Is<string>(s => s == dirInfo.FullName),
@@ -318,14 +312,13 @@ namespace MSStore.CLI.UnitTests
                 });
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "package",
                     path,
                     "--output",
                     customPath,
                     "--verbose"
-                });
+                ]);
 
             result.Should().Contain("The packaged app is here:");
             result.Should().Contain(customPath);
@@ -356,12 +349,11 @@ namespace MSStore.CLI.UnitTests
             SetupBasedOnTestDataProjectSubPath(dirInfo, testDataProjectSubPath);
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "package",
                     path,
                     "--verbose"
-                }, expectedResult);
+                ], expectedResult);
 
             if (expectedResult == -6)
             {
@@ -410,12 +402,11 @@ namespace MSStore.CLI.UnitTests
                 });
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "package",
                     path,
                     "--verbose"
-                });
+                ]);
 
             result.Should().Contain("The packaged app is here:");
             result.Should().Contain(path);
@@ -464,14 +455,13 @@ namespace MSStore.CLI.UnitTests
                 });
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "package",
                     path,
                     "--output",
                     customPath,
                     "--verbose"
-                });
+                ]);
 
             result.Should().Contain("The packaged app is here:");
             result.Should().Contain(customPath);
@@ -523,12 +513,11 @@ namespace MSStore.CLI.UnitTests
                 });
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "package",
                     path,
                     "--verbose"
-                });
+                ]);
 
             result.Should().Contain("The packaged app is here:");
             result.Should().Contain(path);
@@ -564,12 +553,11 @@ namespace MSStore.CLI.UnitTests
                 });
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "package",
                     path,
                     "--verbose"
-                });
+                ]);
 
             result.Should().Contain("The packaged app is here:");
             result.Should().Contain(path);
@@ -621,12 +609,11 @@ namespace MSStore.CLI.UnitTests
                 });
 
             var result = await ParseAndInvokeAsync(
-                new string[]
-                {
+                [
                     "package",
                     path,
                     "--verbose"
-                });
+                ]);
 
             result.Should().Contain("The packaged app is here:");
             result.Should().Contain(path);

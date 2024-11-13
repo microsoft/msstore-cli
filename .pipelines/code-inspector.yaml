@@ -35,7 +35,7 @@ extends:
       credscan:
         suppressionsFile: '$(System.DefaultWorkingDirectory)/.pipelines/CredScanSuppressions.json'
       binSkim:
-        AnalyzeTargetGlob: '$(System.DefaultWorkingDirectory)\MSStore.API\bin\**\net8.0\MSStore.API.dll'
+        AnalyzeTargetGlob: '$(System.DefaultWorkingDirectory)\MSStore.API\bin\**\net9.0\MSStore.API.dll'
     stages:
     - stage: codeInspector
       displayName: Code Inspector

@@ -18,36 +18,29 @@ using Spectre.Console;
 
 namespace MSStore.CLI.ProjectConfigurators
 {
-    internal class FlutterProjectConfigurator : FileProjectConfigurator
+    internal class FlutterProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IImageConverter imageConverter, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, IEnvironmentInformationService environmentInformationService, ILogger<FlutterProjectConfigurator> logger) : FileProjectConfigurator(browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, environmentInformationService, logger)
     {
-        private readonly IExternalCommandExecutor _externalCommandExecutor;
-        private readonly IImageConverter _imageConverter;
-
-        public FlutterProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IImageConverter imageConverter, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, IEnvironmentInformationService environmentInformationService, ILogger<FlutterProjectConfigurator> logger)
-            : base(browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, environmentInformationService, logger)
-        {
-            _externalCommandExecutor = externalCommandExecutor ?? throw new ArgumentNullException(nameof(externalCommandExecutor));
-            _imageConverter = imageConverter ?? throw new ArgumentNullException(nameof(imageConverter));
-        }
+        private readonly IExternalCommandExecutor _externalCommandExecutor = externalCommandExecutor ?? throw new ArgumentNullException(nameof(externalCommandExecutor));
+        private readonly IImageConverter _imageConverter = imageConverter ?? throw new ArgumentNullException(nameof(imageConverter));
 
         public override string ToString() => "Flutter";
 
-        public override string[] SupportedProjectPattern { get; } = new[] { "pubspec.yaml" };
+        public override string[] SupportedProjectPattern { get; } = ["pubspec.yaml"];
 
-        public override string[] PackageFilesExtensionInclude => new[] { ".msix" };
+        public override string[] PackageFilesExtensionInclude => [".msix"];
         public override string[]? PackageFilesExtensionExclude { get; }
         public override SearchOption PackageFilesSearchOption { get; } = SearchOption.AllDirectories;
         public override PublishFileSearchFilterStrategy PublishFileSearchFilterStrategy { get; } = PublishFileSearchFilterStrategy.All;
         public override string OutputSubdirectory { get; } = Path.Combine("build", "windows", "MSStore.CLI");
         public override string DefaultInputSubdirectory { get; } = Path.Combine("build", "windows");
-        public override IEnumerable<BuildArch>? DefaultBuildArchs => new[] { BuildArch.X64 };
+        public override IEnumerable<BuildArch>? DefaultBuildArchs => [BuildArch.X64];
 
         public override bool PackageOnlyOnWindows => true;
 
-        public override AllowTargetFutureDeviceFamily[] AllowTargetFutureDeviceFamilies { get; } = new[]
-        {
+        public override AllowTargetFutureDeviceFamily[] AllowTargetFutureDeviceFamilies { get; } =
+        [
             AllowTargetFutureDeviceFamily.Desktop
-        };
+        ];
 
         public override async Task<(int returnCode, DirectoryInfo? outputDirectory)> ConfigureAsync(string pathOrUrl, DirectoryInfo? output, string publisherDisplayName, DevCenterApplication app, Version? version, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
@@ -201,7 +194,7 @@ namespace MSStore.CLI.ProjectConfigurators
 
         public override async Task<List<string>?> GetDefaultImagesAsync(string pathOrUrl, CancellationToken ct)
         {
-            List<string> images = new List<string>();
+            List<string> images = [];
 
             var flutterDir = await GetFlutterDirAsync(_externalCommandExecutor, ct);
             if (flutterDir == null)
@@ -395,7 +388,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 }
             });
 
-            if (msixInstalled == true)
+            if (msixInstalled)
             {
                 return;
             }
@@ -518,14 +511,14 @@ namespace MSStore.CLI.ProjectConfigurators
 
                     var cleanedStdOut = System.Text.RegularExpressions.Regex.Replace(result.StdOut, @"\e([^\[\]]|\[.*?[a-zA-Z]|\].*?\a)", string.Empty);
 
-                    var msixLine = cleanedStdOut.Split(new string[] { "\n", Environment.NewLine }, StringSplitOptions.None).LastOrDefault(line => line.Contains("msix created:"));
+                    var msixLine = cleanedStdOut.Split(["\n", Environment.NewLine], StringSplitOptions.None).LastOrDefault(line => line.Contains("msix created:"));
                     int index;
                     if (msixLine == null || (index = msixLine.IndexOf(": ", StringComparison.OrdinalIgnoreCase)) == -1)
                     {
                         throw new MSStoreException("Failed to find the path to the packaged msix file.");
                     }
 
-                    var msixPath = msixLine.Substring(index + 1).Trim();
+                    var msixPath = msixLine[(index + 1)..].Trim();
 
                     if (Logger.IsEnabled(LogLevel.Information))
                     {
@@ -596,7 +589,7 @@ namespace MSStore.CLI.ProjectConfigurators
                             {
                                 if (commentStartIndex > indexOfProperty)
                                 {
-                                    propertyValue = line.Substring(0, commentStartIndex).Split(':').LastOrDefault()?.Trim();
+                                    propertyValue = line[..commentStartIndex].Split(':').LastOrDefault()?.Trim();
                                 }
                                 else
                                 {

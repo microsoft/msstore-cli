@@ -14,13 +14,13 @@ namespace MSStore.API
         public MSStoreWrappedErrorException(string? message, List<ResponseError>? responseErrors)
             : base(message)
         {
-            ResponseErrors = responseErrors ?? new List<ResponseError>();
+            ResponseErrors = responseErrors ?? [];
         }
 
         public MSStoreWrappedErrorException(string? message, List<ResponseError>? responseErrors, Exception? innerException)
             : base(message, innerException)
         {
-            ResponseErrors = responseErrors ?? new List<ResponseError>();
+            ResponseErrors = responseErrors ?? [];
         }
     }
 }

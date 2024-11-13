@@ -49,7 +49,7 @@ extends:
       credscan:
         suppressionsFile: '$(System.DefaultWorkingDirectory)/.pipelines/CredScanSuppressions.json'
       binSkim:
-        AnalyzeTargetGlob: '$(System.DefaultWorkingDirectory)\MSStore.API\bin\**\net8.0\MSStore.API.dll'
+        AnalyzeTargetGlob: '$(System.DefaultWorkingDirectory)\MSStore.API\bin\**\net9.0\MSStore.API.dll'
     stages:
       - stage: Build_And_Run_CodeQL
         jobs:
@@ -63,9 +63,9 @@ extends:
               steps:
               - checkout: self
               - task: UseDotNet@2
-                displayName: Setup .NET 8
+                displayName: Setup .NET 9
                 inputs:
-                  version: 8.0.x
+                  version: 9.0.x
               - script: mv -f $(Build.SourcesDirectory)/.pipelines/release-nuget.config ./nuget.config
                 displayName: Add release package source
               - task: NuGetAuthenticate@1
