@@ -18,18 +18,15 @@ namespace MSStore.CLI.Services
         {
             try
             {
-                using var bitmap = SKBitmap.Decode(sourceFilePath);
+                using var image = SKImage.FromEncodedData(sourceFilePath);
 
                 SKBitmap finalBitmap = new SKBitmap(destinationWidth, destinationHeight);
                 SKRect dest = new SKRect(paddingX, paddingY, destinationWidth - paddingX, destinationHeight - paddingY);
-                SKRect source = new SKRect(0, 0, bitmap.Width, bitmap.Height);
+                SKRect source = new SKRect(0, 0, image.Width, image.Height);
 
                 using (SKCanvas canvas = new SKCanvas(finalBitmap))
                 {
-                    canvas.DrawBitmap(bitmap, source, dest, new SKPaint
-                    {
-                        FilterQuality = SKFilterQuality.High
-                    });
+                    canvas.DrawImage(image, source, dest, new SKSamplingOptions(SKCubicResampler.Mitchell));
                 }
 
                 using MemoryStream memStream = new MemoryStream();

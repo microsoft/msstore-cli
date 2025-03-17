@@ -202,13 +202,13 @@ namespace MSStore.CLI.ProjectConfigurators
                 return images;
             }
 
-            var iconSubPath = Path.Combine("templates", "app_shared", "windows.tmpl", "runner", "resources", "app_icon.ico");
+            var iconSubPath = Path.Combine("templates", "app", "windows.tmpl", "runner", "resources", "app_icon.ico");
             var iconTemplateSubPath = $"{iconSubPath}.img.tmpl";
 
             var flutterDefaultAppIconTemplate = Path.Combine(flutterDir, "packages", "flutter_tools", iconTemplateSubPath);
             if (File.Exists(flutterDefaultAppIconTemplate))
             {
-                var flutter_template_images = GetPubPackagePath(flutterDir, "flutter_template_images");
+                var flutter_template_images = GetPubPackagePath("flutter_template_images");
 
                 if (flutter_template_images?.FullName != null)
                 {
@@ -220,7 +220,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 }
             }
 
-            var msix = GetPubPackagePath(flutterDir, "msix");
+            var msix = GetPubPackagePath("msix");
 
             if (msix?.FullName != null)
             {
@@ -250,9 +250,10 @@ namespace MSStore.CLI.ProjectConfigurators
             return null;
         }
 
-        private static DirectoryInfo? GetPubPackagePath(string flutterDir, string packageName, string version = "*")
+        private static DirectoryInfo? GetPubPackagePath(string packageName, string version = "*")
         {
-            var pubDartlangOrgDir = new DirectoryInfo(Path.Combine(flutterDir, ".pub-cache", "hosted", "pub.dartlang.org"));
+            var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var pubDartlangOrgDir = new DirectoryInfo(Path.Combine(appData, "Pub", "Cache", "hosted", "pub.dev"));
             if (pubDartlangOrgDir.Exists)
             {
                 return pubDartlangOrgDir
@@ -285,8 +286,8 @@ namespace MSStore.CLI.ProjectConfigurators
                 bool isDefaultIcon = false;
                 if (flutterDir != null)
                 {
-                    msix = GetPubPackagePath(flutterDir, "msix");
-                    isDefaultIcon = IsDefaultIcon(flutterDir, icon, imageConverter);
+                    msix = GetPubPackagePath("msix");
+                    isDefaultIcon = IsDefaultIcon(icon, imageConverter);
                 }
 
                 var logoPath = Path.ChangeExtension(icon, ".png");
@@ -317,13 +318,13 @@ namespace MSStore.CLI.ProjectConfigurators
             }
         }
 
-        private static bool IsDefaultIcon(string flutterDir, string iconPath, IImageConverter imageConverter)
+        private static bool IsDefaultIcon(string iconPath, IImageConverter imageConverter)
         {
-            var flutter_template_images = GetPubPackagePath(flutterDir, "flutter_template_images");
+            var flutter_template_images = GetPubPackagePath("flutter_template_images");
 
             if (flutter_template_images?.FullName != null)
             {
-                var iconSubPath = Path.Combine("templates", "app_shared", "windows.tmpl", "runner", "resources", "app_icon.ico");
+                var iconSubPath = Path.Combine("templates", "app", "windows.tmpl", "runner", "resources", "app_icon.ico");
                 var flutterDefaultAppIcon = Path.Combine(flutter_template_images.FullName, iconSubPath);
                 if (File.Exists(flutterDefaultAppIcon))
                 {
