@@ -357,7 +357,7 @@ namespace MSStore.CLI.UnitTests
 
             if (expectedResult == -6)
             {
-                result.Output.Should().Contain("This project type can only be packaged on Windows.");
+                result.Error.Should().Contain("This project type can only be packaged on Windows.");
             }
         }
 
