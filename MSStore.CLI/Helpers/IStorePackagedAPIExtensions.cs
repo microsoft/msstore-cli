@@ -636,7 +636,7 @@ namespace MSStore.CLI.Helpers
                 return null;
             }
 
-            AnsiConsole.MarkupLine("Prepating Bundle...");
+            AnsiConsole.MarkupLine("Preparing Bundle...");
 
             return await AnsiConsole.Progress()
                 .StartAsync(async ctx =>
