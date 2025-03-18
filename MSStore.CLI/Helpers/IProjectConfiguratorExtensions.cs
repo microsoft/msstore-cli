@@ -12,13 +12,13 @@ namespace MSStore.CLI.Helpers
 {
     internal static class IProjectConfiguratorExtensions
     {
-        internal static async Task ValidateImagesAsync(this IProjectConfigurator configurator, string pathOrUrl, IImageConverter imageConverter, ILogger logger, CancellationToken ct)
+        internal static async Task ValidateImagesAsync(this IProjectConfigurator configurator, IAnsiConsole ansiConsole, string pathOrUrl, IImageConverter imageConverter, ILogger logger, CancellationToken ct)
         {
             var appImages = await configurator.GetAppImagesAsync(pathOrUrl, ct);
             if (appImages?.Count > 0)
             {
                 var projectSpecificDefaultImages = await configurator.GetDefaultImagesAsync(pathOrUrl, ct);
-                var defaultImages = ProjectImagesHelper.GetDefaultImagesUsedByApp(appImages, projectSpecificDefaultImages, imageConverter, logger);
+                var defaultImages = ProjectImagesHelper.GetDefaultImagesUsedByApp(ansiConsole, appImages, projectSpecificDefaultImages, imageConverter, logger);
                 if (defaultImages.Count > 0)
                 {
                     AnsiConsole.MarkupLine($"[bold yellow]The following images are using the default values and should be updated:[/]");

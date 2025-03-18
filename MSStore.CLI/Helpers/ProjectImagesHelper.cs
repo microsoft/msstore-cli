@@ -16,7 +16,7 @@ namespace MSStore.CLI.Helpers
 {
     internal static class ProjectImagesHelper
     {
-        internal static List<string> GetDefaultImagesUsedByApp(List<string> appImagesFileList, List<string>? projectSpecificDefaultImagesFileList, IImageConverter imageConverter, ILogger logger)
+        internal static List<string> GetDefaultImagesUsedByApp(IAnsiConsole ansiConsole, List<string> appImagesFileList, List<string>? projectSpecificDefaultImagesFileList, IImageConverter imageConverter, ILogger logger)
         {
             List<string> defaultImagesFileList = GetDefaultImagesList(logger);
             if (projectSpecificDefaultImagesFileList != null)
@@ -25,8 +25,8 @@ namespace MSStore.CLI.Helpers
             }
 
             List<string> failedImages = [];
-            List<byte[]> defaultImages = GetHashesForImageFiles(defaultImagesFileList, imageConverter);
-            List<byte[]> appImages = GetHashesForImageFiles(appImagesFileList, imageConverter);
+            List<byte[]> defaultImages = GetHashesForImageFiles(ansiConsole, defaultImagesFileList, imageConverter);
+            List<byte[]> appImages = GetHashesForImageFiles(ansiConsole, appImagesFileList, imageConverter);
 
             for (int appImageIndex = 0; appImageIndex < appImages.Count; appImageIndex++)
             {
@@ -74,7 +74,7 @@ namespace MSStore.CLI.Helpers
             return [];
         }
 
-        private static List<byte[]> GetHashesForImageFiles(List<string> imageFiles, IImageConverter imageConverter)
+        private static List<byte[]> GetHashesForImageFiles(IAnsiConsole ansiConsole, List<string> imageFiles, IImageConverter imageConverter)
         {
             List<byte[]> hashes = [];
 
@@ -85,7 +85,7 @@ namespace MSStore.CLI.Helpers
                     var byteArray = imageConverter.ConvertToByteArray(image);
                     if (byteArray == null)
                     {
-                        AnsiConsole.WriteLine($"Cannot load the image: {image}.");
+                        ansiConsole.WriteLine($"Cannot load the image: {image}.");
                         continue;
                     }
 
@@ -93,8 +93,8 @@ namespace MSStore.CLI.Helpers
                 }
                 catch (Exception ex)
                 {
-                    AnsiConsole.WriteLine($"Cannot load the image: {image}.");
-                    AnsiConsole.WriteLine(ex.ToString());
+                    ansiConsole.WriteLine($"Cannot load the image: {image}.");
+                    ansiConsole.WriteLine(ex.ToString());
                     continue;
                 }
             }

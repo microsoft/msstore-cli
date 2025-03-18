@@ -20,7 +20,7 @@ namespace MSStore.CLI.UnitTests
                     "init"
                 ], -1);
 
-            result.Should().Contain($"We could not find a project configurator for the project at '{Directory.GetCurrentDirectory()}'.");
+            result.Error.Should().Contain($"We could not find a project configurator for the project at '{Directory.GetCurrentDirectory()}'.");
         }
 
         [TestMethod]
@@ -36,7 +36,7 @@ namespace MSStore.CLI.UnitTests
                     "--verbose"
                 ], -2);
 
-            result.Should().Contain("I'll redirect you to the Microsoft Store Sign-up page.");
+            result.Error.Should().Contain("I'll redirect you to the Microsoft Store Sign-up page.");
 
             BrowserLauncher.Verify(x => x.OpenBrowserAsync("https://partner.microsoft.com/dashboard/registration", true, It.IsAny<CancellationToken>()), Times.Once);
         }

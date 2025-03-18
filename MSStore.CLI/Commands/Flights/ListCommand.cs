@@ -22,10 +22,11 @@ namespace MSStore.CLI.Commands.Flights
             AddArgument(SubmissionCommand.ProductIdArgument);
         }
 
-        public new class Handler(ILogger<ListCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, TelemetryClient telemetryClient) : ICommandHandler
+        public new class Handler(ILogger<ListCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : ICommandHandler
         {
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
+            private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
             public string ProductId { get; set; } = null!;
@@ -41,12 +42,12 @@ namespace MSStore.CLI.Commands.Flights
 
                 if (ProductTypeHelper.Solve(ProductId) == ProductType.Unpackaged)
                 {
-                    AnsiConsole.WriteLine("This command is not supported for unpackaged applications.");
+                    _ansiConsole.WriteLine("This command is not supported for unpackaged applications.");
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
                 }
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(
-                    await AnsiConsole.Status().StartAsync("Retrieving Flights", async ctx =>
+                    await _ansiConsole.Status().StartAsync("Retrieving Flights", async ctx =>
                     {
                         try
                         {
@@ -54,7 +55,7 @@ namespace MSStore.CLI.Commands.Flights
 
                             var flightsList = await storePackagedAPI.GetFlightsAsync(ProductId, ct);
 
-                            ctx.SuccessStatus("[bold green]Retrieved Flights[/]");
+                            ctx.SuccessStatus(_ansiConsole, "[bold green]Retrieved Flights[/]");
 
                             if (flightsList?.Count > 0)
                             {
@@ -79,17 +80,15 @@ namespace MSStore.CLI.Commands.Flights
                             }
                             else
                             {
-                                AnsiConsole.MarkupLine("The application has [bold][u]no[/] Flights[/].");
+                                _ansiConsole.MarkupLine("The application has [bold][u]no[/] Flights[/].");
                             }
-
-                            AnsiConsole.WriteLine();
 
                             return 0;
                         }
                         catch (Exception err)
                         {
                             _logger.LogError(err, "Error while retrieving Flights.");
-                            ctx.ErrorStatus(err);
+                            ctx.ErrorStatus(_ansiConsole, err);
                             return -1;
                         }
                     }), ct);

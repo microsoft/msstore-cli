@@ -27,7 +27,7 @@ namespace MSStore.CLI.UnitTests
                     "submission"
                 ]);
 
-            result.Should().Contain("Execute flight submissions related tasks.");
+            result.Error.Should().Contain("Execute flight submissions related tasks.");
         }
 
         [TestMethod]
@@ -49,8 +49,8 @@ namespace MSStore.CLI.UnitTests
                     FakeFlights[0].FlightId!
                 ]);
 
-            result.Should().Contain("Code1");
-            result.Should().Contain("Detail1");
+            result.Error.Should().Contain("Code1");
+            result.Error.Should().Contain("Detail1");
         }
 
         [TestMethod]
@@ -70,8 +70,8 @@ namespace MSStore.CLI.UnitTests
                     FakeFlights[0].FlightId!
                 ]);
 
-            result.Should().Contain("\"Id\": \"123456789\"");
-            result.Should().Contain("\"FileUploadUrl\": \"https://azureblob.com/fileupload\"");
+            result.Output.Should().Contain("\"Id\": \"123456789\"");
+            result.Output.Should().Contain("\"FileUploadUrl\": \"https://azureblob.com/fileupload\"");
         }
 
         [TestMethod]
@@ -95,8 +95,8 @@ namespace MSStore.CLI.UnitTests
 }"
                 ]);
 
-            result.Should().Contain("Updating flight submission product");
-            result.Should().Contain("\"FileUploadUrl\": \"https://azureblob.com/fileupload\"");
+            result.Error.Should().Contain("Updating flight submission product");
+            result.Output.Should().Contain("\"FileUploadUrl\": \"https://azureblob.com/fileupload\"");
         }
 
         [TestMethod]
@@ -123,7 +123,7 @@ namespace MSStore.CLI.UnitTests
                     FakeFlights[0].FlightId!
                 ]);
 
-            result.Should().Contain("Flight Submission Commited with status");
+            result.Error.Should().Contain("Flight Submission Commited with status");
         }
 
         [TestMethod]
@@ -145,7 +145,7 @@ namespace MSStore.CLI.UnitTests
                     FakeFlights[0].FlightId!
                 ]);
 
-            result.Should().Contain("Submission commit success!");
+            result.Error.Should().Contain("Submission commit success!");
         }
 
         [TestMethod]
@@ -171,8 +171,8 @@ namespace MSStore.CLI.UnitTests
 
             FakeConsole.Verify(x => x.YesNoConfirmationAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
 
-            result.Should().Contain($"Found Flight Submission with Id '{FakeFlights[0].PendingFlightSubmission!.Id}'");
-            result.Should().Contain("Existing submission deleted!");
+            result.Error.Should().Contain($"Found Flight Submission with Id '{FakeFlights[0].PendingFlightSubmission!.Id}'");
+            result.Error.Should().Contain("Existing submission deleted!");
         }
     }
 }

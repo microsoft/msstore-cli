@@ -120,11 +120,13 @@ namespace MSStore.CLI.Commands
             IProjectConfiguratorFactory projectConfiguratorFactory,
             IStoreAPIFactory storeAPIFactory,
             TelemetryClient telemetryClient,
+            IAnsiConsole ansiConsole,
             ILogger<PublishCommand.Handler> logger) : ICommandHandler
         {
             private readonly IProjectConfiguratorFactory _projectConfiguratorFactory = projectConfiguratorFactory ?? throw new ArgumentNullException(nameof(projectConfiguratorFactory));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
+            private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
             public string PathOrUrl { get; set; } = null!;
@@ -153,7 +155,7 @@ namespace MSStore.CLI.Commands
 
                 if (projectPublisher == null)
                 {
-                    AnsiConsole.WriteLine(CultureInfo.InvariantCulture, "We could not find a project publisher for the project at '{0}'.", PathOrUrl);
+                    _ansiConsole.WriteLine(string.Format(CultureInfo.InvariantCulture, "We could not find a project publisher for the project at '{0}'.", PathOrUrl));
                     props["ProjType"] = "NF";
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(-1, props, ct);
                 }
@@ -162,24 +164,24 @@ namespace MSStore.CLI.Commands
 
                 var storePackagedAPI = await _storeAPIFactory.CreatePackagedAsync(ct: ct);
 
-                AnsiConsole.WriteLine($"This seems to be a {projectPublisher} project.");
+                _ansiConsole.WriteLine($"This seems to be a {projectPublisher} project.");
 
                 API.Packaged.Models.DevCenterApplication? app = null;
 
                 if (!string.IsNullOrEmpty(AppId))
                 {
-                    app = await AnsiConsole.Status().StartAsync("Retrieving application...", async ctx =>
+                    app = await _ansiConsole.Status().StartAsync("Retrieving application...", async ctx =>
                     {
                         try
                         {
                             var app = await storePackagedAPI.GetApplicationAsync(AppId, ct);
 
-                            ctx.SuccessStatus("Ok! Found the app!");
+                            ctx.SuccessStatus(_ansiConsole, "Ok! Found the app!");
                             return app;
                         }
                         catch (Exception)
                         {
-                            ctx.ErrorStatus("Could not retrieve your application. Please make sure you have the correct AppId.");
+                            ctx.ErrorStatus(_ansiConsole, "Could not retrieve your application. Please make sure you have the correct AppId.");
                             _logger.LogError("Could not find application with id '{AppId}'.", AppId);
                             return null;
                         }

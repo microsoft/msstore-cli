@@ -13,7 +13,7 @@ using Spectre.Console;
 
 namespace MSStore.CLI.ProjectConfigurators
 {
-    internal abstract class NodeBaseProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, IEnvironmentInformationService environmentInformationService, ILogger<NodeBaseProjectConfigurator> logger) : FileProjectConfigurator(browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, environmentInformationService, logger)
+    internal abstract class NodeBaseProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, IEnvironmentInformationService environmentInformationService, IAnsiConsole ansiConsole, ILogger<NodeBaseProjectConfigurator> logger) : FileProjectConfigurator(browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, environmentInformationService, ansiConsole, logger)
     {
         public override string[] SupportedProjectPattern { get; } = ["package.json"];
 
@@ -33,19 +33,19 @@ namespace MSStore.CLI.ProjectConfigurators
                 return true;
             }
 
-            return await AnsiConsole.Status().StartAsync("Running 'npm install'...", async ctx =>
+            return await ErrorAnsiConsole.Status().StartAsync("Running 'npm install'...", async ctx =>
             {
                 try
                 {
                     var result = await ExternalCommandExecutor.RunAsync("npm", "install", projectRootPath.FullName, ct);
                     if (result.ExitCode == 0)
                     {
-                        ctx.SuccessStatus("'npm install' ran successfully.");
+                        ctx.SuccessStatus(ErrorAnsiConsole, "'npm install' ran successfully.");
                         _npmInstallExecuted[projectRootPath.FullName] = true;
                         return true;
                     }
 
-                    ctx.ErrorStatus("'npm install' failed.");
+                    ctx.ErrorStatus(ErrorAnsiConsole, "'npm install' failed.");
 
                     return false;
                 }
@@ -66,19 +66,19 @@ namespace MSStore.CLI.ProjectConfigurators
                 return true;
             }
 
-            return await AnsiConsole.Status().StartAsync("Running 'yarn install'...", async ctx =>
+            return await ErrorAnsiConsole.Status().StartAsync("Running 'yarn install'...", async ctx =>
             {
                 try
                 {
                     var result = await ExternalCommandExecutor.RunAsync("yarn", "install", projectRootPath.FullName, ct);
                     if (result.ExitCode == 0)
                     {
-                        ctx.SuccessStatus("'yarn install' ran successfully.");
+                        ctx.SuccessStatus(ErrorAnsiConsole, "'yarn install' ran successfully.");
                         _yarnInstallExecuted[projectRootPath.FullName] = true;
                         return true;
                     }
 
-                    ctx.ErrorStatus("'yarn install' failed.");
+                    ctx.ErrorStatus(ErrorAnsiConsole, "'yarn install' failed.");
 
                     return false;
                 }
@@ -99,19 +99,19 @@ namespace MSStore.CLI.ProjectConfigurators
                 return value;
             }
 
-            return await AnsiConsole.Status().StartAsync($"Checking if package '{packageName}' is already installed...", async ctx =>
+            return await ErrorAnsiConsole.Status().StartAsync($"Checking if package '{packageName}' is already installed...", async ctx =>
             {
                 try
                 {
                     var result = await ExternalCommandExecutor.RunAsync("npm", $"list {packageName}", projectRootPath.FullName, ct);
                     if (result.ExitCode == 0 && result.StdOut.Contains($"`-- {packageName}@"))
                     {
-                        ctx.SuccessStatus($"'{packageName}' package is already installed, no need to install it again.");
+                        ctx.SuccessStatus(ErrorAnsiConsole, $"'{packageName}' package is already installed, no need to install it again.");
                         _npmListExecuted[(projectRootPath.FullName, packageName)] = true;
                         return true;
                     }
 
-                    ctx.SuccessStatus($"'{packageName}' package is not yet installed.");
+                    ctx.SuccessStatus(ErrorAnsiConsole, $"'{packageName}' package is not yet installed.");
                     _npmListExecuted[(projectRootPath.FullName, packageName)] = false;
                     return false;
                 }
@@ -132,7 +132,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 return value;
             }
 
-            return await AnsiConsole.Status().StartAsync($"Checking if package '{packageName}' is already installed...", async ctx =>
+            return await ErrorAnsiConsole.Status().StartAsync($"Checking if package '{packageName}' is already installed...", async ctx =>
             {
                 try
                 {
@@ -140,12 +140,12 @@ namespace MSStore.CLI.ProjectConfigurators
                     if (result.ExitCode == 0 &&
                         (result.StdOut.Contains($"─ {packageName}@") || result.StdOut.Contains($"=> Found \"{packageName}@")))
                     {
-                        ctx.SuccessStatus($"'{packageName}' package is already installed, no need to install it again.");
+                        ctx.SuccessStatus(ErrorAnsiConsole, $"'{packageName}' package is already installed, no need to install it again.");
                         _yarnWhyExecuted[(projectRootPath.FullName, packageName)] = true;
                         return true;
                     }
 
-                    ctx.SuccessStatus($"'{packageName}' package is not yet installed.");
+                    ctx.SuccessStatus(ErrorAnsiConsole, $"'{packageName}' package is not yet installed.");
                     _yarnWhyExecuted[(projectRootPath.FullName, packageName)] = false;
                     return false;
                 }
@@ -185,20 +185,20 @@ namespace MSStore.CLI.ProjectConfigurators
                 return true;
             }
 
-            AnsiConsole.WriteLine();
+            ErrorAnsiConsole.WriteLine();
 
-            return await AnsiConsole.Status().StartAsync($"Installing '{packageName}' package...", async ctx =>
+            return await ErrorAnsiConsole.Status().StartAsync($"Installing '{packageName}' package...", async ctx =>
             {
                 try
                 {
                     var result = await ExternalCommandExecutor.RunAsync("npm", $"install --save-dev {packageName}", projectRootPath.FullName, ct);
                     if (result.ExitCode != 0)
                     {
-                        ctx.ErrorStatus($"'npm install --save-dev {packageName}' failed.");
+                        ctx.ErrorStatus(ErrorAnsiConsole, $"'npm install --save-dev {packageName}' failed.");
                         return false;
                     }
 
-                    ctx.SuccessStatus($"'{packageName}' package installed successfully!");
+                    ctx.SuccessStatus(ErrorAnsiConsole, $"'{packageName}' package installed successfully!");
                     return true;
                 }
                 catch (Exception ex)
@@ -225,20 +225,20 @@ namespace MSStore.CLI.ProjectConfigurators
                 return true;
             }
 
-            AnsiConsole.WriteLine();
+            ErrorAnsiConsole.WriteLine();
 
-            return await AnsiConsole.Status().StartAsync($"Installing '{packageName}' package...", async ctx =>
+            return await ErrorAnsiConsole.Status().StartAsync($"Installing '{packageName}' package...", async ctx =>
             {
                 try
                 {
                     var result = await ExternalCommandExecutor.RunAsync("yarn", $"add --dev {packageName}", projectRootPath.FullName, ct);
                     if (result.ExitCode != 0)
                     {
-                        ctx.ErrorStatus($"'yarn add --dev {packageName}' failed.");
+                        ctx.ErrorStatus(ErrorAnsiConsole, $"'yarn add --dev {packageName}' failed.");
                         return false;
                     }
 
-                    ctx.SuccessStatus($"'{packageName}' package installed successfully!");
+                    ctx.SuccessStatus(ErrorAnsiConsole, $"'{packageName}' package installed successfully!");
                     return true;
                 }
                 catch (Exception ex)

@@ -4,6 +4,8 @@
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging.Abstractions;
 using MSStore.CLI.Services;
+using Spectre.Console;
+using static MSStore.CLI.UnitTests.BaseCommandLineTest;
 
 namespace MSStore.CLI.UnitTests
 {
@@ -15,7 +17,14 @@ namespace MSStore.CLI.UnitTests
         [TestInitialize]
         public void TestInitialize()
         {
-            _externalCommandExecutor = new ExternalCommandExecutor(NullLogger<ExternalCommandExecutor>.Instance);
+            var errorCapture = new OutputCapture(Console.Error);
+
+            var ansiConsole = AnsiConsole.Create(new()
+            {
+                Interactive = InteractionSupport.No,
+                Out = new CustomAnsiConsoleOutput(errorCapture),
+            });
+            _externalCommandExecutor = new ExternalCommandExecutor(ansiConsole, NullLogger<ExternalCommandExecutor>.Instance);
         }
 
         [TestMethod]

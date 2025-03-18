@@ -17,7 +17,7 @@ using Spectre.Console;
 
 namespace MSStore.CLI.Services.TokenManager
 {
-    internal class MSALTokenManager(IConsoleReader consoleReader) : ITokenManager
+    internal class MSALTokenManager(IConsoleReader consoleReader, IAnsiConsole ansiConsole) : ITokenManager
     {
         private const string MSATenantId = "9188040d-6c67-4c5b-b112-36a304b66dad";
 
@@ -36,6 +36,7 @@ namespace MSStore.CLI.Services.TokenManager
         private static readonly string ClientId = "76b1a1a3-44ef-4bb8-bbe3-cb462ebaeee4";
 
         private readonly IConsoleReader _consoleReader = consoleReader ?? throw new ArgumentNullException(nameof(consoleReader));
+        private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
 
         private IPublicClientApplication? _app;
         private IAccount? _selectedAccount;
@@ -127,8 +128,8 @@ namespace MSStore.CLI.Services.TokenManager
                 {
                     if (forceSelection)
                     {
-                        AnsiConsole.WriteLine("You have already signed-in with one account:");
-                        AnsiConsole.WriteLine($"\tAccount: {accounts.First().Username}");
+                        _ansiConsole.WriteLine("You have already signed-in with one account:");
+                        _ansiConsole.WriteLine($"\tAccount: {accounts.First().Username}");
                         if (await _consoleReader.YesNoConfirmationAsync("Do you want to use that account now? ('y' to continue and 'n' for New Sign-in/Interactive Mode)", ct))
                         {
                             selectedAccount = accounts.First();
@@ -141,7 +142,7 @@ namespace MSStore.CLI.Services.TokenManager
                 }
                 else
                 {
-                    AnsiConsole.MarkupLine($"You have already signed-in with [u]{accounts.Count()}[/] accounts");
+                    _ansiConsole.MarkupLine($"You have already signed-in with [u]{accounts.Count()}[/] accounts");
 
                     var newSigninOption = "New Sign-in/Interactive Mode...";
 

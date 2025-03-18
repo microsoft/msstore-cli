@@ -98,6 +98,7 @@ namespace MSStore.CLI.UnitTests
         };
 
         private Parser _parser = null!;
+        protected IAnsiConsole ErrorAnsiConsole { get; private set; } = null!;
 
         protected static string CopyFilesRecursively(string sourcePath, [CallerMemberName] string caller = null!)
         {
@@ -226,7 +227,7 @@ namespace MSStore.CLI.UnitTests
 
             ElectronManifestManager = new Mock<ElectronManifestManager> { CallBase = true };
 
-            AppXManifestManager = new Mock<AppXManifestManager> { CallBase = true };
+            RefreshAnsiConsole();
 
             NuGetPackageManager = new Mock<INuGetPackageManager>();
 
@@ -252,6 +253,7 @@ namespace MSStore.CLI.UnitTests
                         .AddSingleton(BrowserLauncher.Object)
                         .AddSingleton(CredentialManager.Object)
                         .AddSingleton(FakeConsole.Object)
+                        .AddSingleton<IAnsiConsole>((sp) => ErrorAnsiConsole)
                         .AddSingleton(ExternalCommandExecutor.Object)
                         .AddSingleton<IProjectConfiguratorFactory, ProjectConfiguratorFactory>()
                         .AddSingleton(new TelemetryClient(new TelemetryConfiguration()))
@@ -283,7 +285,7 @@ namespace MSStore.CLI.UnitTests
                     services.AddLogging(builder =>
                     {
                         builder.ClearProviders();
-                        builder.AddProvider(new CustomSpectreConsoleLoggerProvider());
+                        builder.AddProvider(new CustomSpectreConsoleLoggerProvider(ErrorAnsiConsole));
                     });
                 })
                 .ConfigureStoreCLICommands()
@@ -307,7 +309,7 @@ namespace MSStore.CLI.UnitTests
                         if (context.ParseResult.CommandResult.Command is MicrosoftStoreCLI
                             || context.ParseResult.CommandResult.Command is ReconfigureCommand
                             || context.ParseResult.CommandResult.Command is TestCommand
-                            || await MicrosoftStoreCLI.InitAsync(configurationManager, credentialManager, consoleReader, cliConfigurator, logger, ct))
+                            || await MicrosoftStoreCLI.InitAsync(ErrorAnsiConsole, configurationManager, credentialManager, consoleReader, cliConfigurator, logger, ct))
                         {
                             await next(context).ConfigureAwait(false);
                         }
@@ -790,16 +792,17 @@ namespace MSStore.CLI.UnitTests
             }
         }
 
-        protected Task<string> RunTestAsync(Func<InvocationContext, Task>? testCallback)
+        protected Task<(string Output, string Error)> RunTestAsync(Func<InvocationContext, Task>? testCallback)
         {
             _testCallback = testCallback;
 
             return ParseAndInvokeAsync(["test"]);
         }
 
-        protected async Task<string> ParseAndInvokeAsync(string[] args, int? expectedResult = 0)
+        protected async Task<(string Output, string Error)> ParseAndInvokeAsync(string[] args, int? expectedResult = 0)
         {
-            var outputCapture = new OutputCapture();
+            var outputCapture = new OutputCapture(Console.Out);
+            var errorCapture = RefreshAnsiConsole();
 
             AnsiConsole.Console = AnsiConsole.Create(new AnsiConsoleSettings
             {
@@ -822,9 +825,9 @@ namespace MSStore.CLI.UnitTests
                 throw new ArgumentException(string.Join(Environment.NewLine, parseResult.Errors.Select(e => e.Message)));
             }
 
-            var testConsole = new TestConsole(outputCapture);
+            var testOutputConsole = new TestConsole(outputCapture, errorCapture);
 
-            var invokeTask = parseResult.InvokeAsync(testConsole);
+            var invokeTask = parseResult.InvokeAsync(testOutputConsole);
 
             var result = await invokeTask.ConfigureAwait(false);
 
@@ -837,7 +840,22 @@ namespace MSStore.CLI.UnitTests
                 outputCapture.Captured.ToString().Should().NotContain("💥");
             }
 
-            return outputCapture.Captured.ToString() ?? string.Empty;
+            return (Output: outputCapture.Captured.ToString() ?? string.Empty, Error: errorCapture.Captured.ToString() ?? string.Empty);
+        }
+
+        private OutputCapture RefreshAnsiConsole()
+        {
+            var errorCapture = new OutputCapture(Console.Error);
+
+            ErrorAnsiConsole = AnsiConsole.Create(new()
+            {
+                Interactive = InteractionSupport.No,
+                Out = new CustomAnsiConsoleOutput(errorCapture),
+            });
+
+            AppXManifestManager = new Mock<AppXManifestManager>(args: ErrorAnsiConsole) { CallBase = true };
+
+            return errorCapture;
         }
 
         private Func<InvocationContext, Task>? _testCallback;
@@ -864,13 +882,15 @@ namespace MSStore.CLI.UnitTests
 
         internal sealed class OutputCapture : TextWriter, IStandardStreamWriter, IDisposable
         {
+#pragma warning disable CA2213 // Disposable fields should be disposed
             private readonly TextWriter _stdOutWriter;
+#pragma warning restore CA2213 // Disposable fields should be disposed
             public TextWriter Captured { get; private set; }
             public override Encoding Encoding => Encoding.ASCII;
 
-            public OutputCapture()
+            public OutputCapture(TextWriter textWriter)
             {
-                _stdOutWriter = Console.Out;
+                _stdOutWriter = textWriter;
                 Console.SetOut(this);
                 Captured = new StringWriter();
             }
@@ -888,9 +908,9 @@ namespace MSStore.CLI.UnitTests
             }
         }
 
-        internal sealed class TestConsole(BaseCommandLineTest.OutputCapture outputCapture) : IConsole
+        internal sealed class TestConsole(BaseCommandLineTest.OutputCapture outputCapture, BaseCommandLineTest.OutputCapture errorCapture) : IConsole
         {
-            public IStandardStreamWriter Error { get; set; } = outputCapture;
+            public IStandardStreamWriter Error { get; set; } = errorCapture;
             public IStandardStreamWriter Out { get; set; } = outputCapture;
             public bool IsOutputRedirected { get; set; }
             public bool IsErrorRedirected { get; set; }

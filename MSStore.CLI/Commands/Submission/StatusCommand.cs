@@ -24,10 +24,11 @@ namespace MSStore.CLI.Commands.Submission
             AddArgument(SubmissionCommand.ProductIdArgument);
         }
 
-        public new class Handler(ILogger<StatusCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, TelemetryClient telemetryClient) : ICommandHandler
+        public new class Handler(ILogger<StatusCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : ICommandHandler
         {
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
+            private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
             public string ProductId { get; set; } = null!;
@@ -41,7 +42,7 @@ namespace MSStore.CLI.Commands.Submission
             {
                 var ct = context.GetCancellationToken();
 
-                var status = await AnsiConsole.Status().StartAsync<object?>("Retrieving submission status", async ctx =>
+                var status = await _ansiConsole.Status().StartAsync<object?>("Retrieving submission status", async ctx =>
                 {
                     try
                     {
@@ -53,11 +54,11 @@ namespace MSStore.CLI.Commands.Submission
 
                             if (application?.Id == null)
                             {
-                                ctx.ErrorStatus($"Could not find application with ID '{ProductId}'");
+                                ctx.ErrorStatus(_ansiConsole, $"Could not find application with ID '{ProductId}'");
                                 return null;
                             }
 
-                            return await storePackagedAPI.GetAnySubmissionAsync(application, ctx, _logger, ct);
+                            return await storePackagedAPI.GetAnySubmissionAsync(_ansiConsole, application, ctx, _logger, ct);
                         }
                         else
                         {
@@ -69,7 +70,7 @@ namespace MSStore.CLI.Commands.Submission
                     catch (Exception err)
                     {
                         _logger.LogError(err, "Error while retrieving submission status.");
-                        AnsiConsole.WriteLine("Error!");
+                        _ansiConsole.WriteLine("Error!");
                         return null;
                     }
                 });
@@ -83,10 +84,10 @@ namespace MSStore.CLI.Commands.Submission
                 {
                     if (devCenterSubmission.Status != null)
                     {
-                        AnsiConsole.MarkupLine($"Submission Status = [green]{devCenterSubmission.Status}[/]");
+                        _ansiConsole.MarkupLine($"Submission Status = [green]{devCenterSubmission.Status}[/]");
                     }
 
-                    devCenterSubmission.StatusDetails?.PrintAllTables(ProductId, devCenterSubmission.Id, _logger);
+                    devCenterSubmission.StatusDetails?.PrintAllTables(_ansiConsole, ProductId, devCenterSubmission.Id, _logger);
                 }
                 else
                 {

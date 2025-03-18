@@ -10,7 +10,7 @@ using Spectre.Console;
 
 namespace MSStore.CLI.Helpers
 {
-    internal class CustomSpectreConsoleLogger(string name, ConsoleFormatter formatter, IExternalScopeProvider? scopeProvider) : ILogger
+    internal class CustomSpectreConsoleLogger(string name, ConsoleFormatter formatter, IExternalScopeProvider? scopeProvider, IAnsiConsole ansiConsole) : ILogger
     {
         internal ConsoleFormatter Formatter { get; set; } = formatter;
         internal IExternalScopeProvider? ScopeProvider { get; set; } = scopeProvider;
@@ -53,7 +53,7 @@ namespace MSStore.CLI.Helpers
                 sb.Capacity = 1024;
             }
 
-            AnsiConsole.Console.Markup(computedAnsiString);
+            ansiConsole.Markup(computedAnsiString);
         }
     }
 }

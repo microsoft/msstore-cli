@@ -11,7 +11,7 @@ namespace MSStore.CLI.Helpers
 {
     internal static class StatusDetailsExtensions
     {
-        public static void PrintAllTables(this StatusDetails statusDetails, string productId, string submissionId, ILogger? logger)
+        public static void PrintAllTables(this StatusDetails statusDetails, IAnsiConsole ansiConsole, string productId, string submissionId, ILogger? logger)
         {
             if (statusDetails == null)
             {
@@ -20,7 +20,7 @@ namespace MSStore.CLI.Helpers
 
             if (statusDetails.Errors != null)
             {
-                PrintErrorsTable(statusDetails.Errors);
+                PrintErrorsTable(ansiConsole, statusDetails.Errors);
             }
 
             if (statusDetails.Warnings?.Count > 0)
@@ -43,7 +43,7 @@ namespace MSStore.CLI.Helpers
                         table.AddRow($"[bold u]{Markup.Escape(warning?.Code ?? string.Empty)}[/]", Markup.Escape(warning?.Details ?? string.Empty));
                     }
 
-                    AnsiConsole.Write(table);
+                    ansiConsole.Write(table);
                 }
 
                 foreach (var error in statusDetails.Warnings.Where(w => onlyLogCodes.Contains(w.Code!)))
@@ -65,11 +65,11 @@ namespace MSStore.CLI.Helpers
                     table.AddRow($"[bold u]{certificationReport.Date}[/]", $"[link]{url.EscapeMarkup()}[/]");
                 }
 
-                AnsiConsole.Write(table);
+                ansiConsole.Write(table);
             }
         }
 
-        public static void PrintErrorsTable(IEnumerable<CodeAndDetail> errors)
+        public static void PrintErrorsTable(IAnsiConsole ansiConsole, IEnumerable<CodeAndDetail> errors)
         {
             if (errors.Any())
             {
@@ -83,7 +83,7 @@ namespace MSStore.CLI.Helpers
                     table.AddRow($"[bold u]{Markup.Escape(error?.Code ?? string.Empty)}[/]", Markup.Escape(error?.Details ?? string.Empty));
                 }
 
-                AnsiConsole.Write(table);
+                ansiConsole.Write(table);
             }
         }
     }

@@ -32,10 +32,11 @@ namespace MSStore.CLI.Commands.Flights.Submission
             AddOption(SubmissionCommand.SkipInitialPolling);
         }
 
-        public new class Handler(ILogger<UpdateCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, TelemetryClient telemetryClient) : ICommandHandler
+        public new class Handler(ILogger<UpdateCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : ICommandHandler
         {
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
+            private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
             public string Product { get; set; } = null!;
@@ -54,7 +55,7 @@ namespace MSStore.CLI.Commands.Flights.Submission
 
                 if (ProductTypeHelper.Solve(ProductId) == ProductType.Unpackaged)
                 {
-                    AnsiConsole.WriteLine("This command is not supported for unpackaged applications.");
+                    _ansiConsole.WriteLine("This command is not supported for unpackaged applications.");
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
                 }
 
@@ -67,7 +68,7 @@ namespace MSStore.CLI.Commands.Flights.Submission
 
                 IStorePackagedAPI storePackagedAPI = null!;
 
-                var flight = await AnsiConsole.Status().StartAsync("Retrieving application flight", async ctx =>
+                var flight = await _ansiConsole.Status().StartAsync("Retrieving application flight", async ctx =>
                 {
                     try
                     {
@@ -85,7 +86,7 @@ namespace MSStore.CLI.Commands.Flights.Submission
                     catch (Exception err)
                     {
                         _logger.LogError(err, "Error while updating submission product.");
-                        ctx.ErrorStatus(err);
+                        ctx.ErrorStatus(_ansiConsole, err);
                         return null;
                     }
                 });
@@ -99,9 +100,9 @@ namespace MSStore.CLI.Commands.Flights.Submission
 
                 if (submissionId == null)
                 {
-                    AnsiConsole.MarkupLine("Could not find an existing flight submission. [b green]Creating new flight submission[/].");
+                    _ansiConsole.MarkupLine("Could not find an existing flight submission. [b green]Creating new flight submission[/].");
 
-                    var flightSubmission = await storePackagedAPI.CreateNewFlightSubmissionAsync(ProductId, FlightId, _logger, ct);
+                    var flightSubmission = await storePackagedAPI.CreateNewFlightSubmissionAsync(_ansiConsole, ProductId, FlightId, _logger, ct);
                     submissionId = flightSubmission?.Id;
 
                     if (submissionId == null)
@@ -110,7 +111,7 @@ namespace MSStore.CLI.Commands.Flights.Submission
                     }
                 }
 
-                var updatedFlightSubmission = await AnsiConsole.Status().StartAsync("Updating flight submission product", async ctx =>
+                var updatedFlightSubmission = await _ansiConsole.Status().StartAsync("Updating flight submission product", async ctx =>
                 {
                     try
                     {
@@ -119,7 +120,7 @@ namespace MSStore.CLI.Commands.Flights.Submission
                     catch (Exception err)
                     {
                         _logger.LogError(err, "Error while updating flight submission product.");
-                        ctx.ErrorStatus(err);
+                        ctx.ErrorStatus(_ansiConsole, err);
                         return null;
                     }
                 });

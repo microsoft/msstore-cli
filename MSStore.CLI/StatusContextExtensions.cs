@@ -9,37 +9,37 @@ namespace MSStore.CLI
 {
     internal static class StatusContextExtensions
     {
-        public static void ErrorStatus(this StatusContext _, string message)
+        public static void ErrorStatus(this StatusContext _, IAnsiConsole ansiConsole, string message)
         {
-            AnsiConsole.MarkupLine($":collision: [bold red]{message.EscapeMarkup()}[/]");
+            ansiConsole.MarkupLine($":collision: [bold red]{message.EscapeMarkup()}[/]");
         }
 
-        public static void ErrorStatus(this StatusContext _, Exception exception)
+        public static void ErrorStatus(this StatusContext _, IAnsiConsole ansiConsole, Exception exception)
         {
             switch (exception)
             {
                 case ArgumentException ex:
-                    ErrorStatus(_, ex.Message);
+                    ErrorStatus(_, ansiConsole, ex.Message);
                     break;
                 case MSStoreWrappedErrorException ex:
                     var message = ex.Message + Environment.NewLine + string.Join(Environment.NewLine, ex.ResponseErrors);
-                    ErrorStatus(_, message);
+                    ErrorStatus(_, ansiConsole, message);
                     break;
                 case Exception:
-                    ErrorStatus(_, "Error!");
+                    ErrorStatus(_, ansiConsole, "Error!");
                     break;
             }
         }
 
-        public static void SuccessStatus(this StatusContext ctx, string? message = null)
+        public static void SuccessStatus(this StatusContext ctx, IAnsiConsole ansiConsole, string? message = null)
         {
             if (message != null)
             {
-                AnsiConsole.MarkupLine($":check_mark_button: {message}");
+                ansiConsole.MarkupLine($":check_mark_button: {message}");
             }
             else
             {
-                AnsiConsole.MarkupLine($":check_mark_button: [bold green]{ctx.Status}[/]");
+                ansiConsole.MarkupLine($":check_mark_button: [bold green]{ctx.Status}[/]");
             }
         }
     }

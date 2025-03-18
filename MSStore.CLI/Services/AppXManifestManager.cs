@@ -13,9 +13,11 @@ using Spectre.Console;
 
 namespace MSStore.CLI.Services
 {
-    internal class AppXManifestManager : IAppXManifestManager
+    internal class AppXManifestManager(IAnsiConsole ansiConsole) : IAppXManifestManager
     {
         private const string AppxBuildNamespace = "http://schemas.microsoft.com/developer/appx/2015/build";
+
+        private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
 
         internal static XmlNamespaceManager GetXmlNamespaceManager(XmlNameTable nameTable)
         {
@@ -338,7 +340,7 @@ namespace MSStore.CLI.Services
                     var value = logoElement.Single().InnerText;
                     if (value != null)
                     {
-                        images.AddRange(GetAllImagesFiles(value, appxManifest, logger));
+                        images.AddRange(GetAllImagesFiles(_ansiConsole, value, appxManifest, logger));
                     }
                 }
 
@@ -348,84 +350,84 @@ namespace MSStore.CLI.Services
                     var appLogoAttr = applicationElement.SelectNodes("//ns:VisualElements/@Logo", nsmgr)?.OfType<XmlAttribute>();
                     if (appLogoAttr?.Any() == true)
                     {
-                        images.AddRange(GetAllImagesFiles(appLogoAttr.Single().Value, appxManifest, logger));
+                        images.AddRange(GetAllImagesFiles(_ansiConsole, appLogoAttr.Single().Value, appxManifest, logger));
                     }
 
                     // App small logo
                     var appSmallLogoAttr = applicationElement.SelectNodes("//ns:VisualElements/@SmallLogo", nsmgr)?.OfType<XmlAttribute>();
                     if (appSmallLogoAttr?.Any() == true)
                     {
-                        images.AddRange(GetAllImagesFiles(appSmallLogoAttr.Single().Value, appxManifest, logger));
+                        images.AddRange(GetAllImagesFiles(_ansiConsole, appSmallLogoAttr.Single().Value, appxManifest, logger));
                     }
 
                     // Default tile wide logo
                     var wideLogoAttr = applicationElement.SelectNodes("//ns:VisualElements/ns:DefaultTile/@WideLogo", nsmgr)?.OfType<XmlAttribute>();
                     if (wideLogoAttr?.Any() == true)
                     {
-                        images.AddRange(GetAllImagesFiles(wideLogoAttr.Single().Value, appxManifest, logger));
+                        images.AddRange(GetAllImagesFiles(_ansiConsole, wideLogoAttr.Single().Value, appxManifest, logger));
                     }
 
                     // Square30x30Logo
                     var square30x30LogoAttr = applicationElement.SelectNodes("//ns2:VisualElements/@Square30x30Logo", nsmgr)?.OfType<XmlAttribute>();
                     if (square30x30LogoAttr?.Any() == true)
                     {
-                        images.AddRange(GetAllImagesFiles(square30x30LogoAttr.Single().Value, appxManifest, logger));
+                        images.AddRange(GetAllImagesFiles(_ansiConsole, square30x30LogoAttr.Single().Value, appxManifest, logger));
                     }
 
                     // Square44x44Logo
                     var square44x44LogoAttr = applicationElement.SelectNodes("//*[local-name()='VisualElements']/@Square44x44Logo", nsmgr)?.OfType<XmlAttribute>();
                     if (square44x44LogoAttr?.Any() == true)
                     {
-                        images.AddRange(GetAllImagesFiles(square44x44LogoAttr.Single().Value, appxManifest, logger));
+                        images.AddRange(GetAllImagesFiles(_ansiConsole, square44x44LogoAttr.Single().Value, appxManifest, logger));
                     }
 
                     // Square70x70Logo
                     var square70x70LogoAttr = applicationElement.SelectNodes("//ns2:VisualElements/ns2:DefaultTile/@Square70x70Logo", nsmgr)?.OfType<XmlAttribute>();
                     if (square70x70LogoAttr?.Any() == true)
                     {
-                        images.AddRange(GetAllImagesFiles(square70x70LogoAttr.Single().Value, appxManifest, logger));
+                        images.AddRange(GetAllImagesFiles(_ansiConsole, square70x70LogoAttr.Single().Value, appxManifest, logger));
                     }
 
                     // Square71x71Logo
                     var square71x71LogoAttr = applicationElement.SelectNodes("//ns3:VisualElements/ns3:DefaultTile/@Square71x71Logo", nsmgr)?.OfType<XmlAttribute>();
                     if (square71x71LogoAttr?.Any() == true)
                     {
-                        images.AddRange(GetAllImagesFiles(square71x71LogoAttr.Single().Value, appxManifest, logger));
+                        images.AddRange(GetAllImagesFiles(_ansiConsole, square71x71LogoAttr.Single().Value, appxManifest, logger));
                     }
 
                     // Square150x150Logo
                     var square150x150LogoAttr = applicationElement.SelectNodes("//*[local-name()='VisualElements']/@Square150x150Logo", nsmgr)?.OfType<XmlAttribute>();
                     if (square150x150LogoAttr?.Any() == true)
                     {
-                        images.AddRange(GetAllImagesFiles(square150x150LogoAttr.Single().Value, appxManifest, logger));
+                        images.AddRange(GetAllImagesFiles(_ansiConsole, square150x150LogoAttr.Single().Value, appxManifest, logger));
                     }
 
                     // Wide310x150Logo
                     var wide310x150LogoAttr = applicationElement.SelectNodes("//*[local-name()='VisualElements']/*[local-name()='DefaultTile']/@Wide310x150Logo", nsmgr)?.OfType<XmlAttribute>();
                     if (wide310x150LogoAttr?.Any() == true)
                     {
-                        images.AddRange(GetAllImagesFiles(wide310x150LogoAttr.Single().Value, appxManifest, logger));
+                        images.AddRange(GetAllImagesFiles(_ansiConsole, wide310x150LogoAttr.Single().Value, appxManifest, logger));
                     }
 
                     // Square310x310Logo
                     var square310x310LogoAttr = applicationElement.SelectNodes("//*[local-name()='VisualElements']/*[local-name()='DefaultTile']/@Square310x310Logo", nsmgr)?.OfType<XmlAttribute>();
                     if (square310x310LogoAttr?.Any() == true)
                     {
-                        images.AddRange(GetAllImagesFiles(square310x310LogoAttr.Single().Value, appxManifest, logger));
+                        images.AddRange(GetAllImagesFiles(_ansiConsole, square310x310LogoAttr.Single().Value, appxManifest, logger));
                     }
 
                     // Splash screen image
                     var splashScreenImageAttr = applicationElement.SelectNodes("//*[local-name()='VisualElements']/*[local-name()='SplashScreen']/@Image", nsmgr)?.OfType<XmlAttribute>();
                     if (splashScreenImageAttr?.Any() == true)
                     {
-                        images.AddRange(GetAllImagesFiles(splashScreenImageAttr.Single().Value, appxManifest, logger));
+                        images.AddRange(GetAllImagesFiles(_ansiConsole, splashScreenImageAttr.Single().Value, appxManifest, logger));
                     }
 
                     // lock screen badge
                     var lockScreenLogoAttr = applicationElement.SelectNodes("//*[local-name()='VisualElements']/*[local-name()='LockScreen']/@BadgeLogo", nsmgr)?.OfType<XmlAttribute>();
                     if (lockScreenLogoAttr?.Any() == true)
                     {
-                        images.AddRange(GetAllImagesFiles(lockScreenLogoAttr.Single().Value, appxManifest, logger));
+                        images.AddRange(GetAllImagesFiles(_ansiConsole, lockScreenLogoAttr.Single().Value, appxManifest, logger));
                     }
                 }
             }
@@ -433,7 +435,7 @@ namespace MSStore.CLI.Services
             return images.Distinct().ToList();
         }
 
-        private static List<string> GetAllImagesFiles(string imageNodeText, FileInfo appxManifest, ILogger logger)
+        private static List<string> GetAllImagesFiles(IAnsiConsole ansiConsole, string imageNodeText, FileInfo appxManifest, ILogger logger)
         {
             List<string> imagePaths = [];
             try
@@ -463,8 +465,8 @@ namespace MSStore.CLI.Services
             }
             catch (Exception ex)
             {
-                AnsiConsole.WriteLine("Failed to get the image file " + imageNodeText);
-                AnsiConsole.WriteLine(ex.ToString());
+                ansiConsole.WriteLine("Failed to get the image file " + imageNodeText);
+                ansiConsole.WriteLine(ex.ToString());
             }
 
             if (imagePaths.Count == 0)

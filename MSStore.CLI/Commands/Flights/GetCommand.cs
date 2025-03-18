@@ -31,10 +31,11 @@ namespace MSStore.CLI.Commands.Flights
             AddArgument(FlightIdArgument);
         }
 
-        public new class Handler(ILogger<GetCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, TelemetryClient telemetryClient) : ICommandHandler
+        public new class Handler(ILogger<GetCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : ICommandHandler
         {
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
+            private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
             public string ProductId { get; set; } = null!;
@@ -51,31 +52,37 @@ namespace MSStore.CLI.Commands.Flights
 
                 if (ProductTypeHelper.Solve(ProductId) == ProductType.Unpackaged)
                 {
-                    AnsiConsole.WriteLine("This command is not supported for unpackaged applications.");
+                    _ansiConsole.WriteLine("This command is not supported for unpackaged applications.");
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
                 }
 
-                return await _telemetryClient.TrackCommandEventAsync<Handler>(
-                    await AnsiConsole.Status().StartAsync("Retrieving Flight", async ctx =>
+                var flight = await _ansiConsole.Status().StartAsync("Retrieving Flight", async ctx =>
+                {
+                    try
                     {
-                        try
-                        {
-                            var storePackagedAPI = await _storeAPIFactory.CreatePackagedAsync(ct: ct);
+                        var storePackagedAPI = await _storeAPIFactory.CreatePackagedAsync(ct: ct);
 
-                            var flight = await storePackagedAPI.GetFlightAsync(ProductId, FlightId, ct);
+                        var flight = await storePackagedAPI.GetFlightAsync(ProductId, FlightId, ct);
 
-                            ctx.SuccessStatus("[bold green]Retrieved Flight[/]");
+                        ctx.SuccessStatus(_ansiConsole, "[bold green]Retrieved Flight[/]");
 
-                            AnsiConsole.WriteLine(JsonSerializer.Serialize(flight, SourceGenerationContext.GetCustom(true).DevCenterFlight));
-                            return await _telemetryClient.TrackCommandEventAsync<Handler>(0, ct);
-                        }
-                        catch (Exception err)
-                        {
-                            _logger.LogError(err, "Error while retrieving Flight.");
-                            ctx.ErrorStatus(err);
-                            return -1;
-                        }
-                    }), ct);
+                        return flight;
+                    }
+                    catch (Exception err)
+                    {
+                        _logger.LogError(err, "Error while retrieving Flight.");
+                        ctx.ErrorStatus(_ansiConsole, err);
+                        return null;
+                    }
+                });
+
+                if (flight != null)
+                {
+                    AnsiConsole.WriteLine(JsonSerializer.Serialize(flight, SourceGenerationContext.GetCustom(true).DevCenterFlight));
+                    return await _telemetryClient.TrackCommandEventAsync<Handler>(0, ct);
+                }
+
+                return await _telemetryClient.TrackCommandEventAsync<Handler>(-1, ct);
             }
         }
     }

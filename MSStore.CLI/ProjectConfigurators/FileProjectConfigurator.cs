@@ -16,7 +16,7 @@ using Spectre.Console;
 
 namespace MSStore.CLI.ProjectConfigurators
 {
-    internal abstract class FileProjectConfigurator(IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, IEnvironmentInformationService environmentInformationService, ILogger logger) : IProjectConfigurator, IProjectPackager, IProjectPublisher
+    internal abstract class FileProjectConfigurator(IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, IEnvironmentInformationService environmentInformationService, IAnsiConsole ansiConsole, ILogger logger) : IProjectConfigurator, IProjectPackager, IProjectPublisher
     {
         private readonly IBrowserLauncher _browserLauncher = browserLauncher ?? throw new ArgumentNullException(nameof(browserLauncher));
         private readonly IConsoleReader _consoleReader = consoleReader ?? throw new ArgumentNullException(nameof(consoleReader));
@@ -26,6 +26,8 @@ namespace MSStore.CLI.ProjectConfigurators
         private readonly IEnvironmentInformationService _environmentInformationService = environmentInformationService ?? throw new ArgumentNullException(nameof(environmentInformationService));
 
         private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
+        protected IAnsiConsole ErrorAnsiConsole { get; } = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
 
         protected ILogger Logger => _logger;
 
@@ -141,14 +143,14 @@ namespace MSStore.CLI.ProjectConfigurators
             var (projectRootPath, projectFile) = GetInfo(pathOrUrl);
 
             // Try to find AppId inside the manifestFile/projectFile file
-            app = await storePackagedAPI.EnsureAppInitializedAsync(app, projectFile, this, ct);
+            app = await storePackagedAPI.EnsureAppInitializedAsync(ErrorAnsiConsole, app, projectFile, this, ct);
 
             if (app?.Id == null)
             {
                 return -1;
             }
 
-            AnsiConsole.MarkupLine($"AppId: [green bold]{app.Id}[/]");
+            ErrorAnsiConsole.MarkupLine($"AppId: [green bold]{app.Id}[/]");
 
             if (inputDirectory == null)
             {
@@ -157,8 +159,8 @@ namespace MSStore.CLI.ProjectConfigurators
 
             if (!inputDirectory.Exists)
             {
-                AnsiConsole.MarkupLine($"[red bold]Input directory does not exist: {inputDirectory.FullName}[/]");
-                AnsiConsole.MarkupLine($"[red]Make sure you build/package the project before trying to publish it.[/]");
+                ErrorAnsiConsole.MarkupLine($"[red bold]Input directory does not exist: {inputDirectory.FullName}[/]");
+                ErrorAnsiConsole.MarkupLine($"[red]Make sure you build/package the project before trying to publish it.[/]");
                 return -2;
             }
 
@@ -179,7 +181,7 @@ namespace MSStore.CLI.ProjectConfigurators
 
             Logger.LogInformation("Trying to publish these {FileCount} files: {FileNames}", packageFiles.Count(), string.Join(", ", packageFiles.Select(f => $"'{f.FullName}'")));
 
-            return await storePackagedAPI.PublishAsync(app, flightId, GetFirstSubmissionDataAsync, AllowTargetFutureDeviceFamilies, output, packageFiles, noCommit, packageRolloutPercentage, _browserLauncher, _consoleReader, _zipFileManager, _fileDownloader, _azureBlobManager, _environmentInformationService, _logger, ct);
+            return await storePackagedAPI.PublishAsync(ErrorAnsiConsole, app, flightId, GetFirstSubmissionDataAsync, AllowTargetFutureDeviceFamilies, output, packageFiles, noCommit, packageRolloutPercentage, _browserLauncher, _consoleReader, _zipFileManager, _fileDownloader, _azureBlobManager, _environmentInformationService, _logger, ct);
         }
 
         protected virtual DirectoryInfo GetInputDirectory(DirectoryInfo projectRootPath)

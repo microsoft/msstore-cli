@@ -22,10 +22,11 @@ namespace MSStore.CLI.Commands.Submission
             AddArgument(SubmissionCommand.ProductIdArgument);
         }
 
-        public new class Handler(ILogger<PublishCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, TelemetryClient telemetryClient) : ICommandHandler
+        public new class Handler(ILogger<PublishCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : ICommandHandler
         {
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
+            private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
             public string ProductId { get; set; } = null!;
@@ -41,7 +42,7 @@ namespace MSStore.CLI.Commands.Submission
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(
                     ProductId,
-                    await AnsiConsole.Status().StartAsync("Publishing submission", async ctx =>
+                    await _ansiConsole.Status().StartAsync("Publishing submission", async ctx =>
                 {
                     try
                     {
@@ -53,15 +54,15 @@ namespace MSStore.CLI.Commands.Submission
 
                             if (application?.Id == null)
                             {
-                                ctx.ErrorStatus($"Could not find application with ID '{ProductId}'");
+                                ctx.ErrorStatus(_ansiConsole, $"Could not find application with ID '{ProductId}'");
                                 return -1;
                             }
 
-                            var submission = await storePackagedAPI.GetAnySubmissionAsync(application, ctx, _logger, ct);
+                            var submission = await storePackagedAPI.GetAnySubmissionAsync(_ansiConsole, application, ctx, _logger, ct);
 
                             if (submission?.Id == null)
                             {
-                                ctx.ErrorStatus($"Could not find submission for application with ID '{ProductId}'");
+                                ctx.ErrorStatus(_ansiConsole, $"Could not find submission for application with ID '{ProductId}'");
                                 return -1;
                             }
 
@@ -74,12 +75,12 @@ namespace MSStore.CLI.Commands.Submission
 
                             if (submissionCommit.Status != null)
                             {
-                                ctx.SuccessStatus($"Submission Commited with status [green u]{submissionCommit.Status}[/]");
+                                ctx.SuccessStatus(_ansiConsole, $"Submission Commited with status [green u]{submissionCommit.Status}[/]");
                                 return 0;
                             }
 
-                            ctx.ErrorStatus($"Could not commit submission for application with ID '{ProductId}'");
-                            AnsiConsole.MarkupLine($"[red]{submissionCommit.ToErrorMessage()}[/]");
+                            ctx.ErrorStatus(_ansiConsole, $"Could not commit submission for application with ID '{ProductId}'");
+                            _ansiConsole.MarkupLine($"[red]{submissionCommit.ToErrorMessage()}[/]");
 
                             return -1;
                         }
@@ -94,7 +95,7 @@ namespace MSStore.CLI.Commands.Submission
                                 return -1;
                             }
 
-                            ctx.SuccessStatus($"Published with Id [green u]{submissionId}[/]");
+                            ctx.SuccessStatus(_ansiConsole, $"Published with Id [green u]{submissionId}[/]");
 
                             return 0;
                         }
@@ -102,7 +103,7 @@ namespace MSStore.CLI.Commands.Submission
                     catch (Exception err)
                     {
                         _logger.LogError(err, "Error while publishing submission");
-                        ctx.ErrorStatus(err);
+                        ctx.ErrorStatus(_ansiConsole, err);
                         return -1;
                     }
                 }), ct);

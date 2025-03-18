@@ -28,6 +28,7 @@ namespace MSStore.CLI.ProjectConfigurators
         IFileDownloader fileDownloader,
         IPWAAppInfoManager pwaAppInfoManager,
         IEnvironmentInformationService environmentInformationService,
+        IAnsiConsole ansiConsole,
         ILogger<PWAProjectConfigurator> logger) : IProjectConfigurator, IProjectPackager, IProjectPublisher
     {
         private readonly IConsoleReader _consoleReader = consoleReader ?? throw new ArgumentNullException(nameof(consoleReader));
@@ -38,6 +39,7 @@ namespace MSStore.CLI.ProjectConfigurators
         private readonly IFileDownloader _fileDownloader = fileDownloader ?? throw new ArgumentNullException(nameof(fileDownloader));
         private readonly IPWAAppInfoManager _pwaAppInfoManager = pwaAppInfoManager ?? throw new ArgumentNullException(nameof(pwaAppInfoManager));
         private readonly IEnvironmentInformationService _environmentInformationService = environmentInformationService ?? throw new ArgumentNullException(nameof(environmentInformationService));
+        private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
         private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         public override string ToString() => "PWA";
@@ -108,7 +110,7 @@ namespace MSStore.CLI.ProjectConfigurators
         {
             if (output == null && commandPublish != true)
             {
-                AnsiConsole.MarkupLine($":collision: [bold red]For PWAs the init command should output to a specific directory (using the '--output' option), or publish directly to the store using the '--publish' option.[/]");
+                _ansiConsole.MarkupLine($":collision: [bold red]For PWAs the init command should output to a specific directory (using the '--output' option), or publish directly to the store using the '--publish' option.[/]");
                 return -2;
             }
 
@@ -129,8 +131,8 @@ namespace MSStore.CLI.ProjectConfigurators
                 return (-1, null);
             }
 
-            AnsiConsole.MarkupLine($"You've provided a URL, so we'll use [link]PWABuilder.com[/] to setup your PWA and upload it to the Microsoft Store.");
-            AnsiConsole.WriteLine();
+            _ansiConsole.MarkupLine($"You've provided a URL, so we'll use [link]PWABuilder.com[/] to setup your PWA and upload it to the Microsoft Store.");
+            _ansiConsole.WriteLine();
 
             string outputZipPath;
             string fileName;
@@ -151,7 +153,7 @@ namespace MSStore.CLI.ProjectConfigurators
             outputZipPath = Path.Combine(output.FullName, Path.ChangeExtension(fileName, "zip"));
 
             var maxVersion = new Version();
-            var submission = await AnsiConsole.Status().StartAsync("Retrieving Submission", async ctx =>
+            var submission = await _ansiConsole.Status().StartAsync("Retrieving Submission", async ctx =>
             {
                 try
                 {
@@ -166,12 +168,12 @@ namespace MSStore.CLI.ProjectConfigurators
                 {
                     if (err.Response.StatusCode == System.Net.HttpStatusCode.Forbidden)
                     {
-                        ctx.ErrorStatus("Could not find the Application or submission. Please check the ProductId.");
+                        ctx.ErrorStatus(_ansiConsole, "Could not find the Application or submission. Please check the ProductId.");
                         _logger.LogError(err, "Could not find the Application or submission. Please check the ProductId.");
                     }
                     else
                     {
-                        ctx.ErrorStatus("Error while retrieving submission.");
+                        ctx.ErrorStatus(_ansiConsole, "Error while retrieving submission.");
                         _logger.LogError(err, "Error while retrieving submission for Application.");
                     }
 
@@ -180,7 +182,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 catch (Exception err)
                 {
                     _logger.LogError(err, "Error while retrieving submission.");
-                    ctx.ErrorStatus(err);
+                    ctx.ErrorStatus(_ansiConsole, err);
                     return null;
                 }
             });
@@ -206,7 +208,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 maxVersion = new Version(1, 0, 0);
             }
 
-            var success = await AnsiConsole.Progress()
+            var success = await _ansiConsole.Progress()
                 .StartAsync(async ctx =>
                 {
                     var task = ctx.AddTask("[green]Downloading PWA Bundle From [u]PWABuilder.com[/][/]");
@@ -239,19 +241,19 @@ namespace MSStore.CLI.ProjectConfigurators
                             task,
                             ct);
 
-                        AnsiConsole.MarkupLine($":check_mark_button: [green]PWA Bundle successfully downloaded![/]");
+                        _ansiConsole.MarkupLine($":check_mark_button: [green]PWA Bundle successfully downloaded![/]");
                     }
                     catch (InvalidOperationException err)
                     {
-                        AnsiConsole.MarkupLine($"Ops! This doesn't seem like the a valid PWA... For more info, go to [link]https://www.pwabuilder.com/reportcard?site={uri.ToString().EscapeMarkup()}[/]");
+                        _ansiConsole.MarkupLine($"Ops! This doesn't seem like the a valid PWA... For more info, go to [link]https://www.pwabuilder.com/reportcard?site={uri.ToString().EscapeMarkup()}[/]");
                         _logger.LogWarning(err, "Not a valid PWA ({PWAUrl})", uri);
-                        AnsiConsole.MarkupLine($":collision: [bold red]Error while downloading PWA zip file.[/]");
+                        _ansiConsole.MarkupLine($":collision: [bold red]Error while downloading PWA zip file.[/]");
                         return false;
                     }
                     catch (Exception err)
                     {
                         _logger.LogError(err, "Error while downloading PWA zip file.");
-                        AnsiConsole.MarkupLine($":collision: [bold red]Error while downloading PWA zip file.[/]");
+                        _ansiConsole.MarkupLine($":collision: [bold red]Error while downloading PWA zip file.[/]");
                         return false;
                     }
 
@@ -339,26 +341,26 @@ namespace MSStore.CLI.ProjectConfigurators
                 uri = pwaAppInfo.Uri ?? uri;
                 if (_appId == null || uri == null)
                 {
-                    AnsiConsole.MarkupLine($":collision: [bold red]AppId or Uri is not defined.[/]");
+                    _ansiConsole.MarkupLine($":collision: [bold red]AppId or Uri is not defined.[/]");
                     _logger.LogError("This folder has not been initialized with a PWA. Could not find the AppId or Uri in the pwaAppInfo.json file.");
                     return -1;
                 }
             }
             catch (Exception ex)
             {
-                AnsiConsole.MarkupLine($":collision: [bold red]Error while loading pwaAppInfo.json file.[/]");
+                _ansiConsole.MarkupLine($":collision: [bold red]Error while loading pwaAppInfo.json file.[/]");
                 _logger.LogError(ex, "Error while loading pwaAppInfo.json file.");
                 return -1;
             }
 
-            app = await storePackagedAPI.EnsureAppInitializedAsync(app, null, this, ct);
+            app = await storePackagedAPI.EnsureAppInitializedAsync(_ansiConsole, app, null, this, ct);
 
             if (app?.Id == null)
             {
                 return -1;
             }
 
-            AnsiConsole.MarkupLine($"AppId: [green bold]{app.Id}[/]");
+            _ansiConsole.MarkupLine($"AppId: [green bold]{app.Id}[/]");
 
             var output = new DirectoryInfo(pathOrUrl);
 
@@ -375,11 +377,12 @@ namespace MSStore.CLI.ProjectConfigurators
 
             if (packageFiles?.Any() != true)
             {
-                AnsiConsole.WriteLine("Couldn't find any package to upload.");
+                _ansiConsole.WriteLine("Couldn't find any package to upload.");
                 return -1;
             }
 
             return await storePackagedAPI.PublishAsync(
+                _ansiConsole,
                 app,
                 flightId,
                 (listingLanguage, ct) => GetFirstSubmissionDataAsync(listingLanguage, uri, ct),
@@ -404,7 +407,7 @@ namespace MSStore.CLI.ProjectConfigurators
 
             if (_webManifest == null)
             {
-                var webManifestResponse = await AnsiConsole.Status().StartAsync("Fetching WebManifest...", async ctx =>
+                var webManifestResponse = await _ansiConsole.Status().StartAsync("Fetching WebManifest...", async ctx =>
                 {
                     try
                     {
@@ -413,7 +416,7 @@ namespace MSStore.CLI.ProjectConfigurators
                     catch (Exception err)
                     {
                         _logger.LogError(err, "Error while fetching web manifest.");
-                        ctx.ErrorStatus("Error while fetching web manifest.");
+                        ctx.ErrorStatus(_ansiConsole, "Error while fetching web manifest.");
                         return null;
                     }
                 });

@@ -38,7 +38,7 @@ namespace MSStore.CLI.Services
         private readonly ITokenManager _tokenManager = tokenManager ?? throw new ArgumentNullException(nameof(tokenManager));
         private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-        public async Task<bool> ConfigureAsync(bool askConfirmation, Guid? tenantId = null, string? sellerId = null, Guid? clientId = null, string? clientSecret = null, string? certificateThumbprint = null, string? certificateFilePath = null, string? certificatePassword = null, CancellationToken ct = default)
+        public async Task<bool> ConfigureAsync(IAnsiConsole ansiConsole, bool askConfirmation, Guid? tenantId = null, string? sellerId = null, Guid? clientId = null, string? clientSecret = null, string? certificateThumbprint = null, string? certificateFilePath = null, string? certificatePassword = null, CancellationToken ct = default)
         {
             if (askConfirmation &&
                 !await _consoleReader.YesNoConfirmationAsync(
@@ -47,11 +47,11 @@ namespace MSStore.CLI.Services
                 return false;
             }
 
-            MicrosoftStoreCLI.WelcomeMessage();
-            AnsiConsole.MarkupLine("Use of the Microsoft Store Developer CLI is subject to the terms of the Microsoft Privacy Statement: [link]https://aka.ms/privacy[/]");
-            AnsiConsole.WriteLine("You might need to provide some credentials to call the Microsoft Store APIs.");
-            AnsiConsole.MarkupLine("[bold green]Let's start![/]");
-            AnsiConsole.WriteLine();
+            MicrosoftStoreCLI.WelcomeMessage(ansiConsole);
+            ansiConsole.MarkupLine("Use of the Microsoft Store Developer CLI is subject to the terms of the Microsoft Privacy Statement: [link]https://aka.ms/privacy[/]");
+            ansiConsole.WriteLine("You might need to provide some credentials to call the Microsoft Store APIs.");
+            ansiConsole.MarkupLine("[bold green]Let's start![/]");
+            ansiConsole.WriteLine();
 
             var config = new Configurations();
 
@@ -59,7 +59,7 @@ namespace MSStore.CLI.Services
 
             if (tenantId == null)
             {
-                organization = await GetOrganizationAsync(config, true, ct);
+                organization = await GetOrganizationAsync(ansiConsole, config, true, ct);
                 if (organization == null)
                 {
                     return false;
@@ -125,15 +125,15 @@ namespace MSStore.CLI.Services
                                 displayName = GetDisplayName(RandomString());
                             }
 
-                            organization = await GetOrganizationAsync(config, organization == null, ct);
+                            organization = await GetOrganizationAsync(ansiConsole, config, organization == null, ct);
                             if (organization == null)
                             {
                                 return false;
                             }
 
-                            AnsiConsole.WriteLine();
+                            ansiConsole.WriteLine();
 
-                            AnsiConsole.MarkupLine("We are going to open the Partner Center website, at the right page.");
+                            ansiConsole.MarkupLine("We are going to open the Partner Center website, at the right page.");
                             var domainsString = string.Empty;
                             if (organization.Domain != null)
                             {
@@ -144,25 +144,25 @@ namespace MSStore.CLI.Services
 
                             var randomString = RandomString();
 
-                            AnsiConsole.MarkupLine("1) At [b green]Account settings[/]/[b green]User management[/]/[b green]Microsoft Entra applications[/] page...");
-                            AnsiConsole.MarkupLine($"2) Make sure you are signed-in with your administrator account from this domain: [b green]{domainsString}[/].");
-                            AnsiConsole.MarkupLine("3) Click on [b green]Microsoft Entra applications[/].");
-                            AnsiConsole.MarkupLine("4) Click on [b green]Add Microsoft Entra Application[/].");
-                            AnsiConsole.MarkupLine("5) Select [b green]Create Microsoft Entra Application[/] and click on [b green]Continue[/].");
-                            AnsiConsole.MarkupLine("6) Fill the form. Here are some values that can help you with the setup:");
-                            AnsiConsole.MarkupLine($"   - Name: [b green]{displayName}[/]");
-                            AnsiConsole.MarkupLine($"   - Reply URI: [b green]https://{organization.Domain}/MSStoreCLIAccess_{randomString}[/]");
-                            AnsiConsole.MarkupLine($"   - App ID URI: [b green]https://{organization.Domain}/MSStoreCLIAccess_{randomString}[/]");
-                            AnsiConsole.MarkupLine("7) Click on [b green]Next[/].");
-                            AnsiConsole.MarkupLine("8) Select [b green]Manager(Windows)[/] and click on [b green]Create[/].");
-                            AnsiConsole.MarkupLine("9) Copy the GUID from the application that you just created and paste it here:");
+                            ansiConsole.MarkupLine("1) At [b green]Account settings[/]/[b green]User management[/]/[b green]Microsoft Entra applications[/] page...");
+                            ansiConsole.MarkupLine($"2) Make sure you are signed-in with your administrator account from this domain: [b green]{domainsString}[/].");
+                            ansiConsole.MarkupLine("3) Click on [b green]Microsoft Entra applications[/].");
+                            ansiConsole.MarkupLine("4) Click on [b green]Add Microsoft Entra Application[/].");
+                            ansiConsole.MarkupLine("5) Select [b green]Create Microsoft Entra Application[/] and click on [b green]Continue[/].");
+                            ansiConsole.MarkupLine("6) Fill the form. Here are some values that can help you with the setup:");
+                            ansiConsole.MarkupLine($"   - Name: [b green]{displayName}[/]");
+                            ansiConsole.MarkupLine($"   - Reply URI: [b green]https://{organization.Domain}/MSStoreCLIAccess_{randomString}[/]");
+                            ansiConsole.MarkupLine($"   - App ID URI: [b green]https://{organization.Domain}/MSStoreCLIAccess_{randomString}[/]");
+                            ansiConsole.MarkupLine("7) Click on [b green]Next[/].");
+                            ansiConsole.MarkupLine("8) Select [b green]Manager(Windows)[/] and click on [b green]Create[/].");
+                            ansiConsole.MarkupLine("9) Copy the GUID from the application that you just created and paste it here:");
                         }
 
                         string? guidStr = await _consoleReader.RequestStringAsync("Client Id", false, ct);
                         Guid guid;
                         if (!Guid.TryParse(guidStr, out guid))
                         {
-                            AnsiConsole.MarkupLine("[bold red]Invalid Client Id[/]");
+                            ansiConsole.MarkupLine("[bold red]Invalid Client Id[/]");
                             return false;
                         }
 
@@ -170,15 +170,15 @@ namespace MSStore.CLI.Services
 
                         if (!_graphClient.Enabled)
                         {
-                            AnsiConsole.MarkupLine("Now click on the application that you just provided the GUID for, and click on [b green]Add new key[/]");
-                            AnsiConsole.MarkupLine("Copy the [b green]Key[/] value and paste it here:");
+                            ansiConsole.MarkupLine("Now click on the application that you just provided the GUID for, and click on [b green]Add new key[/]");
+                            ansiConsole.MarkupLine("Copy the [b green]Key[/] value and paste it here:");
                         }
                     }
 
                     clientSecret = await _consoleReader.RequestStringAsync("Client Secret", true, ct);
                     if (string.IsNullOrEmpty(clientSecret))
                     {
-                        AnsiConsole.MarkupLine("[bold red]Invalid Client Secret[/]");
+                        ansiConsole.MarkupLine("[bold red]Invalid Client Secret[/]");
                         return false;
                     }
                 }
@@ -189,11 +189,11 @@ namespace MSStore.CLI.Services
                         displayName = GetDisplayName(machineName);
 
                         // Search for an existing App, so we don't conflict with other apps display names.
-                        var existingAzureApp = await RetrieveApplicationAsync(displayName, ct);
+                        var existingAzureApp = await RetrieveApplicationAsync(ansiConsole, displayName, ct);
 
                         if (existingAzureApp != null)
                         {
-                            AnsiConsole.MarkupLine($"Found an Azure App with the same display name ([u]{displayName}[/]), using a random one.");
+                            ansiConsole.MarkupLine($"Found an Azure App with the same display name ([u]{displayName}[/]), using a random one.");
                             displayName = GetDisplayName($"{machineName} - {RandomString()}");
                         }
                     }
@@ -203,13 +203,13 @@ namespace MSStore.CLI.Services
                         displayName = GetDisplayName(RandomString());
                     }
 
-                    var clientApp = await CreateClientIdAsync(displayName, ct);
+                    var clientApp = await CreateClientIdAsync(ansiConsole, displayName, ct);
                     if (clientApp?.Id == null || clientApp?.AppId == null)
                     {
                         return false;
                     }
 
-                    organization = await GetOrganizationAsync(config, organization == null, ct);
+                    organization = await GetOrganizationAsync(ansiConsole, config, organization == null, ct);
                     if (organization == null)
                     {
                         return false;
@@ -221,7 +221,7 @@ namespace MSStore.CLI.Services
                         SignInAudience = "AzureADMyOrg"
                     };
 
-                    if (!await UpdateClientAppAsync(clientApp.Id, appUpdateRequest, ct))
+                    if (!await UpdateClientAppAsync(ansiConsole, clientApp.Id, appUpdateRequest, ct))
                     {
                         return false;
                     }
@@ -232,30 +232,30 @@ namespace MSStore.CLI.Services
                     }
 
                     config.ClientId = clientApp.AppId;
-                    var newClientSecret = await CreateClientSecretAsync(clientApp.Id, displayName, ct);
+                    var newClientSecret = await CreateClientSecretAsync(ansiConsole, clientApp.Id, displayName, ct);
                     if (string.IsNullOrEmpty(newClientSecret))
                     {
                         return false;
                     }
 
-                    AnsiConsole.WriteLine();
+                    ansiConsole.WriteLine();
 
                     clientSecret = newClientSecret;
 
-                    AnsiConsole.MarkupLine("At the Partner Center website, at the [b green]Account settings[/]/[b green]User management[/]/[b green]Microsoft Entra applications[/] page:");
+                    ansiConsole.MarkupLine("At the Partner Center website, at the [b green]Account settings[/]/[b green]User management[/]/[b green]Microsoft Entra applications[/] page:");
                     var domainsString = string.Empty;
                     if (organization.Domain != null)
                     {
                         domainsString = organization.Domain;
                     }
 
-                    AnsiConsole.MarkupLine($"1) Signin with your administrator account from this domain: [b green]{domainsString}[/].");
-                    AnsiConsole.MarkupLine("2) Click on [b green]Add Microsoft Entra Application[/].");
-                    AnsiConsole.MarkupLine("3) Select [b green]Add Microsoft Entra Application[/] and click on [b green]Continue[/].");
-                    AnsiConsole.MarkupLine($"4) Select the app that we just created for you: [bold green]{displayName}[/] and click on [b green]Next[/].");
-                    AnsiConsole.MarkupLine("5) Select [b green]Manager(Windows)[/] and click on [b green]Add[/].");
-                    AnsiConsole.MarkupLine("6) Return here.");
-                    AnsiConsole.WriteLine();
+                    ansiConsole.MarkupLine($"1) Signin with your administrator account from this domain: [b green]{domainsString}[/].");
+                    ansiConsole.MarkupLine("2) Click on [b green]Add Microsoft Entra Application[/].");
+                    ansiConsole.MarkupLine("3) Select [b green]Add Microsoft Entra Application[/] and click on [b green]Continue[/].");
+                    ansiConsole.MarkupLine($"4) Select the app that we just created for you: [bold green]{displayName}[/] and click on [b green]Next[/].");
+                    ansiConsole.MarkupLine("5) Select [b green]Manager(Windows)[/] and click on [b green]Add[/].");
+                    ansiConsole.MarkupLine("6) Return here.");
+                    ansiConsole.WriteLine();
 
                     bool yesNo;
                     do
@@ -286,13 +286,13 @@ namespace MSStore.CLI.Services
                 _credentialManager.ClearCredentials(config.ClientId.Value.ToString());
             }
 
-            config.SellerId = await RetrieveSellerId(sellerId, ct);
+            config.SellerId = await RetrieveSellerId(ansiConsole, sellerId, ct);
             if (config.SellerId == null)
             {
-                AnsiConsole.MarkupLine("At the Partner Center website, at the [b green]Account settings[/]/[b green]Organization profile[/]/[b green]Legal info[/] page:");
+                ansiConsole.MarkupLine("At the Partner Center website, at the [b green]Account settings[/]/[b green]Organization profile[/]/[b green]Legal info[/] page:");
                 await OpenPartnerCenterUserManagementPageAsync("organization/legalinfo#mpn", ct);
 
-                AnsiConsole.MarkupLine("Copy the [b green]Seller Id[/] value here:");
+                ansiConsole.MarkupLine("Copy the [b green]Seller Id[/] value here:");
 
                 try
                 {
@@ -305,9 +305,9 @@ namespace MSStore.CLI.Services
                 }
             }
 
-            AnsiConsole.WriteLine();
+            ansiConsole.WriteLine();
 
-            var result = await AnsiConsole.Status().StartAsync("Testing configuration...", async ctx =>
+            var result = await ansiConsole.Status().StartAsync("Testing configuration...", async ctx =>
             {
                 try
                 {
@@ -329,14 +329,14 @@ namespace MSStore.CLI.Services
                                 break;
                             }
 
-                            AnsiConsole.MarkupLine($"Failed to auth... Might just need to wait a little bit. Retrying again in [b green]{delay}[/] seconds([b green]{i + 1}/{maxRetry}[/])...");
+                            ansiConsole.MarkupLine($"Failed to auth... Might just need to wait a little bit. Retrying again in [b green]{delay}[/] seconds([b green]{i + 1}/{maxRetry}[/])...");
                             await Task.Delay(TimeSpan.FromSeconds(delay), ct);
                         }
                     }
 
                     if (storeAPI == null)
                     {
-                        ctx.ErrorStatus("Really failed to auth.");
+                        ctx.ErrorStatus(ansiConsole, "Really failed to auth.");
 
                         return false;
                     }
@@ -346,7 +346,7 @@ namespace MSStore.CLI.Services
                 catch (Exception err)
                 {
                     _logger?.LogError(err, "Error while testing the configuration.");
-                    ctx.ErrorStatus("Ops, something doesn't seem to be right!");
+                    ctx.ErrorStatus(ansiConsole, "Ops, something doesn't seem to be right!");
                     return false;
                 }
 
@@ -355,8 +355,8 @@ namespace MSStore.CLI.Services
 
             if (result)
             {
-                AnsiConsole.WriteLine("Configuration saved!");
-                AnsiConsole.MarkupLine("[bold green]Awesome! It seems to be working![/]");
+                ansiConsole.WriteLine("Configuration saved!");
+                ansiConsole.MarkupLine("[bold green]Awesome! It seems to be working![/]");
             }
 
             return result;
@@ -367,7 +367,7 @@ namespace MSStore.CLI.Services
             await _browserLauncher.OpenBrowserAsync($"https://partner.microsoft.com/dashboard/account/v3/{specificPage}", true, ct);
         }
 
-        private async Task<Organization?> GetOrganizationAsync(Configurations config, bool forceSelection, CancellationToken ct)
+        private async Task<Organization?> GetOrganizationAsync(IAnsiConsole ansiConsole, Configurations config, bool forceSelection, CancellationToken ct)
         {
             if (_tokenManager.CurrentUser == null)
             {
@@ -375,7 +375,7 @@ namespace MSStore.CLI.Services
                 await _tokenManager.SelectAccountAsync(false, forceSelection, ct);
             }
 
-            var organization = await GetSignedInOrganizationAsync(ct);
+            var organization = await GetSignedInOrganizationAsync(ansiConsole, ct);
 
             if (organization == null)
             {
@@ -384,21 +384,21 @@ namespace MSStore.CLI.Services
 
             if (organization.Id == Guid.Empty)
             {
-                AnsiConsole.MarkupLine("[yellow]This account is either:[/]");
-                AnsiConsole.MarkupLine("[b]1) [/][yellow]Not registered as a [green]Microsoft Store Developer[/][/]; and/or");
-                AnsiConsole.MarkupLine("[b]2) [/][yellow]Not associated with an [green]Microsoft Entra Tenant[/].[/]");
+                ansiConsole.MarkupLine("[yellow]This account is either:[/]");
+                ansiConsole.MarkupLine("[b]1) [/][yellow]Not registered as a [green]Microsoft Store Developer[/][/]; and/or");
+                ansiConsole.MarkupLine("[b]2) [/][yellow]Not associated with an [green]Microsoft Entra Tenant[/].[/]");
 
                 if (await _consoleReader.YesNoConfirmationAsync("Do you know if you are already registed?", ct))
                 {
-                    AnsiConsole.MarkupLine("Let's then associate your account with an [green]Microsoft Entra Tenant[/].");
+                    ansiConsole.MarkupLine("Let's then associate your account with an [green]Microsoft Entra Tenant[/].");
 
-                    AnsiConsole.WriteLine();
+                    ansiConsole.WriteLine();
 
-                    AnsiConsole.MarkupLine("We can't automatically do this...");
-                    AnsiConsole.MarkupLine("At the Partner Center website, at the [b green]Account settings[/]/[b green]Organization profile[/]/[b green]Tenants[/] page:");
-                    AnsiConsole.MarkupLine("1) Either associate a Microsoft Entra ID with your Partner Center account, or Create a new Microsoft Entra ID.");
-                    AnsiConsole.MarkupLine("2) Then close the browser and return here.");
-                    AnsiConsole.WriteLine();
+                    ansiConsole.MarkupLine("We can't automatically do this...");
+                    ansiConsole.MarkupLine("At the Partner Center website, at the [b green]Account settings[/]/[b green]Organization profile[/]/[b green]Tenants[/] page:");
+                    ansiConsole.MarkupLine("1) Either associate a Microsoft Entra ID with your Partner Center account, or Create a new Microsoft Entra ID.");
+                    ansiConsole.MarkupLine("2) Then close the browser and return here.");
+                    ansiConsole.WriteLine();
 
                     bool yesNo;
                     do
@@ -426,7 +426,7 @@ namespace MSStore.CLI.Services
 
             if (organization.Id != config.TenantId)
             {
-                AnsiConsole.MarkupLine($"Found Organization/Tenant [green b]{organization.Id}[/]");
+                ansiConsole.MarkupLine($"Found Organization/Tenant [green b]{organization.Id}[/]");
             }
 
             config.TenantId = organization.Id;
@@ -434,7 +434,7 @@ namespace MSStore.CLI.Services
             return organization;
         }
 
-        private async Task<int?> RetrieveSellerId(string? sellerId, CancellationToken ct)
+        private async Task<int?> RetrieveSellerId(IAnsiConsole ansiConsole, string? sellerId, CancellationToken ct)
         {
             if (sellerId != null)
             {
@@ -451,7 +451,7 @@ namespace MSStore.CLI.Services
                 await _tokenManager.SelectAccountAsync(false, true, ct);
             }
 
-            var accountEnrollment = await AnsiConsole.Status().StartAsync("Retrieving account enrollment...", async ctx =>
+            var accountEnrollment = await ansiConsole.Status().StartAsync("Retrieving account enrollment...", async ctx =>
             {
                 try
                 {
@@ -468,7 +468,7 @@ namespace MSStore.CLI.Services
             if (!string.IsNullOrEmpty(accountEnrollment?.Id))
             {
                 _logger.LogInformation("Enrollment account Id: '{AccountEnrollmentId}'", accountEnrollment?.Id);
-                AnsiConsole.MarkupLine("Found an enrollment account, using it.");
+                ansiConsole.MarkupLine("Found an enrollment account, using it.");
                 return Convert.ToInt32(accountEnrollment?.Id, CultureInfo.InvariantCulture);
             }
             else
@@ -478,9 +478,9 @@ namespace MSStore.CLI.Services
             }
         }
 
-        private async Task<Organization?> GetSignedInOrganizationAsync(CancellationToken ct)
+        private async Task<Organization?> GetSignedInOrganizationAsync(IAnsiConsole ansiConsole, CancellationToken ct)
         {
-            var organization = await AnsiConsole.Status().StartAsync("Retrieving Organization Id...", async ctx =>
+            var organization = await ansiConsole.Status().StartAsync("Retrieving Organization Id...", async ctx =>
             {
                 try
                 {
@@ -504,7 +504,7 @@ namespace MSStore.CLI.Services
                 catch (Exception err)
                 {
                     _logger?.LogError(err, "Error while retrieving Organization");
-                    ctx.ErrorStatus("Error while retrieving Organization.");
+                    ctx.ErrorStatus(ansiConsole, "Error while retrieving Organization.");
                     return null;
                 }
             });
@@ -512,11 +512,11 @@ namespace MSStore.CLI.Services
             return organization;
         }
 
-        private async Task<AzureApplication?> CreateClientIdAsync(string displayName, CancellationToken ct)
+        private async Task<AzureApplication?> CreateClientIdAsync(IAnsiConsole ansiConsole, string displayName, CancellationToken ct)
         {
-            AnsiConsole.WriteLine();
+            ansiConsole.WriteLine();
 
-            return await AnsiConsole.Status().StartAsync("Creating App ID...", async ctx =>
+            return await ansiConsole.Status().StartAsync("Creating App ID...", async ctx =>
             {
                 try
                 {
@@ -528,36 +528,36 @@ namespace MSStore.CLI.Services
                     };
                     table.AddColumns("AppId", "Id");
                     table.AddRow($"[bold u]{app.AppId}[/]", $"[bold u]{app.Id}[/]");
-                    AnsiConsole.Write(table);
+                    ansiConsole.Write(table);
 
                     if (!app.AppId.HasValue)
                     {
                         _logger?.LogError("Error while creating Azure App Registration");
-                        ctx.ErrorStatus("Error while creating Azure App Registration.");
+                        ctx.ErrorStatus(ansiConsole, "Error while creating Azure App Registration.");
                         return null;
                     }
 
                     var principal = await _graphClient.CreatePrincipalAsync(app.AppId.Value.ToString(), ct);
 
                     _logger.LogInformation("Created Azure App Principal Id: {PrincipalId}", principal.Id);
-                    AnsiConsole.MarkupLine(":check_mark_button: [green]Created Azure App Principal Id.[/]");
+                    ansiConsole.MarkupLine(":check_mark_button: [green]Created Azure App Principal Id.[/]");
 
                     return app;
                 }
                 catch (Exception err)
                 {
                     _logger?.LogError(err, "Error while creating Azure App Registration");
-                    ctx.ErrorStatus("Error while creating Azure App Registration.");
+                    ctx.ErrorStatus(ansiConsole, "Error while creating Azure App Registration.");
                     return null;
                 }
             });
         }
 
-        private async Task<AzureApplication?> RetrieveApplicationAsync(string displayName, CancellationToken ct)
+        private async Task<AzureApplication?> RetrieveApplicationAsync(IAnsiConsole ansiConsole, string displayName, CancellationToken ct)
         {
-            AnsiConsole.WriteLine();
+            ansiConsole.WriteLine();
 
-            return await AnsiConsole.Status().StartAsync("Retrieving Azure Application...", async ctx =>
+            return await ansiConsole.Status().StartAsync("Retrieving Azure Application...", async ctx =>
             {
                 try
                 {
@@ -568,40 +568,40 @@ namespace MSStore.CLI.Services
                 catch (Exception err)
                 {
                     _logger?.LogError(err, "Error while Retrieving Azure Application");
-                    ctx.ErrorStatus("Error while Retrieving Azure Application.");
+                    ctx.ErrorStatus(ansiConsole, "Error while Retrieving Azure Application.");
                     return null;
                 }
             });
         }
 
-        private async Task<bool> UpdateClientAppAsync(string id, AppUpdateRequest updatedApp, CancellationToken ct)
+        private async Task<bool> UpdateClientAppAsync(IAnsiConsole ansiConsole, string id, AppUpdateRequest updatedApp, CancellationToken ct)
         {
-            AnsiConsole.WriteLine();
+            ansiConsole.WriteLine();
 
-            return await AnsiConsole.Status().StartAsync("Updating Client App...", async ctx =>
+            return await ansiConsole.Status().StartAsync("Updating Client App...", async ctx =>
             {
                 try
                 {
                     var app = await _graphClient.UpdateAppAsync(id, updatedApp, ct);
 
-                    AnsiConsole.MarkupLine($":check_mark_button: [green]App Registration configured![/]");
+                    ansiConsole.MarkupLine($":check_mark_button: [green]App Registration configured![/]");
 
                     return true;
                 }
                 catch (Exception err)
                 {
                     _logger?.LogError(err, "Error while Updating Azure App");
-                    ctx.ErrorStatus("Error while Updating Azure App.");
+                    ctx.ErrorStatus(ansiConsole, "Error while Updating Azure App.");
                     return false;
                 }
             });
         }
 
-        private async Task<string?> CreateClientSecretAsync(string clientId, string displayName, CancellationToken ct)
+        private async Task<string?> CreateClientSecretAsync(IAnsiConsole ansiConsole, string clientId, string displayName, CancellationToken ct)
         {
-            AnsiConsole.WriteLine();
+            ansiConsole.WriteLine();
 
-            return await AnsiConsole.Status().StartAsync("Creating Client/App Secret...", async ctx =>
+            return await ansiConsole.Status().StartAsync("Creating Client/App Secret...", async ctx =>
             {
                 try
                 {
@@ -612,7 +612,7 @@ namespace MSStore.CLI.Services
                 catch (Exception err)
                 {
                     _logger?.LogError(err, "Error while creating Client/App Secret");
-                    ctx.ErrorStatus("Error while creating Client/App Secret.");
+                    ctx.ErrorStatus(ansiConsole, "Error while creating Client/App Secret.");
                     return null;
                 }
             });

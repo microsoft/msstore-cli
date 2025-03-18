@@ -31,7 +31,7 @@ namespace MSStore.CLI.UnitTests
                     FakeFlights[0].FlightId!
                 ], -1);
 
-            result.Should().Contain("Could not find the flight submission. Please check the ProductId/FlightId");
+            result.Error.Should().Contain("Could not find the flight submission. Please check the ProductId/FlightId");
         }
 
         [TestMethod]
@@ -62,7 +62,7 @@ namespace MSStore.CLI.UnitTests
                     FakeFlights[0].FlightId!
                 ]);
 
-            result.Should().Contain("\"PackageRolloutStatus\": \"PackageRolloutNotStarted\"");
+            result.Output.Should().Contain("\"PackageRolloutStatus\": \"PackageRolloutNotStarted\"");
         }
 
         [TestMethod]
@@ -94,7 +94,7 @@ namespace MSStore.CLI.UnitTests
                     "100"
                 ]);
 
-            result.Should().Contain("\"PackageRolloutPercentage\": 100");
+            result.Output.Should().Contain("\"PackageRolloutPercentage\": 100");
         }
 
         [TestMethod]
@@ -125,7 +125,7 @@ namespace MSStore.CLI.UnitTests
                     FakeFlights[0].FlightId!
                 ]);
 
-            result.Should().Contain("\"PackageRolloutStatus\": \"PackageRolloutStopped\"");
+            result.Output.Should().Contain("\"PackageRolloutStatus\": \"PackageRolloutStopped\"");
         }
 
         [TestMethod]
@@ -156,7 +156,7 @@ namespace MSStore.CLI.UnitTests
                     FakeFlights[0].FlightId!
                 ]);
 
-            result.Should().Contain("\"PackageRolloutStatus\": \"PackageRolloutComplete\"");
+            result.Output.Should().Contain("\"PackageRolloutStatus\": \"PackageRolloutComplete\"");
         }
     }
 }

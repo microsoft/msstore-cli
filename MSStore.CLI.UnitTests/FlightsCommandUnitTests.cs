@@ -25,8 +25,8 @@ namespace MSStore.CLI.UnitTests
                     FakeApps[0].Id!
                 ]);
 
-            result.Should().ContainAll(FakeFlights.Select(a => a.FlightId));
-            result.Should().ContainAll(FakeFlights.Select(a => a.FriendlyName));
+            result.Output.Should().ContainAll(FakeFlights.Select(a => a.FlightId));
+            result.Output.Should().ContainAll(FakeFlights.Select(a => a.FriendlyName));
         }
 
         [TestMethod]
@@ -40,8 +40,8 @@ namespace MSStore.CLI.UnitTests
                     FakeFlights[0].FlightId!
                 ]);
 
-            result.Should().Contain(FakeFlights[0].FlightId);
-            result.Should().Contain(FakeFlights[0].FriendlyName);
+            result.Output.Should().Contain(FakeFlights[0].FlightId);
+            result.Output.Should().Contain(FakeFlights[0].FriendlyName);
         }
 
         [TestMethod]
@@ -55,7 +55,7 @@ namespace MSStore.CLI.UnitTests
                     FakeFlights[0].FlightId!
                 ]);
 
-            result.Should().Contain("Deleted Flight");
+            result.Error.Should().Contain("Deleted Flight");
         }
 
         [TestMethod]
@@ -71,9 +71,9 @@ namespace MSStore.CLI.UnitTests
                     "1",
                 ]);
 
-            result.Should().Contain("Created Flight");
-            result.Should().Contain("NewFlight");
-            result.Should().Contain("632B6A77-0E18-4B41-9033-3614D2174F2E");
+            result.Error.Should().Contain("Created Flight");
+            result.Output.Should().Contain("NewFlight");
+            result.Output.Should().Contain("632B6A77-0E18-4B41-9033-3614D2174F2E");
         }
     }
 }

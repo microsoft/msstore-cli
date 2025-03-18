@@ -30,10 +30,11 @@ namespace MSStore.CLI.Commands.Submission
             AddOption(SubmissionCommand.SkipInitialPolling);
         }
 
-        public new class Handler(ILogger<UpdateMetadataCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, TelemetryClient telemetryClient) : ICommandHandler
+        public new class Handler(ILogger<UpdateMetadataCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : ICommandHandler
         {
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
+            private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
             public string Metadata { get; set; } = null!;
@@ -53,7 +54,7 @@ namespace MSStore.CLI.Commands.Submission
 
                 if (ProductTypeHelper.Solve(ProductId) == ProductType.Packaged)
                 {
-                    updateSubmissionData = await UpdateCommand.Handler.PackagedUpdateCommandAsync(_storeAPIFactory, Metadata, ProductId, _logger, ct);
+                    updateSubmissionData = await UpdateCommand.Handler.PackagedUpdateCommandAsync(_ansiConsole, _storeAPIFactory, Metadata, ProductId, _logger, ct);
                 }
                 else
                 {
@@ -64,7 +65,7 @@ namespace MSStore.CLI.Commands.Submission
                         throw new MSStoreException("Invalid metadata provided.");
                     }
 
-                    updateSubmissionData = await AnsiConsole.Status().StartAsync("Updating submission metadata", async ctx =>
+                    updateSubmissionData = await _ansiConsole.Status().StartAsync("Updating submission metadata", async ctx =>
                     {
                         try
                         {
@@ -75,7 +76,7 @@ namespace MSStore.CLI.Commands.Submission
                         catch (Exception err)
                         {
                             _logger.LogError(err, "Error while updating submission metadata.");
-                            ctx.ErrorStatus(err);
+                            ctx.ErrorStatus(_ansiConsole, err);
                             return null;
                         }
                     });

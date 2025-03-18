@@ -25,10 +25,11 @@ namespace MSStore.CLI.Commands.Submission
             AddOption(SubmissionCommand.LanguageOption);
         }
 
-        public new class Handler(ILogger<GetListingAssetsCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, TelemetryClient telemetryClient) : ICommandHandler
+        public new class Handler(ILogger<GetListingAssetsCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : ICommandHandler
         {
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
+            private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
             public string Language { get; set; } = null!;
@@ -43,7 +44,7 @@ namespace MSStore.CLI.Commands.Submission
             {
                 var ct = context.GetCancellationToken();
 
-                var ret = await AnsiConsole.Status().StartAsync<object?>("Retrieving listing assets", async ctx =>
+                var ret = await _ansiConsole.Status().StartAsync<object?>("Retrieving listing assets", async ctx =>
                 {
                     try
                     {
@@ -55,11 +56,11 @@ namespace MSStore.CLI.Commands.Submission
 
                             if (application?.Id == null)
                             {
-                                ctx.ErrorStatus($"Could not find application with ID '{ProductId}'");
+                                ctx.ErrorStatus(_ansiConsole, $"Could not find application with ID '{ProductId}'");
                                 return -1;
                             }
 
-                            var submission = await storePackagedAPI.GetAnySubmissionAsync(application, ctx, _logger, ct);
+                            var submission = await storePackagedAPI.GetAnySubmissionAsync(_ansiConsole, application, ctx, _logger, ct);
 
                             return submission;
                         }
@@ -69,7 +70,7 @@ namespace MSStore.CLI.Commands.Submission
 
                             var draft = await storeAPI.GetDraftListingAssetsAsync(ProductId, Language, ct);
 
-                            ctx.SuccessStatus();
+                            ctx.SuccessStatus(_ansiConsole);
 
                             return draft;
                         }
@@ -77,7 +78,7 @@ namespace MSStore.CLI.Commands.Submission
                     catch (Exception err)
                     {
                         _logger.LogError(err, "Error while retrieving listing assets.");
-                        ctx.ErrorStatus(err);
+                        ctx.ErrorStatus(_ansiConsole, err);
                         return null;
                     }
                 });
@@ -88,15 +89,15 @@ namespace MSStore.CLI.Commands.Submission
 
                     if (listings == null)
                     {
-                        AnsiConsole.MarkupLine($":collision: [bold red]Submission has no listings.[/]");
+                        _ansiConsole.MarkupLine($":collision: [bold red]Submission has no listings.[/]");
 
                         return await _telemetryClient.TrackCommandEventAsync<Handler>(-1, ct);
                     }
 
                     foreach (var listing in listings)
                     {
-                        AnsiConsole.WriteLine();
-                        AnsiConsole.MarkupLine($"Listing [green b u]{listing.Key}[/]:");
+                        _ansiConsole.WriteLine();
+                        _ansiConsole.MarkupLine($"Listing [green b u]{listing.Key}[/]:");
                         var baseListing = listing.Value?.BaseListing;
                         if (baseListing != null)
                         {

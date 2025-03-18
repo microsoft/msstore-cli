@@ -19,13 +19,13 @@ namespace MSStore.CLI
 {
     internal class MicrosoftStoreCLI : RootCommand
     {
-        internal static void WelcomeMessage()
+        internal static void WelcomeMessage(IAnsiConsole ansiConsole)
         {
-            AnsiConsole.WriteLine();
-            AnsiConsole.Write(
+            ansiConsole.WriteLine();
+            ansiConsole.Write(
                 new FigletText("Microsoft Store Dev CLI")
                     .Color(Color.Blue));
-            AnsiConsole.WriteLine();
+            ansiConsole.WriteLine();
         }
 
         internal Option<bool> VerboseOption { get; }
@@ -54,10 +54,11 @@ namespace MSStore.CLI
             });
         }
 
-        public new class Handler(IConfigurationManager<Configurations> configurationManager, ICLIConfigurator cliConfigurator, TelemetryClient telemetryClient) : ICommandHandler
+        public new class Handler(IConfigurationManager<Configurations> configurationManager, ICLIConfigurator cliConfigurator, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : ICommandHandler
         {
             private readonly IConfigurationManager<Configurations> _configurationManager = configurationManager ?? throw new ArgumentNullException(nameof(configurationManager));
             private readonly ICLIConfigurator _cliConfigurator = cliConfigurator ?? throw new ArgumentNullException(nameof(cliConfigurator));
+            private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
             public int Invoke(InvocationContext context)
@@ -75,21 +76,21 @@ namespace MSStore.CLI
                 {
                     return await _telemetryClient.TrackCommandEventAsync(
                         "Configure",
-                        await _cliConfigurator.ConfigureAsync(false, ct: ct) ? 0 : -1,
+                        await _cliConfigurator.ConfigureAsync(_ansiConsole, false, ct: ct) ? 0 : -1,
                         ct);
                 }
                 else
                 {
                     HelpBuilder helpBuilder = new(LocalizationResources.Instance, CommandExtensions.GetBufferWidth());
                     helpBuilder.Write(context.ParseResult.RootCommandResult.Command, Console.Out);
-                    AnsiConsole.MarkupLine("Use of the Microsoft Store Developer CLI is subject to the terms of the Microsoft Privacy Statement: [link]https://aka.ms/privacy[/]");
+                    _ansiConsole.MarkupLine("Use of the Microsoft Store Developer CLI is subject to the terms of the Microsoft Privacy Statement: [link]https://aka.ms/privacy[/]");
                 }
 
                 return 0;
             }
         }
 
-        internal static async Task<bool> InitAsync(IConfigurationManager<Configurations> configurationManager, ICredentialManager credentialManager, IConsoleReader consoleReader, ICLIConfigurator cliConfigurator, ILogger logger, CancellationToken ct)
+        internal static async Task<bool> InitAsync(IAnsiConsole ansiConsole, IConfigurationManager<Configurations> configurationManager, ICredentialManager credentialManager, IConsoleReader consoleReader, ICLIConfigurator cliConfigurator, ILogger logger, CancellationToken ct)
         {
             Configurations config;
             try
@@ -99,7 +100,7 @@ namespace MSStore.CLI
             catch (Exception ex)
             {
                 logger.LogCritical(ex, "Something in the config file seems wrong...");
-                return await StartOverAsync(configurationManager, consoleReader, cliConfigurator, ct);
+                return await StartOverAsync(ansiConsole, configurationManager, consoleReader, cliConfigurator, ct);
             }
 
             if (config.SellerId == null)
@@ -110,7 +111,7 @@ namespace MSStore.CLI
 
             if (!config.ClientId.HasValue)
             {
-                AnsiConsole.MarkupLine("Configuration Client Id is empty. Please, run the [b green]reconfigure[/] command");
+                ansiConsole.MarkupLine("Configuration Client Id is empty. Please, run the [b green]reconfigure[/] command");
                 return false;
             }
 
@@ -119,23 +120,23 @@ namespace MSStore.CLI
                 && string.IsNullOrEmpty(config.CertificateThumbprint)
                 && string.IsNullOrEmpty(secret))
             {
-                AnsiConsole.MarkupLine("We could not find credentials that match your configurations.");
+                ansiConsole.MarkupLine("We could not find credentials that match your configurations.");
                 logger.LogCritical("Secret is empty");
 
-                return await StartOverAsync(configurationManager, consoleReader, cliConfigurator, ct);
+                return await StartOverAsync(ansiConsole, configurationManager, consoleReader, cliConfigurator, ct);
             }
 
             return true;
         }
 
-        internal static async Task<bool> StartOverAsync(IConfigurationManager<Configurations> configurationManager, IConsoleReader consoleReader, ICLIConfigurator cliConfigurator, CancellationToken ct)
+        internal static async Task<bool> StartOverAsync(IAnsiConsole ansiConsole, IConfigurationManager<Configurations> configurationManager, IConsoleReader consoleReader, ICLIConfigurator cliConfigurator, CancellationToken ct)
         {
             if (await consoleReader.YesNoConfirmationAsync("Do you want to start over and reset the settings? I'll ask for the credentials all over again, ok?", ct))
             {
                 _ = await configurationManager.LoadAsync(true, ct);
                 await configurationManager.ClearAsync(ct);
-                AnsiConsole.WriteLine("Configuration cleared.");
-                return await cliConfigurator.ConfigureAsync(false, ct: ct);
+                ansiConsole.WriteLine("Configuration cleared.");
+                return await cliConfigurator.ConfigureAsync(ansiConsole, false, ct: ct);
             }
             else
             {

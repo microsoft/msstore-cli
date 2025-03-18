@@ -30,10 +30,11 @@ namespace MSStore.CLI.Commands.Submission
             AddOption(SubmissionCommand.LanguageOption);
         }
 
-        public new class Handler(ILogger<GetCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, TelemetryClient telemetryClient) : ICommandHandler
+        public new class Handler(ILogger<GetCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : ICommandHandler
         {
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
+            private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
             public string Module { get; set; } = null!;
@@ -49,7 +50,7 @@ namespace MSStore.CLI.Commands.Submission
             {
                 var ct = context.GetCancellationToken();
 
-                var submission = await AnsiConsole.Status().StartAsync("Retrieving Submission", async ctx =>
+                var submission = await _ansiConsole.Status().StartAsync("Retrieving Submission", async ctx =>
                 {
                     try
                     {
@@ -62,11 +63,11 @@ namespace MSStore.CLI.Commands.Submission
 
                             if (application?.Id == null)
                             {
-                                ctx.ErrorStatus($"Could not find application with ID '{ProductId}'");
+                                ctx.ErrorStatus(_ansiConsole, $"Could not find application with ID '{ProductId}'");
                                 return -1;
                             }
 
-                            submission = await storePackagedAPI.GetAnySubmissionAsync(application, ctx, _logger, ct);
+                            submission = await storePackagedAPI.GetAnySubmissionAsync(_ansiConsole, application, ctx, _logger, ct);
                         }
                         else
                         {
@@ -78,10 +79,10 @@ namespace MSStore.CLI.Commands.Submission
                             }
                             catch (ArgumentException ex)
                             {
-                                ctx.ErrorStatus(ex.Message);
+                                ctx.ErrorStatus(_ansiConsole, ex.Message);
                             }
 
-                            ctx.SuccessStatus();
+                            ctx.SuccessStatus(_ansiConsole);
                         }
 
                         return submission;
@@ -90,12 +91,12 @@ namespace MSStore.CLI.Commands.Submission
                     {
                         if (err.Response.StatusCode == System.Net.HttpStatusCode.Forbidden)
                         {
-                            ctx.ErrorStatus("Could not find the Application or submission. Please check the ProductId.");
+                            ctx.ErrorStatus(_ansiConsole, "Could not find the Application or submission. Please check the ProductId.");
                             _logger.LogError(err, "Could not find the Application or submission. Please check the ProductId.");
                         }
                         else
                         {
-                            ctx.ErrorStatus("Error while retrieving submission.");
+                            ctx.ErrorStatus(_ansiConsole, "Error while retrieving submission.");
                             _logger.LogError(err, "Error while retrieving submission for Application.");
                         }
 
@@ -104,7 +105,7 @@ namespace MSStore.CLI.Commands.Submission
                     catch (Exception err)
                     {
                         _logger.LogError(err, "Error while retrieving submission.");
-                        ctx.ErrorStatus(err);
+                        ctx.ErrorStatus(_ansiConsole, err);
                         return null;
                     }
                 });

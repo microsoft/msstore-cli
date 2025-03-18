@@ -16,7 +16,7 @@ using Spectre.Console;
 
 namespace MSStore.CLI.ProjectConfigurators
 {
-    internal class ReactNativeProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, IAppXManifestManager appXManifestManager, IEnvironmentInformationService environmentInformationService, ILogger<ReactNativeProjectConfigurator> logger) : NodeBaseProjectConfigurator(externalCommandExecutor, browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, environmentInformationService, logger)
+    internal class ReactNativeProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, IAppXManifestManager appXManifestManager, IEnvironmentInformationService environmentInformationService, IAnsiConsole ansiConsole, ILogger<ReactNativeProjectConfigurator> logger) : NodeBaseProjectConfigurator(externalCommandExecutor, browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, environmentInformationService, ansiConsole, logger)
     {
         private readonly IAppXManifestManager _appXManifestManager = appXManifestManager ?? throw new ArgumentNullException(nameof(appXManifestManager));
 
@@ -87,8 +87,8 @@ namespace MSStore.CLI.ProjectConfigurators
 
             _appXManifestManager.UpdateManifest(appxManifest.FullName, app, publisherDisplayName, version);
 
-            AnsiConsole.WriteLine($"React Native project '{reactNativeProjectFile.FullName}', with AppX manifest file at '{appxManifest.FullName}', is now configured to build to the Microsoft Store!");
-            AnsiConsole.MarkupLine("For more information on building your React Native project to the Microsoft Store, see [link]https://microsoft.github.io/react-native-windows/docs/app-publishing[/]");
+            ErrorAnsiConsole.WriteLine($"React Native project '{reactNativeProjectFile.FullName}', with AppX manifest file at '{appxManifest.FullName}', is now configured to build to the Microsoft Store!");
+            ErrorAnsiConsole.MarkupLine("For more information on building your React Native project to the Microsoft Store, see [link]https://microsoft.github.io/react-native-windows/docs/app-publishing[/]");
 
             return Task.FromResult((0, output));
         }
@@ -142,7 +142,7 @@ namespace MSStore.CLI.ProjectConfigurators
 
             output ??= GetInputDirectory(projectRootPath);
 
-            return await UWPProjectConfigurator.PackageAsync(appxManifest.Directory, buildArchs, solutionFile, PackageFilesExtensionInclude, appxManifest, version, output, ExternalCommandExecutor, _appXManifestManager, Logger, ct);
+            return await UWPProjectConfigurator.PackageAsync(ErrorAnsiConsole, appxManifest.Directory, buildArchs, solutionFile, PackageFilesExtensionInclude, appxManifest, version, output, ExternalCommandExecutor, _appXManifestManager, Logger, ct);
         }
 
         public override Task<string?> GetAppIdAsync(FileInfo? fileInfo, CancellationToken ct)

@@ -159,6 +159,7 @@ namespace MSStore.CLI.Commands
             IPartnerCenterManager partnerCenterManager,
             IImageConverter imageConverter,
             IConfigurationManager<Configurations> configurationManager,
+            IAnsiConsole ansiConsole,
             TelemetryClient telemetryClient) : ICommandHandler
         {
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -170,6 +171,7 @@ namespace MSStore.CLI.Commands
             private readonly IPartnerCenterManager _partnerCenterManager = partnerCenterManager ?? throw new ArgumentNullException(nameof(partnerCenterManager));
             private readonly IImageConverter _imageConverter = imageConverter ?? throw new ArgumentNullException(nameof(imageConverter));
             private readonly IConfigurationManager<Configurations> _configurationManager = configurationManager ?? throw new ArgumentNullException(nameof(configurationManager));
+            private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
             public string PathOrUrl { get; set; } = null!;
@@ -216,7 +218,7 @@ namespace MSStore.CLI.Commands
 
                 if (configurator == null)
                 {
-                    AnsiConsole.WriteLine(CultureInfo.InvariantCulture, "We could not find a project configurator for the project at '{0}'.", PathOrUrl);
+                    _ansiConsole.WriteLine(string.Format(CultureInfo.InvariantCulture, "We could not find a project configurator for the project at '{0}'.", PathOrUrl));
                     props["ProjType"] = "NF";
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(-1, props, ct);
                 }
@@ -237,7 +239,7 @@ namespace MSStore.CLI.Commands
                         await _tokenManager.SelectAccountAsync(true, false, ct);
 
                         AccountEnrollment? account = null;
-                        var success = await AnsiConsole.Status().StartAsync("Waiting for browser Sign in", async ctx =>
+                        var success = await _ansiConsole.Status().StartAsync("Waiting for browser Sign in", async ctx =>
                         {
                             try
                             {
@@ -245,12 +247,12 @@ namespace MSStore.CLI.Commands
 
                                 account = accounts.Items?.FirstOrDefault();
 
-                                ctx.SuccessStatus("Authenticated!");
+                                ctx.SuccessStatus(_ansiConsole, "Authenticated!");
                             }
                             catch (Exception err)
                             {
                                 _logger.LogError(err, "Error while authenticating.");
-                                ctx.ErrorStatus("Could not authenticate. Please try again.");
+                                ctx.ErrorStatus(_ansiConsole, "Could not authenticate. Please try again.");
                                 return false;
                             }
 
@@ -268,11 +270,11 @@ namespace MSStore.CLI.Commands
                             return await _telemetryClient.TrackCommandEventAsync<Handler>(-2, props, ct);
                         }
 
-                        account.WriteInfo();
+                        account.WriteInfo(_ansiConsole);
 
                         if (string.IsNullOrEmpty(account.Name))
                         {
-                            AnsiConsole.MarkupLine("Account name is empty.");
+                            _ansiConsole.MarkupLine("Account name is empty.");
                             return await _telemetryClient.TrackCommandEventAsync<Handler>(-3, props, ct);
                         }
 
@@ -288,7 +290,7 @@ namespace MSStore.CLI.Commands
                             PublisherDisplayName = await _consoleReader.RequestStringAsync("Please, provide the PublisherDisplayName", false, ct);
                             if (string.IsNullOrEmpty(PublisherDisplayName))
                             {
-                                AnsiConsole.MarkupLine("[bold red]Invalid Publisher Display Name[/]");
+                                _ansiConsole.MarkupLine("[bold red]Invalid Publisher Display Name[/]");
                                 return await _telemetryClient.TrackCommandEventAsync<Handler>(-1, props, ct);
                             }
 
@@ -309,16 +311,16 @@ namespace MSStore.CLI.Commands
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(-1, props, ct);
                 }
 
-                AnsiConsole.WriteLine($"This seems to be a {configurator} project.");
+                _ansiConsole.WriteLine($"This seems to be a {configurator} project.");
 
                 bool verbose = context.ParseResult.IsVerbose();
                 if (verbose)
                 {
-                    AnsiConsole.WriteLine($"Using PublisherDisplayName: {PublisherDisplayName}");
+                    _ansiConsole.WriteLine($"Using PublisherDisplayName: {PublisherDisplayName}");
                 }
 
-                AnsiConsole.WriteLine("Let's set it up for you!");
-                AnsiConsole.WriteLine();
+                _ansiConsole.WriteLine("Let's set it up for you!");
+                _ansiConsole.WriteLine();
 
                 var (result, outputDirectory) = await configurator.ConfigureAsync(PathOrUrl, Output, PublisherDisplayName, app, Version, storePackagedAPI, ct);
 
@@ -332,7 +334,7 @@ namespace MSStore.CLI.Commands
                     Output = outputDirectory;
                 }
 
-                await configurator.ValidateImagesAsync(PathOrUrl, _imageConverter, _logger, ct);
+                await configurator.ValidateImagesAsync(_ansiConsole, PathOrUrl, _imageConverter, _logger, ct);
 
                 outputDirectory = null;
                 if (Package == true || Publish == true)
@@ -340,7 +342,7 @@ namespace MSStore.CLI.Commands
                     var projectPackager = configurator as IProjectPackager;
                     if (projectPackager == null)
                     {
-                        AnsiConsole.WriteLine(CultureInfo.InvariantCulture, "We can't package this type of project.");
+                        _ansiConsole.WriteLine("We can't package this type of project.");
                         return await _telemetryClient.TrackCommandEventAsync<Handler>(-4, props, ct);
                     }
 
@@ -357,7 +359,7 @@ namespace MSStore.CLI.Commands
 
                     if (projectPackager.PackageOnlyOnWindows && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
-                        AnsiConsole.MarkupLine("[red]This project type can only be packaged on Windows.[/]");
+                        _ansiConsole.MarkupLine("[red]This project type can only be packaged on Windows.[/]");
                         return await _telemetryClient.TrackCommandEventAsync<Handler>(-6, props, ct);
                     }
 
@@ -374,7 +376,7 @@ namespace MSStore.CLI.Commands
                     var projectPublisher = configurator as IProjectPublisher;
                     if (projectPublisher == null)
                     {
-                        AnsiConsole.WriteLine(CultureInfo.InvariantCulture, "We can't publish this type of project.");
+                        _ansiConsole.WriteLine("We can't publish this type of project.");
                         return await _telemetryClient.TrackCommandEventAsync<Handler>(-5, props, ct);
                     }
 
@@ -395,8 +397,8 @@ namespace MSStore.CLI.Commands
 
                 if (appList.Count == 0)
                 {
-                    AnsiConsole.WriteLine("Your account has no registered apps yet.");
-                    AnsiConsole.MarkupLine("[b]Let's create one![/]");
+                    _ansiConsole.WriteLine("Your account has no registered apps yet.");
+                    _ansiConsole.MarkupLine("[b]Let's create one![/]");
                     return await CreateNewAppAsync(ct);
                 }
 
@@ -427,18 +429,18 @@ namespace MSStore.CLI.Commands
             {
                 List<DevCenterApplication>? appList = null;
 
-                var success = await AnsiConsole.Status().StartAsync("Retrieving all registered applications...", async ctx =>
+                var success = await _ansiConsole.Status().StartAsync("Retrieving all registered applications...", async ctx =>
                 {
                     try
                     {
                         appList = await storePackagedAPI.GetApplicationsAsync(ct);
 
-                        ctx.SuccessStatus("Ok! Found your apps!");
+                        ctx.SuccessStatus(_ansiConsole, "Ok! Found your apps!");
                     }
                     catch (Exception err)
                     {
                         _logger.LogError(err, "Error while retrieving applications.");
-                        ctx.ErrorStatus("Could not retrieve your registered applications. Please try again.");
+                        ctx.ErrorStatus(_ansiConsole, "Could not retrieve your registered applications. Please try again.");
 
                         return false;
                     }
@@ -451,9 +453,9 @@ namespace MSStore.CLI.Commands
 
             private async Task OpenMicrosoftStoreRegistrationPageAsync(CancellationToken ct)
             {
-                AnsiConsole.WriteLine("I see that you are not a Microsoft Store Developer just yet.");
-                AnsiConsole.WriteLine();
-                AnsiConsole.WriteLine("I'll redirect you to the Microsoft Store Sign-up page.");
+                _ansiConsole.WriteLine("I see that you are not a Microsoft Store Developer just yet.");
+                _ansiConsole.WriteLine();
+                _ansiConsole.WriteLine("I'll redirect you to the Microsoft Store Sign-up page.");
 
                 await _browserLauncher.OpenBrowserAsync("https://partner.microsoft.com/dashboard/registration", true, ct);
             }

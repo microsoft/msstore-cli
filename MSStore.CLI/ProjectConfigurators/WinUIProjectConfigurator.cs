@@ -19,7 +19,7 @@ using Spectre.Console;
 
 namespace MSStore.CLI.ProjectConfigurators
 {
-    internal class WinUIProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, INuGetPackageManager nuGetPackageManager, IAppXManifestManager appXManifestManager, IEnvironmentInformationService environmentInformationService, ILogger<WinUIProjectConfigurator> logger) : UWPProjectConfigurator(externalCommandExecutor, browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, nuGetPackageManager, appXManifestManager, environmentInformationService, logger)
+    internal class WinUIProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, INuGetPackageManager nuGetPackageManager, IAppXManifestManager appXManifestManager, IEnvironmentInformationService environmentInformationService, IAnsiConsole ansiConsole, ILogger<WinUIProjectConfigurator> logger) : UWPProjectConfigurator(externalCommandExecutor, browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, nuGetPackageManager, appXManifestManager, environmentInformationService, ansiConsole, logger)
     {
         public override string ToString() => "Windows App SDK/WinUI";
 
@@ -48,7 +48,7 @@ namespace MSStore.CLI.ProjectConfigurators
 
             (_, FileInfo manifestFile) = GetInfo(pathOrUrl);
 
-            return await IsWinUI3Async(manifestFile, ExternalCommandExecutor, NuGetPackageManager, Logger, ct);
+            return await IsWinUI3Async(ErrorAnsiConsole, manifestFile, ExternalCommandExecutor, NuGetPackageManager, Logger, ct);
         }
 
         [SupportedOSPlatform("windows")]
@@ -58,14 +58,14 @@ namespace MSStore.CLI.ProjectConfigurators
 
             var workingDirectory = projectRootPath.FullName;
 
-            var msbuildPath = await GetMSBuildPathAsync(ExternalCommandExecutor, Logger, workingDirectory, ct);
+            var msbuildPath = await GetMSBuildPathAsync(ErrorAnsiConsole, ExternalCommandExecutor, Logger, workingDirectory, ct);
 
             if (string.IsNullOrEmpty(msbuildPath))
             {
                 return (-1, null);
             }
 
-            await RestorePackagesAsync(ExternalCommandExecutor, Logger, workingDirectory, msbuildPath, ct);
+            await RestorePackagesAsync(ErrorAnsiConsole, ExternalCommandExecutor, Logger, workingDirectory, msbuildPath, ct);
 
             output ??= new DirectoryInfo(Path.Combine(projectRootPath.FullName, "AppPackages"));
 
@@ -140,7 +140,7 @@ namespace MSStore.CLI.ProjectConfigurators
                         throw new MSStoreException($"Could not find any file with extensions {string.Join(", ", PackageFilesExtensionInclude.Select(e => $"'{e}'"))}!");
                     }
 
-                    ctx.SuccessStatus("MSIX built successfully!");
+                    ctx.SuccessStatus(ErrorAnsiConsole, "MSIX built successfully!");
 
                     return bundleUploadFile;
                 }

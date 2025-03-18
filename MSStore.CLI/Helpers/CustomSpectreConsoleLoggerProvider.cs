@@ -4,16 +4,18 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
+using Spectre.Console;
 
 namespace MSStore.CLI.Helpers
 {
     internal class CustomSpectreConsoleLoggerProvider : ILoggerProvider, ISupportExternalScope
     {
         private readonly ConcurrentDictionary<string, CustomSpectreConsoleLogger> _loggers = new();
+        private readonly IAnsiConsole _ansiConsole;
         private ConsoleFormatter _formatter;
         private IExternalScopeProvider? _scopeProvider;
 
-        public CustomSpectreConsoleLoggerProvider()
+        public CustomSpectreConsoleLoggerProvider(IAnsiConsole ansiConsole)
         {
             _formatter = new CustomSpectreConsoleFormatter
             {
@@ -25,11 +27,12 @@ namespace MSStore.CLI.Helpers
                     SingleLine = true
                 }
             };
+            _ansiConsole = ansiConsole;
         }
 
         public ILogger CreateLogger(string name)
         {
-            return _loggers.GetOrAdd(name, (name) => new CustomSpectreConsoleLogger(name, _formatter, _scopeProvider));
+            return _loggers.GetOrAdd(name, (name) => new CustomSpectreConsoleLogger(name, _formatter, _scopeProvider, _ansiConsole));
         }
 
         public void Dispose()

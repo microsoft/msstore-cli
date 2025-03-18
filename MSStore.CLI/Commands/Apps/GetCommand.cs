@@ -25,10 +25,11 @@ namespace MSStore.CLI.Commands.Apps
             AddArgument(SubmissionCommand.ProductIdArgument);
         }
 
-        public new class Handler(ILogger<GetCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, TelemetryClient telemetryClient) : ICommandHandler
+        public new class Handler(ILogger<GetCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : ICommandHandler
         {
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
+            private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
             public string ProductId { get; set; } = null!;
@@ -44,12 +45,12 @@ namespace MSStore.CLI.Commands.Apps
 
                 if (ProductTypeHelper.Solve(ProductId) == ProductType.Unpackaged)
                 {
-                    AnsiConsole.WriteLine("This command is not supported for unpackaged applications.");
+                    _ansiConsole.WriteLine("This command is not supported for unpackaged applications.");
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
                 }
 
                 object? application = null;
-                var success = await AnsiConsole.Status().StartAsync("Retrieving Application", async ctx =>
+                var success = await _ansiConsole.Status().StartAsync("Retrieving Application", async ctx =>
                 {
                     try
                     {
@@ -66,11 +67,11 @@ namespace MSStore.CLI.Commands.Apps
 
                         if (err.Response.StatusCode == System.Net.HttpStatusCode.Forbidden)
                         {
-                            ctx.ErrorStatus("Could not find the Application. Please check the ProductId.");
+                            ctx.ErrorStatus(_ansiConsole, "Could not find the Application. Please check the ProductId.");
                         }
                         else
                         {
-                            ctx.ErrorStatus("Error while retrieving Application.");
+                            ctx.ErrorStatus(_ansiConsole, "Error while retrieving Application.");
                         }
 
                         return false;
@@ -78,7 +79,7 @@ namespace MSStore.CLI.Commands.Apps
                     catch (Exception err)
                     {
                         _logger.LogError(err, "Error while retrieving Application.");
-                        ctx.ErrorStatus(err);
+                        ctx.ErrorStatus(_ansiConsole, err);
                         return false;
                     }
 
@@ -94,7 +95,7 @@ namespace MSStore.CLI.Commands.Apps
                 {
                     if (app?.Id == null)
                     {
-                        AnsiConsole.MarkupLine($"Could not find application with ID '{ProductId}'");
+                        _ansiConsole.MarkupLine($"Could not find application with ID '{ProductId}'");
                         return await _telemetryClient.TrackCommandEventAsync<Handler>(-1, ct);
                     }
                     else

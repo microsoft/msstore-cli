@@ -24,10 +24,11 @@ namespace MSStore.CLI.Commands.Flights
             AddArgument(GetCommand.FlightIdArgument);
         }
 
-        public new class Handler(ILogger<DeleteCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, TelemetryClient telemetryClient) : ICommandHandler
+        public new class Handler(ILogger<DeleteCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : ICommandHandler
         {
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
+            private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
             public string ProductId { get; set; } = null!;
@@ -44,12 +45,12 @@ namespace MSStore.CLI.Commands.Flights
 
                 if (ProductTypeHelper.Solve(ProductId) == ProductType.Unpackaged)
                 {
-                    AnsiConsole.WriteLine("This command is not supported for unpackaged applications.");
+                    _ansiConsole.WriteLine("This command is not supported for unpackaged applications.");
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
                 }
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(
-                    await AnsiConsole.Status().StartAsync("Deleting Flight", async ctx =>
+                    await _ansiConsole.Status().StartAsync("Deleting Flight", async ctx =>
                     {
                         try
                         {
@@ -57,21 +58,21 @@ namespace MSStore.CLI.Commands.Flights
 
                             DevCenterError? devCenterError = await storePackagedAPI.DeleteFlightAsync(ProductId, FlightId, ct);
 
-                            ctx.SuccessStatus("[bold green]Deleted Flight[/]");
+                            ctx.SuccessStatus(_ansiConsole, "[bold green]Deleted Flight[/]");
 
                             return 0;
                         }
                         catch (MSStoreHttpException err)
                         {
                             _logger.LogError(err, "Could not delete the flight.");
-                            ctx.ErrorStatus("Could not delete the flight.");
+                            ctx.ErrorStatus(_ansiConsole, "Could not delete the flight.");
 
                             return -1;
                         }
                         catch (Exception err)
                         {
                             _logger.LogError(err, "Error while deleting flight.");
-                            ctx.ErrorStatus("Error while deleting flight. Please try again.");
+                            ctx.ErrorStatus(_ansiConsole, "Error while deleting flight. Please try again.");
                             return -1;
                         }
                     }), ct);

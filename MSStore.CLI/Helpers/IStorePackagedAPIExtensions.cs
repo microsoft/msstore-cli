@@ -22,7 +22,7 @@ namespace MSStore.CLI.Helpers
     {
         internal delegate Task<(string Description, List<SubmissionImage> Images)> FirstSubmissionDataCallback(string listingLanguage, CancellationToken ct);
 
-        public static async Task<DevCenterSubmission?> GetAnySubmissionAsync(this IStorePackagedAPI storePackagedAPI, DevCenterApplication application, StatusContext ctx, ILogger logger, CancellationToken ct)
+        public static async Task<DevCenterSubmission?> GetAnySubmissionAsync(this IStorePackagedAPI storePackagedAPI, IAnsiConsole ansiConsole, DevCenterApplication application, StatusContext ctx, ILogger logger, CancellationToken ct)
         {
             if (application.Id == null)
             {
@@ -32,14 +32,14 @@ namespace MSStore.CLI.Helpers
             DevCenterSubmission? submission = null;
             if (application.PendingApplicationSubmission?.Id != null)
             {
-                AnsiConsole.MarkupLine($"Found [green]Pending Submission[/].");
+                ansiConsole.MarkupLine($"Found [green]Pending Submission[/].");
                 logger.LogInformation("Found Pending Submission with Id '{ApplicationPendingApplicationSubmissionId}'", application.PendingApplicationSubmission.Id);
                 ctx.Status("Retrieving Pending Submission");
                 submission = await storePackagedAPI.GetSubmissionAsync(application.Id, application.PendingApplicationSubmission.Id, ct);
             }
             else if (application.LastPublishedApplicationSubmission?.Id != null)
             {
-                AnsiConsole.MarkupLine("Could not find a Pending Submission, but found the [green]Last Published Submission[/].");
+                ansiConsole.MarkupLine("Could not find a Pending Submission, but found the [green]Last Published Submission[/].");
                 logger.LogInformation("Could not find a Pending Submission, but found the Last Published Submission with Id '{ApplicationLastPublishedApplicationSubmissionId}'", application.LastPublishedApplicationSubmission.Id);
                 ctx.Status("Retrieving Last Published Submission");
                 submission = await storePackagedAPI.GetSubmissionAsync(application.Id, application.LastPublishedApplicationSubmission.Id, ct);
@@ -48,7 +48,7 @@ namespace MSStore.CLI.Helpers
             return submission;
         }
 
-        public static async Task<DevCenterFlightSubmission?> GetAnyFlightSubmissionAsync(this IStorePackagedAPI storePackagedAPI, string applicationId, DevCenterFlight flight, StatusContext ctx, ILogger logger, CancellationToken ct)
+        public static async Task<DevCenterFlightSubmission?> GetAnyFlightSubmissionAsync(this IStorePackagedAPI storePackagedAPI, IAnsiConsole ansiConsole, string applicationId, DevCenterFlight flight, StatusContext ctx, ILogger logger, CancellationToken ct)
         {
             if (applicationId == null || flight.FlightId == null)
             {
@@ -58,14 +58,14 @@ namespace MSStore.CLI.Helpers
             DevCenterFlightSubmission? submission = null;
             if (flight.PendingFlightSubmission?.Id != null)
             {
-                AnsiConsole.MarkupLine($"Found [green]Pending Flight Submission[/].");
+                ansiConsole.MarkupLine($"Found [green]Pending Flight Submission[/].");
                 logger.LogInformation("Found Pending Flight Submission with Id '{FlightPendingFlightSubmissionId}'", flight.PendingFlightSubmission.Id);
                 ctx.Status("Retrieving Pending Flight Submission");
                 submission = await storePackagedAPI.GetFlightSubmissionAsync(applicationId, flight.FlightId, flight.PendingFlightSubmission.Id, ct);
             }
             else if (flight.LastPublishedFlightSubmission?.Id != null)
             {
-                AnsiConsole.MarkupLine("Could not find a Pending Flight Submission, but found the [green]Last Published Flight Submission[/].");
+                ansiConsole.MarkupLine("Could not find a Pending Flight Submission, but found the [green]Last Published Flight Submission[/].");
                 logger.LogInformation("Could not find a Pending Flight Submission, but found the Last Published Flight Submission with Id '{FlightLastPublishedFlightSubmissionId}'", flight.LastPublishedFlightSubmission.Id);
                 ctx.Status("Retrieving Last Published Flight Submission");
                 submission = await storePackagedAPI.GetFlightSubmissionAsync(applicationId, flight.FlightId, flight.LastPublishedFlightSubmission.Id, ct);
@@ -74,15 +74,15 @@ namespace MSStore.CLI.Helpers
             return submission;
         }
 
-        public static async Task<DevCenterSubmission?> CreateNewSubmissionAsync(this IStorePackagedAPI storePackagedAPI, string productId, ILogger logger, CancellationToken ct)
+        public static async Task<DevCenterSubmission?> CreateNewSubmissionAsync(this IStorePackagedAPI storePackagedAPI, IAnsiConsole ansiConsole, string productId, ILogger logger, CancellationToken ct)
         {
-            return await AnsiConsole.Status().StartAsync("Creating new Submission", async ctx =>
+            return await ansiConsole.Status().StartAsync("Creating new Submission", async ctx =>
             {
                 try
                 {
                     var submission = await storePackagedAPI.CreateSubmissionAsync(productId, ct);
 
-                    ctx.SuccessStatus($"Submission created.");
+                    ctx.SuccessStatus(ansiConsole, $"Submission created.");
                     logger.LogInformation("Submission created. Id={SubmissionId}", submission.Id);
 
                     return submission;
@@ -90,21 +90,21 @@ namespace MSStore.CLI.Helpers
                 catch (Exception err)
                 {
                     logger.LogError(err, "Error while creating submission.");
-                    ctx.ErrorStatus("Error while creating submission. Please try again.");
+                    ctx.ErrorStatus(ansiConsole, "Error while creating submission. Please try again.");
                     return null;
                 }
             });
         }
 
-        public static async Task<DevCenterFlightSubmission?> CreateNewFlightSubmissionAsync(this IStorePackagedAPI storePackagedAPI, string productId, string flightId, ILogger logger, CancellationToken ct)
+        public static async Task<DevCenterFlightSubmission?> CreateNewFlightSubmissionAsync(this IStorePackagedAPI storePackagedAPI, IAnsiConsole ansiConsole, string productId, string flightId, ILogger logger, CancellationToken ct)
         {
-            return await AnsiConsole.Status().StartAsync("Creating new Flight Submission", async ctx =>
+            return await ansiConsole.Status().StartAsync("Creating new Flight Submission", async ctx =>
             {
                 try
                 {
                     var flightSubmission = await storePackagedAPI.CreateFlightSubmissionAsync(productId, flightId, ct);
 
-                    ctx.SuccessStatus($"Flight Submission created.");
+                    ctx.SuccessStatus(ansiConsole, $"Flight Submission created.");
                     logger.LogInformation("Flight Submission created. Id={FlightSubmissionId}", flightSubmission.Id);
 
                     return flightSubmission;
@@ -112,15 +112,15 @@ namespace MSStore.CLI.Helpers
                 catch (Exception err)
                 {
                     logger.LogError(err, "Error while creating flight submission.");
-                    ctx.ErrorStatus("Error while creating flight submission. Please try again.");
+                    ctx.ErrorStatus(ansiConsole, "Error while creating flight submission. Please try again.");
                     return null;
                 }
             });
         }
 
-        private static async Task<IDevCenterSubmission?> GetExistingSubmission(this IStorePackagedAPI storePackagedAPI, string appId, string? flightId, string submissionId, ILogger logger, CancellationToken ct)
+        private static async Task<IDevCenterSubmission?> GetExistingSubmission(this IStorePackagedAPI storePackagedAPI, IAnsiConsole ansiConsole, string appId, string? flightId, string submissionId, ILogger logger, CancellationToken ct)
         {
-            return await AnsiConsole.Status().StartAsync("Retrieving existing Submission", async ctx =>
+            return await ansiConsole.Status().StartAsync("Retrieving existing Submission", async ctx =>
             {
                 try
                 {
@@ -134,7 +134,7 @@ namespace MSStore.CLI.Helpers
                         submission = await storePackagedAPI.GetSubmissionAsync(appId, submissionId, ct);
                     }
 
-                    AnsiConsole.MarkupLine($":check_mark_button: [green]Submission retrieved[/]");
+                    ansiConsole.MarkupLine($":check_mark_button: [green]Submission retrieved[/]");
                     logger.LogInformation("Submission retrieved. Id = '{SubmissionId}'", submission.Id);
 
                     return submission;
@@ -142,7 +142,7 @@ namespace MSStore.CLI.Helpers
                 catch (Exception err)
                 {
                     logger.LogError(err, "Error while retrieving submission.");
-                    ctx.ErrorStatus("Error while retrieving submission. Please try again.");
+                    ctx.ErrorStatus(ansiConsole, "Error while retrieving submission. Please try again.");
                     return null;
                 }
             });
@@ -177,15 +177,15 @@ namespace MSStore.CLI.Helpers
                    && submissionStatus.StatusDetails?.CertificationReports.IsNullOrEmpty() == true);
         }
 
-        public static async Task<DevCenterSubmissionStatusResponse?> PollSubmissionStatusAsync(this IStorePackagedAPI storePackagedAPI, string productId, string? flightId, string submissionId, bool waitFirst, ILogger? logger, CancellationToken ct = default)
+        public static async Task<DevCenterSubmissionStatusResponse?> PollSubmissionStatusAsync(this IStorePackagedAPI storePackagedAPI, IAnsiConsole ansiConsole, string productId, string? flightId, string submissionId, bool waitFirst, ILogger? logger, CancellationToken ct = default)
         {
             DevCenterSubmissionStatusResponse? lastSubmissionStatus = null;
             await foreach (var submissionStatus in storePackagedAPI.EnumerateSubmissionStatusAsync(productId, flightId, submissionId, waitFirst, ct: ct))
             {
-                AnsiConsole.MarkupLine($"Submission Status - [green]{submissionStatus.Status}[/]");
-                submissionStatus.StatusDetails?.PrintAllTables(productId, submissionId, logger);
+                ansiConsole.MarkupLine($"Submission Status - [green]{submissionStatus.Status}[/]");
+                submissionStatus.StatusDetails?.PrintAllTables(ansiConsole, productId, submissionId, logger);
 
-                AnsiConsole.WriteLine();
+                ansiConsole.WriteLine();
 
                 lastSubmissionStatus = submissionStatus;
             }
@@ -193,7 +193,7 @@ namespace MSStore.CLI.Helpers
             return lastSubmissionStatus;
         }
 
-        public static async Task<int> HandleLastSubmissionStatusAsync(this IStorePackagedAPI storePackagedAPI, DevCenterSubmissionStatusResponse lastSubmissionStatus, string productId, string? flightId, string submissionId, IBrowserLauncher browserLauncher, ILogger logger, CancellationToken ct = default)
+        public static async Task<int> HandleLastSubmissionStatusAsync(this IStorePackagedAPI storePackagedAPI, IAnsiConsole ansiConsole, DevCenterSubmissionStatusResponse lastSubmissionStatus, string productId, string? flightId, string submissionId, IBrowserLauncher browserLauncher, ILogger logger, CancellationToken ct = default)
         {
             if ("CommitFailed".Equals(lastSubmissionStatus?.Status, StringComparison.Ordinal))
             {
@@ -201,20 +201,20 @@ namespace MSStore.CLI.Helpers
                 if (lastSubmissionStatus.StatusDetails?.Errors?.Count == 1 &&
                     error?.Code == "InvalidMicrosoftAgeRating")
                 {
-                    AnsiConsole.WriteLine("Submission has failed. For the first submission of a new application, you need to complete the Microsoft Age Rating at the Microsoft Partner Center.");
+                    ansiConsole.WriteLine("Submission has failed. For the first submission of a new application, you need to complete the Microsoft Age Rating at the Microsoft Partner Center.");
 
                     await browserLauncher.OpenBrowserAsync($"https://partner.microsoft.com/dashboard/products/{productId}/submissions/{submissionId}/ageratings", true, ct);
                 }
                 else if (lastSubmissionStatus.StatusDetails?.Errors?.Count == 1 &&
                          error?.Code == "InvalidState")
                 {
-                    AnsiConsole.WriteLine("Submission has failed. Submission has active validation errors which cannot be exposed via API.");
+                    ansiConsole.WriteLine("Submission has failed. Submission has active validation errors which cannot be exposed via API.");
 
                     await browserLauncher.OpenBrowserAsync($"https://partner.microsoft.com/dashboard/products/{productId}/submissions/{submissionId}", true, ct);
                 }
                 else
                 {
-                    AnsiConsole.WriteLine("Submission has failed. Please check the Errors collection of the submissionResource response.");
+                    ansiConsole.WriteLine("Submission has failed. Please check the Errors collection of the submissionResource response.");
 
                     await browserLauncher.OpenBrowserAsync($"https://partner.microsoft.com/dashboard/products/{productId}/submissions/{submissionId}", true, ct);
                 }
@@ -223,7 +223,7 @@ namespace MSStore.CLI.Helpers
             }
             else
             {
-                var submission = await storePackagedAPI.GetExistingSubmission(productId, flightId, submissionId, logger, ct);
+                var submission = await storePackagedAPI.GetExistingSubmission(ansiConsole, productId, flightId, submissionId, logger, ct);
 
                 if (submission == null || submission.Id == null)
                 {
@@ -233,20 +233,20 @@ namespace MSStore.CLI.Helpers
 
                 if (submission is DevCenterSubmission devCenterSubmission && devCenterSubmission.ApplicationPackages != null)
                 {
-                    AnsiConsole.WriteLine("Submission commit success! Here is some data:");
-                    AnsiConsole.WriteLine("Packages:");
+                    ansiConsole.WriteLine("Submission commit success! Here is some data:");
+                    ansiConsole.WriteLine("Packages:");
                     foreach (var applicationPackage in devCenterSubmission.ApplicationPackages)
                     {
-                        AnsiConsole.WriteLine(applicationPackage.FileName ?? string.Empty);
+                        ansiConsole.WriteLine(applicationPackage.FileName ?? string.Empty);
                     }
                 }
                 else if (submission is DevCenterFlightSubmission devCenterFlightSubmission && devCenterFlightSubmission.FlightPackages != null)
                 {
-                    AnsiConsole.WriteLine("Submission commit success! Here is some data:");
-                    AnsiConsole.WriteLine("Packages:");
+                    ansiConsole.WriteLine("Submission commit success! Here is some data:");
+                    ansiConsole.WriteLine("Packages:");
                     foreach (var applicationPackage in devCenterFlightSubmission.FlightPackages)
                     {
-                        AnsiConsole.WriteLine(applicationPackage.FileName ?? string.Empty);
+                        ansiConsole.WriteLine(applicationPackage.FileName ?? string.Empty);
                     }
                 }
             }
@@ -254,9 +254,9 @@ namespace MSStore.CLI.Helpers
             return 0;
         }
 
-        public static async Task<bool> DeleteSubmissionAsync(this IStorePackagedAPI storePackagedAPI, string appId, string? flightId, string pendingSubmissionId, IBrowserLauncher browserLauncher, ILogger logger, CancellationToken ct)
+        public static async Task<bool> DeleteSubmissionAsync(this IStorePackagedAPI storePackagedAPI, IAnsiConsole ansiConsole, string appId, string? flightId, string pendingSubmissionId, IBrowserLauncher browserLauncher, ILogger logger, CancellationToken ct)
         {
-            return await AnsiConsole.Status().StartAsync("Deleting existing Submission", async ctx =>
+            return await ansiConsole.Status().StartAsync("Deleting existing Submission", async ctx =>
             {
                 try
                 {
@@ -272,7 +272,7 @@ namespace MSStore.CLI.Helpers
 
                     if (devCenterError != null)
                     {
-                        AnsiConsole.WriteLine(devCenterError.Message ?? string.Empty);
+                        ansiConsole.WriteLine(devCenterError.Message ?? string.Empty);
                         if (devCenterError.Code == "InvalidOperation" &&
                             devCenterError.Source == "Ingestion Api" &&
                             devCenterError.Target == "applicationSubmission")
@@ -283,19 +283,19 @@ namespace MSStore.CLI.Helpers
                         }
                     }
 
-                    ctx.SuccessStatus("Existing submission deleted!");
+                    ctx.SuccessStatus(ansiConsole, "Existing submission deleted!");
                 }
                 catch (MSStoreHttpException err)
                 {
                     if (err.Response.StatusCode == System.Net.HttpStatusCode.Forbidden)
                     {
                         logger.LogError(err, "Could not delete the submission.");
-                        ctx.ErrorStatus("Could not delete the submission.");
+                        ctx.ErrorStatus(ansiConsole, "Could not delete the submission.");
                     }
                     else
                     {
                         logger.LogError(err, "Error while deleting application's submission.");
-                        ctx.ErrorStatus("Error while deleting submission.");
+                        ctx.ErrorStatus(ansiConsole, "Error while deleting submission.");
                     }
 
                     return false;
@@ -303,7 +303,7 @@ namespace MSStore.CLI.Helpers
                 catch (Exception err)
                 {
                     logger.LogError(err, "Error while deleting submission.");
-                    ctx.ErrorStatus("Error while deleting submission. Please try again.");
+                    ctx.ErrorStatus(ansiConsole, "Error while deleting submission. Please try again.");
                     return false;
                 }
 
@@ -311,7 +311,7 @@ namespace MSStore.CLI.Helpers
             });
         }
 
-        public static async Task<DevCenterApplication?> EnsureAppInitializedAsync(this IStorePackagedAPI storePackagedAPI, DevCenterApplication? application, FileInfo? directoryInfo, IProjectPublisher projectPublisher, CancellationToken ct)
+        public static async Task<DevCenterApplication?> EnsureAppInitializedAsync(this IStorePackagedAPI storePackagedAPI, IAnsiConsole ansiConsole, DevCenterApplication? application, FileInfo? directoryInfo, IProjectPublisher projectPublisher, CancellationToken ct)
         {
             if (application?.Id == null)
             {
@@ -321,17 +321,17 @@ namespace MSStore.CLI.Helpers
                     throw new MSStoreException("Failed to find the AppId.");
                 }
 
-                await AnsiConsole.Status().StartAsync("Retrieving application...", async ctx =>
+                await ansiConsole.Status().StartAsync("Retrieving application...", async ctx =>
                 {
                     try
                     {
                         application = await storePackagedAPI.GetApplicationAsync(appId, ct);
 
-                        ctx.SuccessStatus("Ok! Found the app!");
+                        ctx.SuccessStatus(ansiConsole, "Ok! Found the app!");
                     }
                     catch (Exception)
                     {
-                        ctx.ErrorStatus("Could not retrieve your application. Please make sure you have the correct AppId.");
+                        ctx.ErrorStatus(ansiConsole, "Could not retrieve your application. Please make sure you have the correct AppId.");
                     }
 
                     return true;
@@ -343,6 +343,7 @@ namespace MSStore.CLI.Helpers
 
         public static async Task<int> PublishAsync(
             this IStorePackagedAPI storePackagedAPI,
+            IAnsiConsole ansiConsole,
             DevCenterApplication app,
             string? flightId,
             FirstSubmissionDataCallback firstSubmissionDataCallback,
@@ -378,7 +379,7 @@ namespace MSStore.CLI.Helpers
 
                 if (flight?.FlightId == null)
                 {
-                    AnsiConsole.MarkupLine($"Could not find application flight with ID '{app.Id}'/'{flightId}'");
+                    ansiConsole.MarkupLine($"Could not find application flight with ID '{app.Id}'/'{flightId}'");
                     return -1;
                 }
 
@@ -400,7 +401,7 @@ namespace MSStore.CLI.Helpers
             // Do not delete if first submission
             if (pendingSubmissionId != null && lastPublishedSubmittion != null)
             {
-                success = await storePackagedAPI.DeleteSubmissionAsync(app.Id, flightId, pendingSubmissionId, browserLauncher, logger, ct);
+                success = await storePackagedAPI.DeleteSubmissionAsync(ansiConsole, app.Id, flightId, pendingSubmissionId, browserLauncher, logger, ct);
 
                 if (!success)
                 {
@@ -413,12 +414,12 @@ namespace MSStore.CLI.Helpers
             // If first submission, just use it // TODO, check that can update
             if (pendingSubmissionId != null && lastPublishedSubmittion == null)
             {
-                submission = await storePackagedAPI.GetExistingSubmission(app.Id, flightId, pendingSubmissionId, logger, ct);
+                submission = await storePackagedAPI.GetExistingSubmission(ansiConsole, app.Id, flightId, pendingSubmissionId, logger, ct);
 
                 if (submission == null || submission.Id == null)
                 {
                     logger.LogError("Could not create or retrieve submission. Please try again.");
-                    AnsiConsole.WriteLine("Could not retrieve submission. Please try again.");
+                    ansiConsole.WriteLine("Could not retrieve submission. Please try again.");
                     return -1;
                 }
 
@@ -426,7 +427,7 @@ namespace MSStore.CLI.Helpers
                 {
                     const string message = "Retrieved a submission that was created in Partner Center. We can't upload the packages for submissions created in Partner Center. Please, delete it and try again.";
                     logger.LogError(message);
-                    AnsiConsole.WriteLine(message);
+                    ansiConsole.WriteLine(message);
                     return -1;
                 }
 
@@ -438,10 +439,10 @@ namespace MSStore.CLI.Helpers
                 {
                     if (oldSubmissionsIsCommitFailed)
                     {
-                        AnsiConsole.MarkupLine("[yellow]The submission was in a failed state. We will delete it and create a new one.[/]");
+                        ansiConsole.MarkupLine("[yellow]The submission was in a failed state. We will delete it and create a new one.[/]");
                     }
 
-                    success = await storePackagedAPI.DeleteSubmissionAsync(app.Id, flightId, submission.Id, browserLauncher, logger, ct);
+                    success = await storePackagedAPI.DeleteSubmissionAsync(ansiConsole, app.Id, flightId, submission.Id, browserLauncher, logger, ct);
 
                     if (!success)
                     {
@@ -455,8 +456,8 @@ namespace MSStore.CLI.Helpers
             if (submission == null)
             {
                 IDevCenterSubmission? newSubmission = flightId != null
-                    ? await storePackagedAPI.CreateNewFlightSubmissionAsync(app.Id, flightId, logger, ct)
-                    : await storePackagedAPI.CreateNewSubmissionAsync(app.Id, logger, ct);
+                    ? await storePackagedAPI.CreateNewFlightSubmissionAsync(ansiConsole, app.Id, flightId, logger, ct)
+                    : await storePackagedAPI.CreateNewSubmissionAsync(ansiConsole, app.Id, logger, ct);
 
                 if (newSubmission != null)
                 {
@@ -469,16 +470,16 @@ namespace MSStore.CLI.Helpers
             if (!success || submission == null || submission.Id == null || submission.FileUploadUrl == null)
             {
                 logger.LogError("Could not create or retrieve submission. Please try again.");
-                AnsiConsole.WriteLine("Could not retrieve submission. Please try again.");
+                ansiConsole.WriteLine("Could not retrieve submission. Please try again.");
                 return -1;
             }
 
-            submission = await storePackagedAPI.GetExistingSubmission(app.Id, flightId, submission.Id, logger, ct);
+            submission = await storePackagedAPI.GetExistingSubmission(ansiConsole, app.Id, flightId, submission.Id, logger, ct);
 
             if (submission == null || submission.Id == null || submission.FileUploadUrl == null)
             {
                 logger.LogError("Could not retrieve submission. Please try again.");
-                AnsiConsole.WriteLine("Could not retrieve submission. Please try again.");
+                ansiConsole.WriteLine("Could not retrieve submission. Please try again.");
                 return -1;
             }
 
@@ -499,7 +500,7 @@ namespace MSStore.CLI.Helpers
             if ((devCenterSubmission != null && devCenterSubmission.ApplicationPackages == null) ||
                 (devCenterFlightSubmission != null && devCenterFlightSubmission.FlightPackages == null))
             {
-                AnsiConsole.WriteLine("No application packages found.");
+                ansiConsole.WriteLine("No application packages found.");
                 return -1;
             }
 
@@ -510,13 +511,13 @@ namespace MSStore.CLI.Helpers
 
             if (devCenterSubmission != null)
             {
-                await FulfillApplicationAsync(app, devCenterSubmission, firstSubmissionDataCallback, allowTargetFutureDeviceFamilies, consoleReader, environmentInformationService, logger, ct);
+                await FulfillApplicationAsync(ansiConsole, app, devCenterSubmission, firstSubmissionDataCallback, allowTargetFutureDeviceFamilies, consoleReader, environmentInformationService, logger, ct);
             }
 
-            AnsiConsole.MarkupLine("New Submission [green]properly configured[/].");
+            ansiConsole.MarkupLine("New Submission [green]properly configured[/].");
             logger.LogInformation("New Submission properly configured. FileUploadUrl: {FileUploadUrl}", submission.FileUploadUrl);
 
-            var uploadZipFilePath = await PrepareBundleAsync(submission, output, input, zipFileManager, fileDownloader, logger, ct);
+            var uploadZipFilePath = await PrepareBundleAsync(ansiConsole, submission, output, input, zipFileManager, fileDownloader, logger, ct);
 
             if (uploadZipFilePath == null)
             {
@@ -554,24 +555,24 @@ namespace MSStore.CLI.Helpers
             if (submission == null || submission.Id == null || submission.FileUploadUrl == null)
             {
                 logger.LogError("Could not retrieve FileUploadUrl. Please try again.");
-                AnsiConsole.WriteLine("Could not retrieve FileUploadUrl. Please try again.");
+                ansiConsole.WriteLine("Could not retrieve FileUploadUrl. Please try again.");
                 return -1;
             }
 
-            success = await AnsiConsole.Progress()
+            success = await ansiConsole.Progress()
                 .StartAsync(async ctx =>
                 {
                     var task = ctx.AddTask("[green]Uploading Bundle to [u]Azure blob[/][/]");
                     try
                     {
                         await azureBlobManager.UploadFileAsync(submission.FileUploadUrl, uploadZipFilePath, task, ct);
-                        AnsiConsole.MarkupLine($":check_mark_button: [green]Successfully uploaded the application package.[/]");
+                        ansiConsole.MarkupLine($":check_mark_button: [green]Successfully uploaded the application package.[/]");
                         return true;
                     }
                     catch (Exception ex)
                     {
                         logger.LogError(ex, "Error while uploading the application package.");
-                        AnsiConsole.WriteLine("Error while uploading the application package.");
+                        ansiConsole.WriteLine("Error while uploading the application package.");
                         return false;
                     }
                 });
@@ -583,7 +584,7 @@ namespace MSStore.CLI.Helpers
 
             if (noCommit)
             {
-                AnsiConsole.WriteLine("Skipping submission commit.");
+                ansiConsole.WriteLine("Skipping submission commit.");
                 return 0;
             }
 
@@ -599,31 +600,31 @@ namespace MSStore.CLI.Helpers
 
             if (submissionCommit == null)
             {
-                AnsiConsole.MarkupLine(":collision: [bold red]Could not commit submission.[/]");
+                ansiConsole.MarkupLine(":collision: [bold red]Could not commit submission.[/]");
                 return -1;
             }
 
             if (submissionCommit.Status == null)
             {
-                AnsiConsole.MarkupLine(":collision: [bold red]Could not retrieve submission status.[/]");
-                AnsiConsole.MarkupLine($"[red]{submissionCommit.ToErrorMessage()}[/]");
+                ansiConsole.MarkupLine(":collision: [bold red]Could not retrieve submission status.[/]");
+                ansiConsole.MarkupLine($"[red]{submissionCommit.ToErrorMessage()}[/]");
 
                 return -2;
             }
 
-            AnsiConsole.WriteLine("Waiting for the submission commit processing to complete. This may take a couple of minutes.");
-            AnsiConsole.MarkupLine($"Submission Committed - Status=[green u]{submissionCommit.Status}[/]");
+            ansiConsole.WriteLine("Waiting for the submission commit processing to complete. This may take a couple of minutes.");
+            ansiConsole.MarkupLine($"Submission Committed - Status=[green u]{submissionCommit.Status}[/]");
 
-            var lastSubmissionStatus = await storePackagedAPI.PollSubmissionStatusAsync(app.Id, flightId, submission.Id, true, logger, ct: ct);
+            var lastSubmissionStatus = await storePackagedAPI.PollSubmissionStatusAsync(ansiConsole, app.Id, flightId, submission.Id, true, logger, ct: ct);
             if (lastSubmissionStatus == null)
             {
                 return -1;
             }
 
-            return await storePackagedAPI.HandleLastSubmissionStatusAsync(lastSubmissionStatus, app.Id, flightId, submission.Id, browserLauncher, logger, ct);
+            return await storePackagedAPI.HandleLastSubmissionStatusAsync(ansiConsole, lastSubmissionStatus, app.Id, flightId, submission.Id, browserLauncher, logger, ct);
         }
 
-        private static async Task<string?> PrepareBundleAsync(IDevCenterSubmission submission, DirectoryInfo output, IEnumerable<FileInfo> packageFiles, IZipFileManager zipFileManager, IFileDownloader fileDownloader, ILogger logger, CancellationToken ct)
+        private static async Task<string?> PrepareBundleAsync(IAnsiConsole ansiConsole, IDevCenterSubmission submission, DirectoryInfo output, IEnumerable<FileInfo> packageFiles, IZipFileManager zipFileManager, IFileDownloader fileDownloader, ILogger logger, CancellationToken ct)
         {
             DevCenterSubmission? devCenterSubmission = submission as DevCenterSubmission;
             DevCenterFlightSubmission? devCenterFlightSubmission = submission as DevCenterFlightSubmission;
@@ -636,9 +637,9 @@ namespace MSStore.CLI.Helpers
                 return null;
             }
 
-            AnsiConsole.MarkupLine("Preparing Bundle...");
+            ansiConsole.MarkupLine("Preparing Bundle...");
 
-            return await AnsiConsole.Progress()
+            return await ansiConsole.Progress()
                 .StartAsync(async ctx =>
                 {
                     DirectoryInfo? uploadDir = null;
@@ -734,7 +735,7 @@ namespace MSStore.CLI.Helpers
 
                             if (tasks.Any(t => !t.Result))
                             {
-                                AnsiConsole.MarkupLine("Error while downloading images. Please try again.");
+                                ansiConsole.MarkupLine("Error while downloading images. Please try again.");
                                 return null;
                             }
                         }
@@ -743,14 +744,14 @@ namespace MSStore.CLI.Helpers
 
                         zipFileManager.CreateFromDirectory(uploadDir.FullName, uploadZipFilePath);
 
-                        AnsiConsole.MarkupLine(":check_mark_button: [green]Zip Bundle is configured and ready to be uploaded![/]");
+                        ansiConsole.MarkupLine(":check_mark_button: [green]Zip Bundle is configured and ready to be uploaded![/]");
 
                         return uploadZipFilePath;
                     }
                     catch (Exception err)
                     {
                         logger.LogError(err, "Error while preparing bundle.");
-                        AnsiConsole.MarkupLine($":collision: [bold red]Error while preparing bundle.[/]");
+                        ansiConsole.MarkupLine($":collision: [bold red]Error while preparing bundle.[/]");
                         return null;
                     }
                     finally
@@ -781,13 +782,13 @@ namespace MSStore.CLI.Helpers
             return false;
         }
 
-        private static async Task FulfillApplicationAsync(DevCenterApplication app, DevCenterSubmission submission, FirstSubmissionDataCallback firstSubmissionDataCallback, AllowTargetFutureDeviceFamily[] allowTargetFutureDeviceFamilies, IConsoleReader consoleReader, IEnvironmentInformationService environmentInformationService, ILogger logger, CancellationToken ct)
+        private static async Task FulfillApplicationAsync(IAnsiConsole ansiConsole, DevCenterApplication app, DevCenterSubmission submission, FirstSubmissionDataCallback firstSubmissionDataCallback, AllowTargetFutureDeviceFamily[] allowTargetFutureDeviceFamilies, IConsoleReader consoleReader, IEnvironmentInformationService environmentInformationService, ILogger logger, CancellationToken ct)
         {
             if (submission.ApplicationCategory == DevCenterApplicationCategory.NotSet)
             {
                 if (environmentInformationService.IsRunningOnCI)
                 {
-                    AnsiConsole.MarkupLine("[yellow]Defaulting to DeveloperTools Category because this is running on CI. You MUST change this later![/]");
+                    ansiConsole.MarkupLine("[yellow]Defaulting to DeveloperTools Category because this is running on CI. You MUST change this later![/]");
                     logger.LogWarning("Defaulting to DeveloperTools Category because this is running on CI. You MUST change this later!");
 
                     submission.ApplicationCategory = DevCenterApplicationCategory.DeveloperTools;
@@ -821,14 +822,14 @@ namespace MSStore.CLI.Helpers
                 {
                     listingCount = 0;
 
-                    AnsiConsole.WriteLine("Let's add listings to your application. Please enter the following information:");
+                    ansiConsole.WriteLine("Let's add listings to your application. Please enter the following information:");
                     do
                     {
-                        AnsiConsole.WriteLine("\tHow many listings do you want to add? One is enough, but you might want to support more listing languages.");
+                        ansiConsole.WriteLine("\tHow many listings do you want to add? One is enough, but you might want to support more listing languages.");
                         var listingCountString = await consoleReader.ReadNextAsync(false, ct);
                         if (!int.TryParse(listingCountString, out listingCount))
                         {
-                            AnsiConsole.WriteLine("Invalid listing count.");
+                            ansiConsole.WriteLine("Invalid listing count.");
                         }
                     }
                     while (listingCount == 0);
@@ -848,7 +849,7 @@ namespace MSStore.CLI.Helpers
                             listingLanguage = await consoleReader.RequestStringAsync("\tEnter the language of the listing (e.g. 'en-us')", false, ct);
                             if (string.IsNullOrEmpty(listingLanguage))
                             {
-                                AnsiConsole.WriteLine("Invalid listing language.");
+                                ansiConsole.WriteLine("Invalid listing language.");
                             }
                         }
                         while (string.IsNullOrEmpty(listingLanguage));

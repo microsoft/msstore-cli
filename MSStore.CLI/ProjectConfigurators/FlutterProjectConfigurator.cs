@@ -18,7 +18,7 @@ using Spectre.Console;
 
 namespace MSStore.CLI.ProjectConfigurators
 {
-    internal class FlutterProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IImageConverter imageConverter, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, IEnvironmentInformationService environmentInformationService, ILogger<FlutterProjectConfigurator> logger) : FileProjectConfigurator(browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, environmentInformationService, logger)
+    internal class FlutterProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IImageConverter imageConverter, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, IEnvironmentInformationService environmentInformationService, IAnsiConsole ansiConsole, ILogger<FlutterProjectConfigurator> logger) : FileProjectConfigurator(browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, environmentInformationService, ansiConsole, logger)
     {
         private readonly IExternalCommandExecutor _externalCommandExecutor = externalCommandExecutor ?? throw new ArgumentNullException(nameof(externalCommandExecutor));
         private readonly IImageConverter _imageConverter = imageConverter ?? throw new ArgumentNullException(nameof(imageConverter));
@@ -48,19 +48,19 @@ namespace MSStore.CLI.ProjectConfigurators
 
             await InstallMsixDependencyAsync(projectRootPath, ct);
 
-            var result = await UpdateManifestAsync(projectRootPath, flutterProjectFile, app, publisherDisplayName, version, _imageConverter, _externalCommandExecutor, ct);
+            var result = await UpdateManifestAsync(ErrorAnsiConsole, projectRootPath, flutterProjectFile, app, publisherDisplayName, version, _imageConverter, _externalCommandExecutor, ct);
             if (result != 0)
             {
                 return (result, null);
             }
 
-            AnsiConsole.WriteLine($"Flutter project '{flutterProjectFile.FullName}' is now configured to build to the Microsoft Store!");
-            AnsiConsole.MarkupLine("For more information on building your Flutter project to the Microsoft Store, see [link]https://pub.dev/packages/msix#microsoft-store-icon-publishing-to-the-microsoft-store[/]");
+            ErrorAnsiConsole.WriteLine($"Flutter project '{flutterProjectFile.FullName}' is now configured to build to the Microsoft Store!");
+            ErrorAnsiConsole.MarkupLine("For more information on building your Flutter project to the Microsoft Store, see [link]https://pub.dev/packages/msix#microsoft-store-icon-publishing-to-the-microsoft-store[/]");
 
             return (0, output);
         }
 
-        internal static async Task<int> UpdateManifestAsync(DirectoryInfo projectRootPath, FileInfo flutterProjectFile, DevCenterApplication app, string publisherDisplayName, Version? version, IImageConverter? imageConverter, IExternalCommandExecutor? externalCommandExecutor, CancellationToken ct)
+        internal static async Task<int> UpdateManifestAsync(IAnsiConsole ansiConsole, DirectoryInfo projectRootPath, FileInfo flutterProjectFile, DevCenterApplication app, string publisherDisplayName, Version? version, IImageConverter? imageConverter, IExternalCommandExecutor? externalCommandExecutor, CancellationToken ct)
         {
             using var fileStream = flutterProjectFile.Open(FileMode.Open, FileAccess.ReadWrite);
 
@@ -94,7 +94,7 @@ namespace MSStore.CLI.ProjectConfigurators
             string? imagePath = null;
             if (imageConverter != null && externalCommandExecutor != null)
             {
-                imagePath = await GenerateImageFromIcoAsync(projectRootPath, imageConverter, externalCommandExecutor, ct);
+                imagePath = await GenerateImageFromIcoAsync(ansiConsole, projectRootPath, imageConverter, externalCommandExecutor, ct);
 
                 if (imagePath == null)
                 {
@@ -265,7 +265,7 @@ namespace MSStore.CLI.ProjectConfigurators
             return null;
         }
 
-        private static async Task<string?> GenerateImageFromIcoAsync(DirectoryInfo projectRootPath, IImageConverter imageConverter, IExternalCommandExecutor externalCommandExecutor, CancellationToken ct)
+        private static async Task<string?> GenerateImageFromIcoAsync(IAnsiConsole ansiConsole, DirectoryInfo projectRootPath, IImageConverter imageConverter, IExternalCommandExecutor externalCommandExecutor, CancellationToken ct)
         {
             try
             {
@@ -295,7 +295,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 {
                     if (!await imageConverter.ConvertIcoToPngAsync(icon, logoPath, 256, 256, 12, 12, ct))
                     {
-                        AnsiConsole.MarkupLine($"[red]Failed to convert icon to png.[/]");
+                        ansiConsole.MarkupLine($"[red]Failed to convert icon to png.[/]");
                         return null;
                     }
                 }
@@ -313,7 +313,7 @@ namespace MSStore.CLI.ProjectConfigurators
             }
             catch (Exception ex)
             {
-                AnsiConsole.MarkupLine($"[red]Error generating logo.png from icon.ico: {ex.Message}[/]");
+                ansiConsole.MarkupLine($"[red]Error generating logo.png from icon.ico: {ex.Message}[/]");
                 return null;
             }
         }
@@ -367,7 +367,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 throw new MSStoreException("Failed to run 'flutter pub get'.");
             }
 
-            var msixInstalled = await AnsiConsole.Status().StartAsync("Checking if package 'msix' is already installed...", async ctx =>
+            var msixInstalled = await ErrorAnsiConsole.Status().StartAsync("Checking if package 'msix' is already installed...", async ctx =>
             {
                 try
                 {
@@ -375,11 +375,11 @@ namespace MSStore.CLI.ProjectConfigurators
                     if ((result.ExitCode == 0 && result.StdOut.Contains("No dependencies would change")) ||
                         (result.ExitCode == 65 && result.StdErr.Contains("\"msix\" is already in \"dev_dependencies\"")))
                     {
-                        ctx.SuccessStatus("'msix' package is already installed, no need to install it again.");
+                        ctx.SuccessStatus(ErrorAnsiConsole, "'msix' package is already installed, no need to install it again.");
                         return true;
                     }
 
-                    ctx.SuccessStatus("'msix' package is not yet installed.");
+                    ctx.SuccessStatus(ErrorAnsiConsole, "'msix' package is not yet installed.");
                     return false;
                 }
                 catch (Exception ex)
@@ -394,9 +394,9 @@ namespace MSStore.CLI.ProjectConfigurators
                 return;
             }
 
-            AnsiConsole.WriteLine();
+            ErrorAnsiConsole.WriteLine();
 
-            await AnsiConsole.Status().StartAsync("Installing 'msix' package...", async ctx =>
+            await ErrorAnsiConsole.Status().StartAsync("Installing 'msix' package...", async ctx =>
             {
                 try
                 {
@@ -406,7 +406,7 @@ namespace MSStore.CLI.ProjectConfigurators
                         throw new MSStoreException(result.StdErr);
                     }
 
-                    ctx.SuccessStatus("'msix' package installed successfully!");
+                    ctx.SuccessStatus(ErrorAnsiConsole, "'msix' package installed successfully!");
                 }
                 catch (Exception ex)
                 {
@@ -418,18 +418,18 @@ namespace MSStore.CLI.ProjectConfigurators
 
         private async Task<bool> RunPubGet(DirectoryInfo projectRootPath, CancellationToken ct)
         {
-            return await AnsiConsole.Status().StartAsync("Running 'flutter pub get'...", async ctx =>
+            return await ErrorAnsiConsole.Status().StartAsync("Running 'flutter pub get'...", async ctx =>
             {
                 try
                 {
                     var result = await _externalCommandExecutor.RunAsync("flutter", "pub get", projectRootPath.FullName, ct);
                     if (result.ExitCode == 0)
                     {
-                        ctx.SuccessStatus("'flutter pub get' ran successfully.");
+                        ctx.SuccessStatus(ErrorAnsiConsole, "'flutter pub get' ran successfully.");
                         return true;
                     }
 
-                    ctx.ErrorStatus("'flutter pub get' failed.");
+                    ctx.ErrorStatus(ErrorAnsiConsole, "'flutter pub get' failed.");
 
                     return false;
                 }
@@ -455,7 +455,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 }
             }
 
-            return await AnsiConsole.Status().StartAsync("Packaging 'msix'...", async ctx =>
+            return await ErrorAnsiConsole.Status().StartAsync("Packaging 'msix'...", async ctx =>
             {
                 try
                 {
@@ -501,7 +501,7 @@ namespace MSStore.CLI.ProjectConfigurators
                         throw new MSStoreException(result.StdErr);
                     }
 
-                    ctx.SuccessStatus("Store package built successfully!");
+                    ctx.SuccessStatus(ErrorAnsiConsole, "Store package built successfully!");
 
                     result = await _externalCommandExecutor.RunAsync("flutter", $"pub run msix:pack {args}", projectRootPath.FullName, ct);
 

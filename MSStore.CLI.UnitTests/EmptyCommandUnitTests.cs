@@ -13,7 +13,7 @@ namespace MSStore.CLI.UnitTests
 
             var result = await ParseAndInvokeAsync([]);
 
-            result.Should().Contain("CLI tool to automate Microsoft Store Developer tasks.");
+            result.Error.Should().Contain("CLI tool to automate Microsoft Store Developer tasks.");
         }
 
         [TestMethod]
@@ -37,7 +37,7 @@ namespace MSStore.CLI.UnitTests
 
             var result = await ParseAndInvokeAsync([]);
 
-            result.Should().Contain("Awesome! It seems to be working!");
+            result.Error.Should().Contain("Awesome! It seems to be working!");
         }
 
         [TestMethod]
@@ -47,7 +47,7 @@ namespace MSStore.CLI.UnitTests
 
             var result = await ParseAndInvokeAsync(["info"]);
 
-            result.Should().Contain("Current Config");
+            result.Output.Should().Contain("Current Config");
         }
 
         [TestMethod]
@@ -57,7 +57,7 @@ namespace MSStore.CLI.UnitTests
 
             var result = await ParseAndInvokeAsync(["info"]);
 
-            result.Should().Contain("Current Config");
+            result.Output.Should().Contain("Current Config");
         }
     }
 }

@@ -18,7 +18,7 @@ using Spectre.Console;
 
 namespace MSStore.CLI.ProjectConfigurators
 {
-    internal class UWPProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, INuGetPackageManager nuGetPackageManager, IAppXManifestManager appXManifestManager, IEnvironmentInformationService environmentInformationService, ILogger<UWPProjectConfigurator> logger) : FileProjectConfigurator(browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, environmentInformationService, logger)
+    internal class UWPProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, INuGetPackageManager nuGetPackageManager, IAppXManifestManager appXManifestManager, IEnvironmentInformationService environmentInformationService, IAnsiConsole ansiConsole, ILogger<UWPProjectConfigurator> logger) : FileProjectConfigurator(browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, environmentInformationService, ansiConsole, logger)
     {
         protected IExternalCommandExecutor ExternalCommandExecutor { get; } = externalCommandExecutor ?? throw new ArgumentNullException(nameof(externalCommandExecutor));
         protected IAppXManifestManager AppXManifestManager { get; } = appXManifestManager ?? throw new ArgumentNullException(nameof(appXManifestManager));
@@ -51,8 +51,8 @@ namespace MSStore.CLI.ProjectConfigurators
 
             AppXManifestManager.UpdateManifest(manifestFile.FullName, app, publisherDisplayName, version);
 
-            AnsiConsole.WriteLine($"{ToString()} project at '{projectRootPath.FullName}' is now configured to build to the Microsoft Store!");
-            AnsiConsole.MarkupLine("For more information on building your UWP project to the Microsoft Store, see [link]https://learn.microsoft.com/windows/msix/package/packaging-uwp-apps[/]");
+            ErrorAnsiConsole.WriteLine($"{ToString()} project at '{projectRootPath.FullName}' is now configured to build to the Microsoft Store!");
+            ErrorAnsiConsole.MarkupLine("For more information on building your UWP project to the Microsoft Store, see [link]https://learn.microsoft.com/windows/msix/package/packaging-uwp-apps[/]");
 
             return Task.FromResult((0, output));
         }
@@ -76,7 +76,7 @@ namespace MSStore.CLI.ProjectConfigurators
 
             (_, FileInfo manifestFile) = GetInfo(pathOrUrl);
 
-            return !await IsWinUI3Async(manifestFile, ExternalCommandExecutor, NuGetPackageManager, Logger, ct);
+            return !await IsWinUI3Async(ErrorAnsiConsole, manifestFile, ExternalCommandExecutor, NuGetPackageManager, Logger, ct);
         }
 
         public override Task<List<string>?> GetAppImagesAsync(string pathOrUrl, CancellationToken ct)
@@ -99,27 +99,27 @@ namespace MSStore.CLI.ProjectConfigurators
         {
             (DirectoryInfo projectRootPath, FileInfo manifestFile) = GetInfo(pathOrUrl);
 
-            return await PackageAsync(projectRootPath, buildArchs, null, PackageFilesExtensionInclude, manifestFile, version, output, ExternalCommandExecutor, AppXManifestManager, Logger, ct);
+            return await PackageAsync(ErrorAnsiConsole, projectRootPath, buildArchs, null, PackageFilesExtensionInclude, manifestFile, version, output, ExternalCommandExecutor, AppXManifestManager, Logger, ct);
         }
 
         [SupportedOSPlatform("windows")]
-        internal static async Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(DirectoryInfo projectRootPath, IEnumerable<BuildArch>? buildArchs, FileInfo? solutionPath, string[] packageFilesExtensionInclude, FileInfo appxManifestFile, Version? version, DirectoryInfo? output, IExternalCommandExecutor externalCommandExecutor, IAppXManifestManager appXManifestManager, ILogger logger, CancellationToken ct)
+        internal static async Task<(int returnCode, DirectoryInfo? outputDirectory)> PackageAsync(IAnsiConsole ansiConsole, DirectoryInfo projectRootPath, IEnumerable<BuildArch>? buildArchs, FileInfo? solutionPath, string[] packageFilesExtensionInclude, FileInfo appxManifestFile, Version? version, DirectoryInfo? output, IExternalCommandExecutor externalCommandExecutor, IAppXManifestManager appXManifestManager, ILogger logger, CancellationToken ct)
         {
             var workingDirectory = solutionPath?.Directory?.FullName ?? projectRootPath.FullName;
-            var msbuildPath = await GetMSBuildPathAsync(externalCommandExecutor, logger, workingDirectory, ct);
+            var msbuildPath = await GetMSBuildPathAsync(ansiConsole, externalCommandExecutor, logger, workingDirectory, ct);
 
             if (string.IsNullOrEmpty(msbuildPath))
             {
                 return (-1, null);
             }
 
-            await RestorePackagesAsync(externalCommandExecutor, logger, workingDirectory, msbuildPath, ct);
+            await RestorePackagesAsync(ansiConsole, externalCommandExecutor, logger, workingDirectory, msbuildPath, ct);
 
             output ??= new DirectoryInfo(Path.Combine(projectRootPath.FullName, "AppPackages"));
 
             version = appXManifestManager.UpdateManifestVersion(appxManifestFile.FullName, version);
 
-            var bundleUploadFile = await AnsiConsole.Status().StartAsync("Building MSIX...", async ctx =>
+            var bundleUploadFile = await ansiConsole.Status().StartAsync("Building MSIX...", async ctx =>
             {
                 try
                 {
@@ -169,7 +169,7 @@ namespace MSStore.CLI.ProjectConfigurators
                         throw new MSStoreException($"Could not find any file with extensions {string.Join(", ", packageFilesExtensionInclude.Select(e => $"'{e}'"))}!");
                     }
 
-                    ctx.SuccessStatus("MSIX built successfully!");
+                    ctx.SuccessStatus(ansiConsole, "MSIX built successfully!");
 
                     return bundleUploadFile;
                 }
@@ -198,7 +198,7 @@ namespace MSStore.CLI.ProjectConfigurators
         }
 
         [SupportedOSPlatform("windows")]
-        protected static async Task<string?> GetMSBuildPathAsync(IExternalCommandExecutor externalCommandExecutor, ILogger logger, string workingDirectory, CancellationToken ct)
+        protected static async Task<string?> GetMSBuildPathAsync(IAnsiConsole ansiConsole, IExternalCommandExecutor externalCommandExecutor, ILogger logger, string workingDirectory, CancellationToken ct)
         {
             if (_msBuildPath != null)
             {
@@ -209,23 +209,23 @@ namespace MSStore.CLI.ProjectConfigurators
 
             if (!File.Exists(vswhere))
             {
-                AnsiConsole.MarkupLine("[red]Visual Studio 2017 or later is required to package UWP apps[/]");
+                ansiConsole.MarkupLine("[red]Visual Studio 2017 or later is required to package UWP apps[/]");
                 return null;
             }
 
-            return await AnsiConsole.Status().StartAsync("Finding MSBuild...", async ctx =>
+            return await ansiConsole.Status().StartAsync("Finding MSBuild...", async ctx =>
             {
                 try
                 {
                     var result = await externalCommandExecutor.RunAsync($"\"{vswhere}\"", "-latest -requires Microsoft.Component.MSBuild -find MSBuild\\**\\Bin\\MSBuild.exe", workingDirectory, ct);
                     if (result.ExitCode == 0 && result.StdOut.Contains("MSBuild.exe", StringComparison.OrdinalIgnoreCase))
                     {
-                        ctx.SuccessStatus("Found MSBuild.");
+                        ctx.SuccessStatus(ansiConsole, "Found MSBuild.");
                         _msBuildPath = result.StdOut.Replace(Environment.NewLine, string.Empty);
                         return _msBuildPath;
                     }
 
-                    AnsiConsole.MarkupLine("[red]Could not find MSBuild.[/]");
+                    ansiConsole.MarkupLine("[red]Could not find MSBuild.[/]");
 
                     return null;
                 }
@@ -239,7 +239,7 @@ namespace MSStore.CLI.ProjectConfigurators
 
         private static Dictionary<string, bool> _nugetRestoreExecuted = [];
         [SupportedOSPlatform("windows")]
-        protected static async Task RestorePackagesAsync(IExternalCommandExecutor externalCommandExecutor, ILogger logger, string workingDirectory, string msbuildPath, CancellationToken ct)
+        protected static async Task RestorePackagesAsync(IAnsiConsole ansiConsole, IExternalCommandExecutor externalCommandExecutor, ILogger logger, string workingDirectory, string msbuildPath, CancellationToken ct)
         {
             if (_nugetRestoreExecuted.TryGetValue(workingDirectory, out var value) && value)
             {
@@ -247,7 +247,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 return;
             }
 
-            await AnsiConsole.Status().StartAsync("Restoring packages...", async ctx =>
+            await ansiConsole.Status().StartAsync("Restoring packages...", async ctx =>
             {
                 try
                 {
@@ -260,7 +260,7 @@ namespace MSStore.CLI.ProjectConfigurators
 
                     _nugetRestoreExecuted[workingDirectory] = true;
 
-                    ctx.SuccessStatus("Packages restored successfully!");
+                    ctx.SuccessStatus(ansiConsole, "Packages restored successfully!");
                 }
                 catch (Exception ex)
                 {
@@ -273,21 +273,21 @@ namespace MSStore.CLI.ProjectConfigurators
         private static Dictionary<string, bool> _nuGetExistsExecuted = [];
 
         [SupportedOSPlatform("windows")]
-        internal static async Task<bool> IsWinUI3Async(FileInfo appxManifestFile, IExternalCommandExecutor externalCommandExecutor, INuGetPackageManager nuGetPackageManager, ILogger logger, CancellationToken ct)
+        internal static async Task<bool> IsWinUI3Async(IAnsiConsole ansiConsole, FileInfo appxManifestFile, IExternalCommandExecutor externalCommandExecutor, INuGetPackageManager nuGetPackageManager, ILogger logger, CancellationToken ct)
         {
             if (appxManifestFile.Directory?.FullName == null)
             {
                 return false;
             }
 
-            var msbuildPath = await GetMSBuildPathAsync(externalCommandExecutor, logger, appxManifestFile.Directory.FullName, ct);
+            var msbuildPath = await GetMSBuildPathAsync(ansiConsole, externalCommandExecutor, logger, appxManifestFile.Directory.FullName, ct);
 
             if (string.IsNullOrEmpty(msbuildPath))
             {
                 return false;
             }
 
-            await RestorePackagesAsync(externalCommandExecutor, logger, appxManifestFile.Directory.FullName, msbuildPath, ct);
+            await RestorePackagesAsync(ansiConsole, externalCommandExecutor, logger, appxManifestFile.Directory.FullName, msbuildPath, ct);
 
             if (appxManifestFile.Directory?.Exists != true)
             {

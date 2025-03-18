@@ -32,6 +32,7 @@ using MSStore.CLI.Services.PartnerCenter;
 using MSStore.CLI.Services.PWABuilder;
 using MSStore.CLI.Services.Telemetry;
 using MSStore.CLI.Services.TokenManager;
+using Spectre.Console;
 
 namespace MSStore.CLI
 {
@@ -53,6 +54,11 @@ namespace MSStore.CLI
                                 null);
             TelemetryConfigurations telemetryConfigurations = await telemetryConfigurationManager.LoadAsync(true, CancellationToken.None);
             TelemetryClient telemetryClient = await CreateTelemetryClientAsync(telemetryConfigurationManager, telemetryConfigurations);
+            var ansiConsole = AnsiConsole.Create(new()
+            {
+                Interactive = Console.IsErrorRedirected ? InteractionSupport.No : InteractionSupport.Yes,
+                Out = new AnsiConsoleOutput(Console.Error)
+            });
 
             var builder = new CommandLineBuilder(storeCLI);
             var parser = builder.UseHost(_ => Host.CreateDefaultBuilder(args), (builder) => builder
@@ -76,6 +82,7 @@ namespace MSStore.CLI
                         .AddScoped<ICredentialManager, Services.CredentialManager.Unix.CredentialManagerUnix>()
 #endif
                         .AddScoped<IConsoleReader, ConsoleReader>()
+                        .AddSingleton<IAnsiConsole>(ansiConsole)
                         .AddScoped<IExternalCommandExecutor, ExternalCommandExecutor>()
                         .AddSingleton<IProjectConfiguratorFactory, ProjectConfiguratorFactory>()
                         .AddScoped<IProjectConfigurator, FlutterProjectConfigurator>()
@@ -199,7 +206,7 @@ namespace MSStore.CLI
                     services.AddLogging(builder =>
                     {
                         builder.ClearProviders();
-                        builder.AddProvider(new CustomSpectreConsoleLoggerProvider());
+                        builder.AddProvider(new CustomSpectreConsoleLoggerProvider(ansiConsole));
                     });
                 })
                 .ConfigureStoreCLICommands()
@@ -224,7 +231,7 @@ namespace MSStore.CLI
 
                         if (context.ParseResult.CommandResult.Command is MicrosoftStoreCLI
                             || context.ParseResult.CommandResult.Command is ReconfigureCommand
-                            || await MicrosoftStoreCLI.InitAsync(configurationManager, credentialManager, consoleReader, cliConfigurator, logger, ct))
+                            || await MicrosoftStoreCLI.InitAsync(ansiConsole, configurationManager, credentialManager, consoleReader, cliConfigurator, logger, ct))
                         {
                             await next(context);
                         }

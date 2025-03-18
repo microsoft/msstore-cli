@@ -35,12 +35,14 @@ namespace MSStore.CLI.Commands
             IStoreAPIFactory storeAPIFactory,
             IImageConverter imageConverter,
             ILogger<PackageCommand.Handler> logger,
+            IAnsiConsole ansiConsole,
             TelemetryClient telemetryClient) : ICommandHandler
         {
             private readonly IProjectConfiguratorFactory _projectConfiguratorFactory = projectConfiguratorFactory ?? throw new ArgumentNullException(nameof(projectConfiguratorFactory));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
             private readonly IImageConverter _imageConverter = imageConverter ?? throw new ArgumentNullException(nameof(imageConverter));
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
             public string PathOrUrl { get; set; } = null!;
@@ -66,7 +68,7 @@ namespace MSStore.CLI.Commands
 
                 if (configurator == null)
                 {
-                    AnsiConsole.WriteLine(CultureInfo.InvariantCulture, "We could not find a project configurator for the project at '{0}'.", PathOrUrl);
+                    _ansiConsole.WriteLine(string.Format(CultureInfo.InvariantCulture, "We could not find a project configurator for the project at '{0}'.", PathOrUrl));
                     props["ProjType"] = "NF";
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(-1, props, ct);
                 }
@@ -75,12 +77,12 @@ namespace MSStore.CLI.Commands
 
                 var storePackagedAPI = await _storeAPIFactory.CreatePackagedAsync(ct: ct);
 
-                AnsiConsole.WriteLine($"This seems to be a {configurator} project.");
+                _ansiConsole.WriteLine($"This seems to be a {configurator} project.");
 
                 var projectPackager = configurator as IProjectPackager;
                 if (projectPackager == null)
                 {
-                    AnsiConsole.WriteLine(CultureInfo.InvariantCulture, "We can't package this type of project.");
+                    _ansiConsole.WriteLine("We can't package this type of project.");
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(-4, props, ct);
                 }
 
@@ -95,11 +97,11 @@ namespace MSStore.CLI.Commands
                     props["Archs"] = string.Join(",", buildArchs);
                 }
 
-                await configurator.ValidateImagesAsync(PathOrUrl, _imageConverter, _logger, ct);
+                await configurator.ValidateImagesAsync(_ansiConsole, PathOrUrl, _imageConverter, _logger, ct);
 
                 if (projectPackager.PackageOnlyOnWindows && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    AnsiConsole.MarkupLine("[red]This project type can only be packaged on Windows.[/]");
+                    _ansiConsole.MarkupLine("[red]This project type can only be packaged on Windows.[/]");
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(-6, props, ct);
                 }
 
@@ -107,7 +109,7 @@ namespace MSStore.CLI.Commands
 
                 if (returnCode == 0 && outputDirectory != null)
                 {
-                    AnsiConsole.WriteLine($"The packaged app is here:");
+                    _ansiConsole.WriteLine($"The packaged app is here:");
                     AnsiConsole.MarkupLine($"[green bold]{outputDirectory}[/]");
                 }
 

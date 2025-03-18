@@ -29,7 +29,7 @@ namespace MSStore.CLI.UnitTests
 
             var result = await ParseAndInvokeAsync([], null);
 
-            result.Should().Contain("https://aka.ms/privacy");
+            result.Error.Should().Contain("https://aka.ms/privacy");
         }
 
         [TestMethod]
@@ -39,7 +39,7 @@ namespace MSStore.CLI.UnitTests
 
             var result = await ParseAndInvokeAsync([], null);
 
-            result.Should().Contain("https://aka.ms/privacy");
+            result.Error.Should().Contain("https://aka.ms/privacy");
         }
     }
 }

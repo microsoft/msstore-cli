@@ -21,10 +21,11 @@ namespace MSStore.CLI.Commands.Apps
         {
         }
 
-        public new class Handler(ILogger<ListCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, TelemetryClient telemetryClient) : ICommandHandler
+        public new class Handler(ILogger<ListCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : ICommandHandler
         {
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
+            private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
             public int Invoke(InvocationContext context)
@@ -36,8 +37,7 @@ namespace MSStore.CLI.Commands.Apps
             {
                 var ct = context.GetCancellationToken();
 
-                return await _telemetryClient.TrackCommandEventAsync<Handler>(
-                    await AnsiConsole.Status().StartAsync("Retrieving Managed Applications", async ctx =>
+                var appList = await _ansiConsole.Status().StartAsync("Retrieving Managed Applications", async ctx =>
                 {
                     try
                     {
@@ -45,42 +45,40 @@ namespace MSStore.CLI.Commands.Apps
 
                         var appList = await storePackagedAPI.GetApplicationsAsync(ct);
 
-                        ctx.SuccessStatus("[bold green]Retrieved Managed Applications[/]");
+                        ctx.SuccessStatus(_ansiConsole, "[bold green]Retrieved Managed Applications[/]");
 
-                        if (appList?.Count > 0)
-                        {
-                            var table = new Table();
-                            table.AddColumns(string.Empty, "ProductId", "Display Name", "PackageId");
-
-                            int i = 1;
-                            foreach (var p in appList)
-                            {
-                                table.AddRow(
-                                    i.ToString(CultureInfo.InvariantCulture),
-                                    $"[bold u]{p.Id.EscapeMarkup()}[/]",
-                                    $"[bold u]{p.PrimaryName.EscapeMarkup()}[/]",
-                                    $"[bold u]{p.PackageIdentityName.EscapeMarkup()}[/]");
-                                i++;
-                            }
-
-                            AnsiConsole.Write(table);
-                        }
-                        else
-                        {
-                            AnsiConsole.MarkupLine("Your account has [bold][u]no[/] Managed apps[/].");
-                        }
-
-                        AnsiConsole.WriteLine();
-
-                        return 0;
+                        return appList;
                     }
                     catch (Exception err)
                     {
                         _logger.LogError(err, "Error while retrieving Managed Applications.");
-                        ctx.ErrorStatus(err);
-                        return -1;
+                        ctx.ErrorStatus(_ansiConsole, err);
+                        return null;
                     }
-                }), ct);
+                });
+
+                if (appList?.Count > 0)
+                {
+                    var table = new Table();
+                    table.AddColumns(string.Empty, "ProductId", "Display Name", "PackageId");
+
+                    int i = 1;
+                    foreach (var p in appList)
+                    {
+                        table.AddRow(
+                            i.ToString(CultureInfo.InvariantCulture),
+                            $"[bold u]{p.Id.EscapeMarkup()}[/]",
+                            $"[bold u]{p.PrimaryName.EscapeMarkup()}[/]",
+                            $"[bold u]{p.PackageIdentityName.EscapeMarkup()}[/]");
+                        i++;
+                    }
+
+                    AnsiConsole.Write(table);
+                    return await _telemetryClient.TrackCommandEventAsync<Handler>(0, ct);
+                }
+
+                AnsiConsole.MarkupLine("Your account has [bold][u]no[/] Managed apps[/].");
+                return await _telemetryClient.TrackCommandEventAsync<Handler>(-1, ct);
             }
         }
     }

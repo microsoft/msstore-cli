@@ -24,8 +24,8 @@ namespace MSStore.CLI.UnitTests
                     "settings"
                 ]);
 
-            result.Should().Contain("Usage:");
-            result.Should().Contain("settings [command] [options]");
+            result.Error.Should().Contain("Usage:");
+            result.Error.Should().Contain("settings [command] [options]");
         }
 
         [TestMethod]

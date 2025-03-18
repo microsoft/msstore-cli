@@ -51,10 +51,11 @@ namespace MSStore.CLI.Commands.Flights
             AddOption(new Option<string>(["--rank-higher-than", "-r"], "The flight ID to rank higher than."));
         }
 
-        public new class Handler(ILogger<CreateCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, TelemetryClient telemetryClient) : ICommandHandler
+        public new class Handler(ILogger<CreateCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : ICommandHandler
         {
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
+            private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
             public string ProductId { get; set; } = null!;
@@ -73,38 +74,44 @@ namespace MSStore.CLI.Commands.Flights
 
                 if (ProductTypeHelper.Solve(ProductId) == ProductType.Unpackaged)
                 {
-                    AnsiConsole.WriteLine("This command is not supported for unpackaged applications.");
+                    _ansiConsole.WriteLine("This command is not supported for unpackaged applications.");
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
                 }
 
-                return await _telemetryClient.TrackCommandEventAsync<Handler>(
-                    await AnsiConsole.Status().StartAsync("Creating Flight", async ctx =>
+                var flight = await _ansiConsole.Status().StartAsync("Creating Flight", async ctx =>
+                {
+                    try
                     {
-                        try
-                        {
-                            var storePackagedAPI = await _storeAPIFactory.CreatePackagedAsync(ct: ct);
+                        var storePackagedAPI = await _storeAPIFactory.CreatePackagedAsync(ct: ct);
 
-                            var flight = await storePackagedAPI.CreateFlightAsync(ProductId, FriendlyName, GroupIds.ToList(), RankHigherThan, ct);
+                        var flight = await storePackagedAPI.CreateFlightAsync(ProductId, FriendlyName, GroupIds.ToList(), RankHigherThan, ct);
 
-                            ctx.SuccessStatus("[bold green]Created Flight[/]");
+                        ctx.SuccessStatus(_ansiConsole, "[bold green]Created Flight[/]");
 
-                            AnsiConsole.WriteLine(JsonSerializer.Serialize(flight, SourceGenerationContext.GetCustom(true).DevCenterFlight));
-                            return await _telemetryClient.TrackCommandEventAsync<Handler>(0, ct);
-                        }
-                        catch (MSStoreHttpException err)
-                        {
-                            _logger.LogError(err, "Could not create the flight.");
-                            ctx.ErrorStatus("Could not create the flight.");
+                        return flight;
+                    }
+                    catch (MSStoreHttpException err)
+                    {
+                        _logger.LogError(err, "Could not create the flight.");
+                        ctx.ErrorStatus(_ansiConsole, "Could not create the flight.");
 
-                            return -1;
-                        }
-                        catch (Exception err)
-                        {
-                            _logger.LogError(err, "Error while creating flight.");
-                            ctx.ErrorStatus("Error while creating flight. Please try again.");
-                            return -1;
-                        }
-                    }), ct);
+                        return null;
+                    }
+                    catch (Exception err)
+                    {
+                        _logger.LogError(err, "Error while creating flight.");
+                        ctx.ErrorStatus(_ansiConsole, "Error while creating flight. Please try again.");
+                        return null;
+                    }
+                });
+
+                if (flight != null)
+                {
+                    AnsiConsole.WriteLine(JsonSerializer.Serialize(flight, SourceGenerationContext.GetCustom(true).DevCenterFlight));
+                    return await _telemetryClient.TrackCommandEventAsync<Handler>(0, ct);
+                }
+
+                return await _telemetryClient.TrackCommandEventAsync<Handler>(-1, ct);
             }
         }
     }

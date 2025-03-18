@@ -35,7 +35,7 @@ namespace MSStore.CLI.UnitTests
                     Guid.Empty.ToString()
                 ]);
 
-            result.Should().Contain("\"IsReady\": true,");
+            result.Output.Should().Contain("\"IsReady\": true,");
         }
 
         [TestMethod]
@@ -65,7 +65,7 @@ namespace MSStore.CLI.UnitTests
                     Guid.Empty.ToString()
                 ]);
 
-            result.Should().Contain("\"PackageId\": \"12345\"");
+            result.Output.Should().Contain("\"PackageId\": \"12345\"");
         }
 
         [TestMethod]
@@ -105,7 +105,7 @@ namespace MSStore.CLI.UnitTests
                     Guid.Empty.ToString()
                 ]);
 
-            result.Should().Contain("\"AssetUrl\": \"https://www.example.com/screenshot.png\",");
+            result.Output.Should().Contain("\"AssetUrl\": \"https://www.example.com/screenshot.png\",");
         }
 
         [TestMethod]
@@ -135,9 +135,9 @@ namespace MSStore.CLI.UnitTests
 }"
                 ]);
 
-            result.Should().Contain("Updating submission product");
-            result.Should().Contain("\"PollingUrl\": \"https://www.example.com/polling\"");
-            result.Should().Contain("\"OngoingSubmissionId\": \"12345\"");
+            result.Error.Should().Contain("Updating submission product");
+            result.Output.Should().Contain("\"PollingUrl\": \"https://www.example.com/polling\"");
+            result.Output.Should().Contain("\"OngoingSubmissionId\": \"12345\"");
         }
 
         [TestMethod]
@@ -165,9 +165,9 @@ namespace MSStore.CLI.UnitTests
 }"
                 ]);
 
-            result.Should().Contain("Updating submission metadata");
-            result.Should().Contain("\"PollingUrl\": \"https://www.example.com/polling\"");
-            result.Should().Contain("\"OngoingSubmissionId\": \"12345\"");
+            result.Error.Should().Contain("Updating submission metadata");
+            result.Output.Should().Contain("\"PollingUrl\": \"https://www.example.com/polling\"");
+            result.Output.Should().Contain("\"OngoingSubmissionId\": \"12345\"");
         }
 
         [TestMethod]
@@ -184,7 +184,7 @@ namespace MSStore.CLI.UnitTests
                     Guid.Empty.ToString()
                 ]);
 
-            result.Should().Contain("Published with Id");
+            result.Error.Should().Contain("Published with Id");
         }
 
         [TestMethod]
@@ -238,8 +238,8 @@ namespace MSStore.CLI.UnitTests
                     Guid.Empty.ToString()
                 ]);
 
-            result.Should().Contain("INPROGRESS");
-            result.Should().Contain("PUBLISHED");
+            result.Error.Should().Contain("INPROGRESS");
+            result.Error.Should().Contain("PUBLISHED");
         }
 
         [TestMethod]
@@ -252,7 +252,7 @@ namespace MSStore.CLI.UnitTests
                     Guid.Empty.ToString()
                 ], -1);
 
-            result.Should().Contain("This command is not supported for unpackaged applications.");
+            result.Error.Should().Contain("This command is not supported for unpackaged applications.");
         }
     }
 }

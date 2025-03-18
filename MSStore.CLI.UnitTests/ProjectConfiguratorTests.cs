@@ -17,11 +17,14 @@ namespace MSStore.CLI.UnitTests
             AddFakeApps();
         }
 
-        private static string CleanResult(string result)
+        private static (string Output, string Error) CleanResult((string Output, string Error) result)
         {
-            return result
-                .Replace(Environment.NewLine, " ")
-                .Replace("  ", " ");
+            return (
+                Output: result.Output
+                    .Replace(Environment.NewLine, " ")
+                    .Replace("  ", " "),
+                Error: result.Error.Replace(Environment.NewLine, " ")
+                    .Replace("  ", " "));
         }
 
         [TestMethod]
@@ -68,8 +71,8 @@ namespace MSStore.CLI.UnitTests
 
             ExternalCommandExecutor.VerifyAll();
 
-            result.Should().Contain("This seems to be a Flutter project.");
-            result.Should().Contain("is now configured to build to the Microsoft Store!");
+            result.Error.Should().Contain("This seems to be a Flutter project.");
+            result.Error.Should().Contain("is now configured to build to the Microsoft Store!");
 
             var pubspecYamlFileContents = await File.ReadAllTextAsync(Path.Combine(path, "pubspec.yaml"));
 
@@ -133,8 +136,8 @@ namespace MSStore.CLI.UnitTests
 
             ExternalCommandExecutor.VerifyAll();
 
-            result.Should().Contain("This seems to be a Flutter project.");
-            result.Should().Contain("is now configured to build to the Microsoft Store!");
+            result.Error.Should().Contain("This seems to be a Flutter project.");
+            result.Error.Should().Contain("is now configured to build to the Microsoft Store!");
 
             var pubspecYamlFileContents = await File.ReadAllTextAsync(Path.Combine(path, "pubspec.yaml"));
 
@@ -189,8 +192,8 @@ namespace MSStore.CLI.UnitTests
 
             ExternalCommandExecutor.VerifyAll();
 
-            result.Should().Contain("This seems to be a Electron project.");
-            result.Should().Contain("is now configured to build to the Microsoft Store!");
+            result.Error.Should().Contain("This seems to be a Electron project.");
+            result.Error.Should().Contain("is now configured to build to the Microsoft Store!");
 
             var packageJsonFileContents = await File.ReadAllTextAsync(Path.Combine(path, "package.json"));
 
@@ -232,8 +235,8 @@ namespace MSStore.CLI.UnitTests
 
             ExternalCommandExecutor.VerifyAll();
 
-            result.Should().Contain("This seems to be a Electron project.");
-            result.Should().Contain("is now configured to build to the Microsoft Store!");
+            result.Error.Should().Contain("This seems to be a Electron project.");
+            result.Error.Should().Contain("is now configured to build to the Microsoft Store!");
 
             var packageJsonFileContents = await File.ReadAllTextAsync(Path.Combine(path, "package.json"));
 
@@ -288,8 +291,8 @@ namespace MSStore.CLI.UnitTests
 
             ExternalCommandExecutor.VerifyAll();
 
-            result.Should().Contain("This seems to be a Electron project.");
-            result.Should().Contain("is now configured to build to the Microsoft Store!");
+            result.Error.Should().Contain("This seems to be a Electron project.");
+            result.Error.Should().Contain("is now configured to build to the Microsoft Store!");
 
             var packageJsonFileContents = await File.ReadAllTextAsync(Path.Combine(path, "package.json"));
 
@@ -331,8 +334,8 @@ namespace MSStore.CLI.UnitTests
 
             ExternalCommandExecutor.VerifyAll();
 
-            result.Should().Contain("This seems to be a Electron project.");
-            result.Should().Contain("is now configured to build to the Microsoft Store!");
+            result.Error.Should().Contain("This seems to be a Electron project.");
+            result.Error.Should().Contain("is now configured to build to the Microsoft Store!");
 
             var packageJsonFileContents = await File.ReadAllTextAsync(Path.Combine(path, "package.json"));
 
@@ -361,8 +364,8 @@ namespace MSStore.CLI.UnitTests
 
             ExternalCommandExecutor.VerifyAll();
 
-            result.Should().Contain("This seems to be a React Native project.");
-            result.Should().Contain("is now configured to build to the Microsoft Store!");
+            result.Error.Should().Contain("This seems to be a React Native project.");
+            result.Error.Should().Contain("is now configured to build to the Microsoft Store!");
 
             await ValidateReactNativeAppxManifestWasUpdatedAsync(path);
         }
@@ -389,8 +392,8 @@ namespace MSStore.CLI.UnitTests
 
             ExternalCommandExecutor.VerifyAll();
 
-            result.Should().Contain("This seems to be a React Native project.");
-            result.Should().Contain("is now configured to build to the Microsoft Store!");
+            result.Error.Should().Contain("This seems to be a React Native project.");
+            result.Error.Should().Contain("is now configured to build to the Microsoft Store!");
 
             await ValidateReactNativeAppxManifestWasUpdatedAsync(path);
         }
@@ -417,8 +420,8 @@ namespace MSStore.CLI.UnitTests
 
             ExternalCommandExecutor.VerifyAll();
 
-            result.Should().Contain("This seems to be a React Native project.");
-            result.Should().Contain("is now configured to build to the Microsoft Store!");
+            result.Error.Should().Contain("This seems to be a React Native project.");
+            result.Error.Should().Contain("is now configured to build to the Microsoft Store!");
 
             await ValidateReactNativeAppxManifestWasUpdatedAsync(path);
         }
@@ -445,8 +448,8 @@ namespace MSStore.CLI.UnitTests
 
             ExternalCommandExecutor.VerifyAll();
 
-            result.Should().Contain("This seems to be a React Native project.");
-            result.Should().Contain("is now configured to build to the Microsoft Store!");
+            result.Error.Should().Contain("This seems to be a React Native project.");
+            result.Error.Should().Contain("is now configured to build to the Microsoft Store!");
 
             await ValidateReactNativeAppxManifestWasUpdatedAsync(path);
         }
@@ -483,7 +486,7 @@ namespace MSStore.CLI.UnitTests
 
             result = CleanResult(result);
 
-            result.Should().Contain("This seems to be a UWP project.");
+            result.Error.Should().Contain("This seems to be a UWP project.");
 
             var appxManifestFileContents = await File.ReadAllTextAsync(Path.Combine(path, "Package.appxmanifest"));
 
@@ -515,7 +518,7 @@ namespace MSStore.CLI.UnitTests
 
             result = CleanResult(result);
 
-            result.Should().Contain("This seems to be a Windows App SDK/WinUI project.");
+            result.Error.Should().Contain("This seems to be a Windows App SDK/WinUI project.");
 
             var appxManifestFileContents = await File.ReadAllTextAsync(Path.Combine(path, "Package.appxmanifest"));
 
@@ -543,7 +546,7 @@ namespace MSStore.CLI.UnitTests
 
             result = CleanResult(result);
 
-            result.Should().Contain("This seems to be a Maui project.");
+            result.Error.Should().Contain("This seems to be a Maui project.");
 
             var appxManifestFileContents = await File.ReadAllTextAsync(Path.Combine(path, "Platforms", "Windows", "Package.appxmanifest"));
 
@@ -649,9 +652,9 @@ namespace MSStore.CLI.UnitTests
             TokenManager
                 .Verify(x => x.SelectAccountAsync(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Once);
 
-            result.Should().Contain("You've provided a URL, so we'll use");
+            result.Error.Should().Contain("You've provided a URL, so we'll use");
             FakeConsole.Verify(x => x.SelectionPromptAsync(It.Is<string>(s => s == "Please select the Application Category:"), It.IsAny<IEnumerable<string>>(), It.IsAny<int>(), It.IsAny<Func<string, string>>(), It.IsAny<CancellationToken>()), Times.Once);
-            result.Should().Contain("Submission commit success!");
+            result.Error.Should().Contain("Submission commit success!");
         }
 
         [TestMethod]
@@ -670,10 +673,10 @@ namespace MSStore.CLI.UnitTests
             TokenManager
                 .Verify(x => x.SelectAccountAsync(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Once);
 
-            result.Should().Contain("You've provided a URL, so we'll use");
+            result.Error.Should().Contain("You've provided a URL, so we'll use");
             FakeConsole.Verify(x => x.SelectionPromptAsync(It.Is<string>(s => s == "Please select the Application Category:"), It.IsAny<IEnumerable<string>>(), It.IsAny<int>(), It.IsAny<Func<string, string>>(), It.IsAny<CancellationToken>()), Times.Never);
-            result.Should().Contain("Submission commit success!");
-            result.Should().Contain("Defaulting to DeveloperTools Category because this is running on CI. You MUST change this later!");
+            result.Error.Should().Contain("Submission commit success!");
+            result.Error.Should().Contain("Defaulting to DeveloperTools Category because this is running on CI. You MUST change this later!");
         }
 
         [TestMethod]
@@ -689,8 +692,8 @@ namespace MSStore.CLI.UnitTests
                     Path.GetTempPath()
                 ]);
 
-            result.Should().Contain("You've provided a URL, so we'll use");
-            result.Should().NotContain("Submission commit success!");
+            result.Error.Should().Contain("You've provided a URL, so we'll use");
+            result.Error.Should().NotContain("Submission commit success!");
         }
 
         [TestMethod]
@@ -704,7 +707,7 @@ namespace MSStore.CLI.UnitTests
                     "https://microsoft.com"
                 ], -2);
 
-            result.Should().Contain("For PWAs the init command should output to a specific directory (using the '--output' option), or publish directly to the store using the '--publish' option.");
+            result.Error.Should().Contain("For PWAs the init command should output to a specific directory (using the '--output' option), or publish directly to the store using the '--publish' option.");
         }
 
         [TestMethod]
@@ -725,8 +728,8 @@ namespace MSStore.CLI.UnitTests
             TokenManager
                 .Verify(x => x.SelectAccountAsync(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
 
-            result.Should().Contain("You've provided a URL, so we'll use");
-            result.Should().Contain("Submission commit success!");
+            result.Error.Should().Contain("You've provided a URL, so we'll use");
+            result.Error.Should().Contain("Submission commit success!");
         }
     }
 }

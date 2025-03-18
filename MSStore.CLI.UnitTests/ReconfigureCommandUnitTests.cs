@@ -32,7 +32,7 @@ namespace MSStore.CLI.UnitTests
                     "reconfigure"
                 ]);
 
-            result.Should().Contain("Awesome! It seems to be working!");
+            result.Error.Should().Contain("Awesome! It seems to be working!");
         }
 
         [TestMethod]
@@ -86,10 +86,10 @@ namespace MSStore.CLI.UnitTests
                     "reconfigure"
                 ]);
 
-            result.Should().Contain("Awesome! It seems to be working!");
+            result.Error.Should().Contain("Awesome! It seems to be working!");
         }
 
-        private Task<string> ParseSetupSuccessWithCredentialsAndTenantAsync()
+        private Task<(string Output, string Error)> ParseSetupSuccessWithCredentialsAndTenantAsync()
         {
             AddDefaultGraphOrg();
 
@@ -130,7 +130,7 @@ namespace MSStore.CLI.UnitTests
             TokenManager
                 .Verify(x => x.GetTokenAsync(It.IsAny<string[]>(), It.IsAny<CancellationToken>()), Times.Never);
 
-            result.Should().Contain("Awesome! It seems to be working!");
+            result.Error.Should().Contain("Awesome! It seems to be working!");
         }
 
         [TestMethod]
@@ -143,7 +143,7 @@ namespace MSStore.CLI.UnitTests
             TokenManager
                 .Verify(x => x.GetTokenAsync(It.IsAny<string[]>(), It.IsAny<CancellationToken>()), Times.Never);
 
-            result.Should().Contain("Awesome! It seems to be working!");
+            result.Error.Should().Contain("Awesome! It seems to be working!");
         }
 
         [TestMethod]
@@ -167,7 +167,7 @@ namespace MSStore.CLI.UnitTests
             TokenManager
                 .Verify(x => x.GetTokenAsync(It.IsAny<string[]>(), It.IsAny<CancellationToken>()), Times.Never);
 
-            result.Should().Contain("Awesome! It seems to be working!");
+            result.Error.Should().Contain("Awesome! It seems to be working!");
         }
 
         [TestMethod]
@@ -191,7 +191,7 @@ namespace MSStore.CLI.UnitTests
             TokenManager
                 .Verify(x => x.GetTokenAsync(It.IsAny<string[]>(), It.IsAny<CancellationToken>()), Times.Never);
 
-            result.Should().Contain("Awesome! It seems to be working!");
+            result.Error.Should().Contain("Awesome! It seems to be working!");
         }
 
         [TestMethod]
@@ -215,7 +215,7 @@ namespace MSStore.CLI.UnitTests
             TokenManager
                 .Verify(x => x.GetTokenAsync(It.IsAny<string[]>(), It.IsAny<CancellationToken>()), Times.Never);
 
-            result.Should().Contain("Awesome! It seems to be working!");
+            result.Error.Should().Contain("Awesome! It seems to be working!");
         }
     }
 }

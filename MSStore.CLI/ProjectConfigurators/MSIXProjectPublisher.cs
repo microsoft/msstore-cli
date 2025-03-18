@@ -16,7 +16,7 @@ using Spectre.Console;
 
 namespace MSStore.CLI.ProjectConfigurators
 {
-    internal class MSIXProjectPublisher(IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, IEnvironmentInformationService environmentInformationService, IAppXManifestManager appXManifestManager, ILogger<MSIXProjectPublisher> logger) : IProjectPublisher
+    internal class MSIXProjectPublisher(IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, IEnvironmentInformationService environmentInformationService, IAppXManifestManager appXManifestManager, IAnsiConsole ansiConsole, ILogger<MSIXProjectPublisher> logger) : IProjectPublisher
     {
         public string[] PackageFilesExtensionInclude =>
         [
@@ -43,6 +43,7 @@ namespace MSStore.CLI.ProjectConfigurators
         private readonly IAzureBlobManager _azureBlobManager = azureBlobManager ?? throw new ArgumentNullException(nameof(azureBlobManager));
         private readonly IEnvironmentInformationService _environmentInformationService = environmentInformationService ?? throw new ArgumentNullException(nameof(environmentInformationService));
         private readonly IAppXManifestManager _appXManifestManager = appXManifestManager ?? throw new ArgumentNullException(nameof(appXManifestManager));
+        private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
         private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         private DirectoryInfo? _tempExtractDir;
         private DevCenterApplication? _app;
@@ -100,14 +101,14 @@ namespace MSStore.CLI.ProjectConfigurators
             _app = app;
 
             // Try to find AppId inside the manifestFile/projectFile file
-            _app = await storePackagedAPI.EnsureAppInitializedAsync(_app, msix, this, ct);
+            _app = await storePackagedAPI.EnsureAppInitializedAsync(_ansiConsole, _app, msix, this, ct);
 
             if (_app?.Id == null)
             {
                 return -1;
             }
 
-            AnsiConsole.MarkupLine($"AppId: [green bold]{_app.Id}[/]");
+            _ansiConsole.MarkupLine($"AppId: [green bold]{_app.Id}[/]");
 
             if (inputDirectory == null)
             {
@@ -116,8 +117,8 @@ namespace MSStore.CLI.ProjectConfigurators
 
             if (inputDirectory?.Exists != true)
             {
-                AnsiConsole.MarkupLine($"[red bold]Input directory does not exist: {inputDirectory?.FullName ?? "empty"}[/]");
-                AnsiConsole.MarkupLine($"[red]Make sure you build/package the project before trying to publish it.[/]");
+                _ansiConsole.MarkupLine($"[red bold]Input directory does not exist: {inputDirectory?.FullName ?? "empty"}[/]");
+                _ansiConsole.MarkupLine($"[red]Make sure you build/package the project before trying to publish it.[/]");
                 return -2;
             }
 
@@ -130,7 +131,7 @@ namespace MSStore.CLI.ProjectConfigurators
 
             _logger.LogInformation("Trying to publish these {FileCount} files: {FileNames}", packageFiles.Count, string.Join(", ", packageFiles.Select(f => $"'{f.FullName}'")));
 
-            return await storePackagedAPI.PublishAsync(_app, flightId, GetFirstSubmissionDataAsync, AllowTargetFutureDeviceFamilies, output, packageFiles, noCommit, packageRolloutPercentage, _browserLauncher, _consoleReader, _zipFileManager, _fileDownloader, _azureBlobManager, _environmentInformationService, _logger, ct);
+            return await storePackagedAPI.PublishAsync(_ansiConsole, _app, flightId, GetFirstSubmissionDataAsync, AllowTargetFutureDeviceFamilies, output, packageFiles, noCommit, packageRolloutPercentage, _browserLauncher, _consoleReader, _zipFileManager, _fileDownloader, _azureBlobManager, _environmentInformationService, _logger, ct);
         }
 
         private Task<(string Description, List<SubmissionImage> Images)> GetFirstSubmissionDataAsync(string listingLanguage, CancellationToken ct)

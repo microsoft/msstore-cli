@@ -23,7 +23,7 @@ namespace MSStore.CLI.UnitTests
                     "package"
                 ], -1);
 
-            result.Should().Contain($"We could not find a project configurator for the project at '{Directory.GetCurrentDirectory()}'.");
+            result.Error.Should().Contain($"We could not find a project configurator for the project at '{Directory.GetCurrentDirectory()}'.");
         }
 
         [TestMethod]
@@ -108,8 +108,8 @@ namespace MSStore.CLI.UnitTests
                     "--verbose"
                 ]);
 
-            result.Should().Contain("The packaged app is here:");
-            result.Should().Contain(customPath);
+            result.Error.Should().Contain("The packaged app is here:");
+            result.Output.Should().Contain(customPath);
 
             ExternalCommandExecutor.VerifyAll();
         }
@@ -233,8 +233,8 @@ namespace MSStore.CLI.UnitTests
                     "--verbose"
                 ]);
 
-            result.Should().Contain("The packaged app is here:");
-            result.Should().Contain(customPath);
+            result.Error.Should().Contain("The packaged app is here:");
+            result.Output.Should().Contain(customPath);
 
             ExternalCommandExecutor.VerifyAll();
         }
@@ -320,8 +320,8 @@ namespace MSStore.CLI.UnitTests
                     "--verbose"
                 ]);
 
-            result.Should().Contain("The packaged app is here:");
-            result.Should().Contain(customPath);
+            result.Error.Should().Contain("The packaged app is here:");
+            result.Output.Should().Contain(customPath);
 
             ExternalCommandExecutor.VerifyAll();
         }
@@ -357,7 +357,7 @@ namespace MSStore.CLI.UnitTests
 
             if (expectedResult == -6)
             {
-                result.Should().Contain("This project type can only be packaged on Windows.");
+                result.Output.Should().Contain("This project type can only be packaged on Windows.");
             }
         }
 
@@ -408,8 +408,8 @@ namespace MSStore.CLI.UnitTests
                     "--verbose"
                 ]);
 
-            result.Should().Contain("The packaged app is here:");
-            result.Should().Contain(path);
+            result.Error.Should().Contain("The packaged app is here:");
+            result.Output.Should().Contain(path);
         }
 
         [TestMethod]
@@ -463,8 +463,8 @@ namespace MSStore.CLI.UnitTests
                     "--verbose"
                 ]);
 
-            result.Should().Contain("The packaged app is here:");
-            result.Should().Contain(customPath);
+            result.Error.Should().Contain("The packaged app is here:");
+            result.Output.Should().Contain(customPath);
         }
 
         private void SetupPubGet(DirectoryInfo dirInfo)
@@ -519,8 +519,8 @@ namespace MSStore.CLI.UnitTests
                     "--verbose"
                 ]);
 
-            result.Should().Contain("The packaged app is here:");
-            result.Should().Contain(path);
+            result.Error.Should().Contain("The packaged app is here:");
+            result.Output.Should().Contain(path);
         }
 
         [TestMethod]
@@ -559,8 +559,8 @@ namespace MSStore.CLI.UnitTests
                     "--verbose"
                 ]);
 
-            result.Should().Contain("The packaged app is here:");
-            result.Should().Contain(path);
+            result.Error.Should().Contain("The packaged app is here:");
+            result.Output.Should().Contain(path);
         }
 
         [TestMethod]
@@ -615,8 +615,8 @@ namespace MSStore.CLI.UnitTests
                     "--verbose"
                 ]);
 
-            result.Should().Contain("The packaged app is here:");
-            result.Should().Contain(path);
+            result.Error.Should().Contain("The packaged app is here:");
+            result.Output.Should().Contain(path);
         }
     }
 }

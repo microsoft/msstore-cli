@@ -30,10 +30,11 @@ namespace MSStore.CLI.Commands.Submission.Rollout
             AddArgument(percentage);
         }
 
-        public new class Handler(ILogger<UpdateCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, TelemetryClient telemetryClient) : ICommandHandler
+        public new class Handler(ILogger<UpdateCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : ICommandHandler
         {
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
+            private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
             public string ProductId { get; set; } = null!;
@@ -51,17 +52,17 @@ namespace MSStore.CLI.Commands.Submission.Rollout
 
                 if (ProductTypeHelper.Solve(ProductId) == ProductType.Unpackaged)
                 {
-                    AnsiConsole.WriteLine("This command is not supported for unpackaged applications.");
+                    _ansiConsole.WriteLine("This command is not supported for unpackaged applications.");
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
                 }
 
                 if (Percentage < 0 || Percentage > 100)
                 {
-                    AnsiConsole.WriteLine("The percentage must be between 0 and 100.");
+                    _ansiConsole.WriteLine("The percentage must be between 0 and 100.");
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
                 }
 
-                var submissionRollout = await AnsiConsole.Status().StartAsync("Updating Submission Rollout", async ctx =>
+                var submissionRollout = await _ansiConsole.Status().StartAsync("Updating Submission Rollout", async ctx =>
                 {
                     try
                     {
@@ -73,7 +74,7 @@ namespace MSStore.CLI.Commands.Submission.Rollout
 
                             if (application?.Id == null)
                             {
-                                ctx.ErrorStatus($"Could not find application with ID '{ProductId}'");
+                                ctx.ErrorStatus(_ansiConsole, $"Could not find application with ID '{ProductId}'");
                                 return null;
                             }
 
@@ -81,7 +82,7 @@ namespace MSStore.CLI.Commands.Submission.Rollout
 
                             if (SubmissionId == null)
                             {
-                                ctx.ErrorStatus("Could not find the submission. Please check the ProductId.");
+                                ctx.ErrorStatus(_ansiConsole, "Could not find the submission. Please check the ProductId.");
                                 return null;
                             }
                         }
@@ -92,12 +93,12 @@ namespace MSStore.CLI.Commands.Submission.Rollout
                     {
                         if (err.Response.StatusCode == System.Net.HttpStatusCode.Forbidden)
                         {
-                            ctx.ErrorStatus("Could not find the submission rollout. Please check the ProductId.");
+                            ctx.ErrorStatus(_ansiConsole, "Could not find the submission rollout. Please check the ProductId.");
                             _logger.LogError(err, "Could not find the submission rollout. Please check the ProductId.");
                         }
                         else
                         {
-                            ctx.ErrorStatus("Error while retrieving submission rollout.");
+                            ctx.ErrorStatus(_ansiConsole, "Error while retrieving submission rollout.");
                             _logger.LogError(err, "Error while retrieving submission rollout for Application.");
                         }
 
@@ -106,7 +107,7 @@ namespace MSStore.CLI.Commands.Submission.Rollout
                     catch (Exception err)
                     {
                         _logger.LogError(err, "Error while retrieving submission rollout.");
-                        ctx.ErrorStatus(err);
+                        ctx.ErrorStatus(_ansiConsole, err);
                         return null;
                     }
                 });

@@ -23,10 +23,11 @@ namespace MSStore.CLI.Commands.Flights.Submission
             AddArgument(Flights.GetCommand.FlightIdArgument);
         }
 
-        public new class Handler(ILogger<StatusCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, TelemetryClient telemetryClient) : ICommandHandler
+        public new class Handler(ILogger<StatusCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : ICommandHandler
         {
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
+            private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
             public string ProductId { get; set; } = null!;
@@ -43,11 +44,11 @@ namespace MSStore.CLI.Commands.Flights.Submission
 
                 if (ProductTypeHelper.Solve(ProductId) == ProductType.Unpackaged)
                 {
-                    AnsiConsole.WriteLine("This command is not supported for unpackaged applications.");
+                    _ansiConsole.WriteLine("This command is not supported for unpackaged applications.");
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
                 }
 
-                var devCenterFlightSubmission = await AnsiConsole.Status().StartAsync<DevCenterFlightSubmission?>("Retrieving flight submission status", async ctx =>
+                var devCenterFlightSubmission = await _ansiConsole.Status().StartAsync<DevCenterFlightSubmission?>("Retrieving flight submission status", async ctx =>
                 {
                     try
                     {
@@ -57,16 +58,16 @@ namespace MSStore.CLI.Commands.Flights.Submission
 
                         if (flight?.FlightId == null)
                         {
-                            ctx.ErrorStatus($"Could not find application flight with ID '{ProductId}'/'{FlightId}'");
+                            ctx.ErrorStatus(_ansiConsole, $"Could not find application flight with ID '{ProductId}'/'{FlightId}'");
                             return null;
                         }
 
-                        return await storePackagedAPI.GetAnyFlightSubmissionAsync(ProductId, flight, ctx, _logger, ct);
+                        return await storePackagedAPI.GetAnyFlightSubmissionAsync(_ansiConsole, ProductId, flight, ctx, _logger, ct);
                     }
                     catch (Exception err)
                     {
                         _logger.LogError(err, "Error while retrieving submission status.");
-                        AnsiConsole.WriteLine("Error!");
+                        _ansiConsole.WriteLine("Error!");
                         return null;
                     }
                 });
@@ -78,10 +79,10 @@ namespace MSStore.CLI.Commands.Flights.Submission
 
                 if (devCenterFlightSubmission.Status != null)
                 {
-                    AnsiConsole.MarkupLine($"Submission Status = [green]{devCenterFlightSubmission.Status}[/]");
+                    ansiConsole.MarkupLine($"Submission Status = [green]{devCenterFlightSubmission.Status}[/]");
                 }
 
-                devCenterFlightSubmission.StatusDetails?.PrintAllTables(ProductId, devCenterFlightSubmission.Id, _logger);
+                devCenterFlightSubmission.StatusDetails?.PrintAllTables(_ansiConsole, ProductId, devCenterFlightSubmission.Id, _logger);
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, 0, ct);
             }

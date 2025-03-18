@@ -23,10 +23,11 @@ namespace MSStore.CLI.Commands.Flights.Submission
             AddArgument(Flights.GetCommand.FlightIdArgument);
         }
 
-        public new class Handler(ILogger<PublishCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, TelemetryClient telemetryClient) : ICommandHandler
+        public new class Handler(ILogger<PublishCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : ICommandHandler
         {
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
+            private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
             public string ProductId { get; set; } = null!;
@@ -43,13 +44,13 @@ namespace MSStore.CLI.Commands.Flights.Submission
 
                 if (ProductTypeHelper.Solve(ProductId) == ProductType.Unpackaged)
                 {
-                    AnsiConsole.WriteLine("This command is not supported for unpackaged applications.");
+                    _ansiConsole.WriteLine("This command is not supported for unpackaged applications.");
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
                 }
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(
                     ProductId,
-                    await AnsiConsole.Status().StartAsync("Publishing flight submission", async ctx =>
+                    await _ansiConsole.Status().StartAsync("Publishing flight submission", async ctx =>
                 {
                     try
                     {
@@ -59,7 +60,7 @@ namespace MSStore.CLI.Commands.Flights.Submission
 
                         if (flight?.FlightId == null)
                         {
-                            ctx.ErrorStatus($"Could not find application flight with ID '{ProductId}'/'{FlightId}'");
+                            ctx.ErrorStatus(_ansiConsole, $"Could not find application flight with ID '{ProductId}'/'{FlightId}'");
                             return -1;
                         }
 
@@ -67,7 +68,7 @@ namespace MSStore.CLI.Commands.Flights.Submission
 
                         if (flightSubmission?.Id == null)
                         {
-                            ctx.ErrorStatus($"Could not find flight submission for application flight with ID '{ProductId}'/'{FlightId}'");
+                            ctx.ErrorStatus(_ansiConsole, $"Could not find flight submission for application flight with ID '{ProductId}'/'{FlightId}'");
                             return -1;
                         }
 
@@ -80,19 +81,19 @@ namespace MSStore.CLI.Commands.Flights.Submission
 
                         if (flightSubmissionCommit.Status != null)
                         {
-                            ctx.SuccessStatus($"Flight Submission Commited with status [green u]{flightSubmissionCommit.Status}[/]");
+                            ctx.SuccessStatus(_ansiConsole, $"Flight Submission Commited with status [green u]{flightSubmissionCommit.Status}[/]");
                             return 0;
                         }
 
-                        ctx.ErrorStatus($"Could not commit flight submission for application flight with ID '{ProductId}'/'{FlightId}'");
-                        AnsiConsole.MarkupLine($"[red]{flightSubmissionCommit.ToErrorMessage()}[/]");
+                        ctx.ErrorStatus(_ansiConsole, $"Could not commit flight submission for application flight with ID '{ProductId}'/'{FlightId}'");
+                        _ansiConsole.MarkupLine($"[red]{flightSubmissionCommit.ToErrorMessage()}[/]");
 
                         return -1;
                     }
                     catch (Exception err)
                     {
                         _logger.LogError(err, "Error while publishing flight submission");
-                        ctx.ErrorStatus(err);
+                        ctx.ErrorStatus(_ansiConsole, err);
                         return -1;
                     }
                 }), ct);

@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using MSStore.CLI.Helpers;
 using MSStore.CLI.Services;
+using Spectre.Console;
 
 namespace MSStore.CLI.Commands
 {
@@ -60,9 +61,10 @@ namespace MSStore.CLI.Commands
             AddOption(reset);
         }
 
-        public new class Handler(ICLIConfigurator cliConfigurator, TelemetryClient telemetryClient) : ICommandHandler
+        public new class Handler(ICLIConfigurator cliConfigurator, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : ICommandHandler
         {
             private readonly ICLIConfigurator _cliConfigurator = cliConfigurator;
+            private readonly IAnsiConsole _ansiConsole = ansiConsole;
             private readonly TelemetryClient _telemetryClient = telemetryClient;
 
             public Guid? TenantId { get; set; }
@@ -94,6 +96,7 @@ namespace MSStore.CLI.Commands
                     (Reset == true
                         ? await _cliConfigurator.ResetAsync(ct: ct)
                         : await _cliConfigurator.ConfigureAsync(
+                            _ansiConsole,
                             askConfirmation,
                             tenantId: TenantId,
                             sellerId: SellerId,

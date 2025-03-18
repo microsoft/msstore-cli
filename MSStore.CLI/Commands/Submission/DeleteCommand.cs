@@ -34,12 +34,13 @@ namespace MSStore.CLI.Commands.Submission
             AddOption(NoConfirmOption);
         }
 
-        public new class Handler(ILogger<DeleteCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IConsoleReader consoleReader, IBrowserLauncher browserLauncher, TelemetryClient telemetryClient) : ICommandHandler
+        public new class Handler(ILogger<DeleteCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IConsoleReader consoleReader, IBrowserLauncher browserLauncher, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : ICommandHandler
         {
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
             private readonly IConsoleReader _consoleReader = consoleReader ?? throw new ArgumentNullException(nameof(consoleReader));
             private readonly IBrowserLauncher _browserLauncher = browserLauncher ?? throw new ArgumentNullException(nameof(browserLauncher));
+            private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
             public string ProductId { get; set; } = null!;
@@ -57,13 +58,13 @@ namespace MSStore.CLI.Commands.Submission
 
                 if (ProductTypeHelper.Solve(ProductId) == ProductType.Unpackaged)
                 {
-                    AnsiConsole.WriteLine("This command is not supported for unpackaged applications.");
+                    _ansiConsole.WriteLine("This command is not supported for unpackaged applications.");
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
                 }
 
                 API.Packaged.IStorePackagedAPI storePackagedAPI = null!;
 
-                var submissionId = await AnsiConsole.Status().StartAsync("Retrieving Application and Submission", async ctx =>
+                var submissionId = await _ansiConsole.Status().StartAsync("Retrieving Application and Submission", async ctx =>
                 {
                     try
                     {
@@ -73,13 +74,13 @@ namespace MSStore.CLI.Commands.Submission
 
                         if (application?.Id == null)
                         {
-                            ctx.ErrorStatus($"Could not find application with ID '{ProductId}'");
+                            ctx.ErrorStatus(_ansiConsole, $"Could not find application with ID '{ProductId}'");
                             return null;
                         }
 
                         if (application.PendingApplicationSubmission?.Id != null)
                         {
-                            ctx.SuccessStatus($"Found [green]Pending Submission[/].");
+                            ctx.SuccessStatus(_ansiConsole, $"Found [green]Pending Submission[/].");
                             return application.PendingApplicationSubmission.Id;
                         }
 
@@ -89,12 +90,12 @@ namespace MSStore.CLI.Commands.Submission
                     {
                         if (err.Response.StatusCode == System.Net.HttpStatusCode.Forbidden)
                         {
-                            ctx.ErrorStatus("Could not delete the submission. Please check the ProductId.");
+                            ctx.ErrorStatus(_ansiConsole, "Could not delete the submission. Please check the ProductId.");
                             _logger.LogError(err, "Could not delete the submission. Please check the ProductId.");
                         }
                         else
                         {
-                            ctx.ErrorStatus("Error while deleting submission.");
+                            ctx.ErrorStatus(_ansiConsole, "Error while deleting submission.");
                             _logger.LogError(err, "Error while deleting application's submission.");
                         }
 
@@ -103,24 +104,24 @@ namespace MSStore.CLI.Commands.Submission
                     catch (Exception err)
                     {
                         _logger.LogError(err, "Error while retrieving submission.");
-                        ctx.ErrorStatus(err);
+                        ctx.ErrorStatus(_ansiConsole, err);
                         return null;
                     }
                 });
 
                 if (submissionId == null)
                 {
-                    AnsiConsole.WriteLine("No pending submission found.");
+                    _ansiConsole.WriteLine("No pending submission found.");
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
                 }
 
-                AnsiConsole.WriteLine($"Found Pending Submission with Id '{submissionId}'");
+                _ansiConsole.WriteLine($"Found Pending Submission with Id '{submissionId}'");
                 if (NoConfirm == false && !await _consoleReader.YesNoConfirmationAsync("Do you want to delete the pending submission?", ct))
                 {
                     return -2;
                 }
 
-                var success = await storePackagedAPI.DeleteSubmissionAsync(ProductId, null, submissionId, _browserLauncher, _logger, ct);
+                var success = await storePackagedAPI.DeleteSubmissionAsync(_ansiConsole, ProductId, null, submissionId, _browserLauncher, _logger, ct);
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, success ? 0 : -1, ct);
             }

@@ -19,7 +19,7 @@ using Spectre.Console;
 
 namespace MSStore.CLI.ProjectConfigurators
 {
-    internal class ElectronProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IElectronManifestManager electronManifestManager, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, IEnvironmentInformationService environmentInformationService, ILogger<ElectronProjectConfigurator> logger) : NodeBaseProjectConfigurator(externalCommandExecutor, browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, environmentInformationService, logger)
+    internal class ElectronProjectConfigurator(IExternalCommandExecutor externalCommandExecutor, IElectronManifestManager electronManifestManager, IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, IEnvironmentInformationService environmentInformationService, IAnsiConsole ansiConsole, ILogger<ElectronProjectConfigurator> logger) : NodeBaseProjectConfigurator(externalCommandExecutor, browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, environmentInformationService, ansiConsole, logger)
     {
         private readonly IElectronManifestManager _electronManifestManager = electronManifestManager ?? throw new ArgumentNullException(nameof(electronManifestManager));
         private ElectronManifest? _electronManifest;
@@ -105,8 +105,8 @@ namespace MSStore.CLI.ProjectConfigurators
 
             CopyDefaultImages(projectRootPath);
 
-            AnsiConsole.WriteLine($"Electron project '{electronProjectFile.FullName}' is now configured to build to the Microsoft Store!");
-            AnsiConsole.MarkupLine("For more information on building your Electron project to the Microsoft Store, see [link]https://www.electron.build/configuration/appx#how-to-publish-your-electron-app-to-the-windows-app-store[/]");
+            ErrorAnsiConsole.WriteLine($"Electron project '{electronProjectFile.FullName}' is now configured to build to the Microsoft Store!");
+            ErrorAnsiConsole.MarkupLine("For more information on building your Electron project to the Microsoft Store, see [link]https://www.electron.build/configuration/appx#how-to-publish-your-electron-app-to-the-windows-app-store[/]");
 
             return (0, output);
         }
@@ -300,14 +300,14 @@ namespace MSStore.CLI.ProjectConfigurators
                 }
             }
 
-            return await AnsiConsole.Status().StartAsync("Packaging 'msix'...", async ctx =>
+            return await ErrorAnsiConsole.Status().StartAsync("Packaging 'msix'...", async ctx =>
             {
                 try
                 {
                     var args = "-w=appx";
                     if (output != null)
                     {
-                        AnsiConsole.MarkupLine("[yellow]The output option is not supported for Electron apps. The provided output directory will be ignored.[/]");
+                        ErrorAnsiConsole.MarkupLine("[yellow]The output option is not supported for Electron apps. The provided output directory will be ignored.[/]");
                         Logger.LogWarning("If you want to customize the output folder, change the .build.directories.output options in your package.json file. (https://github.com/electron-userland/electron-builder/blob/973a0048b46b8367864241a903453f927c158304/packages/app-builder-lib/scheme.json#L3522-L3550)");
                     }
 
@@ -348,7 +348,7 @@ namespace MSStore.CLI.ProjectConfigurators
                         throw new MSStoreException(result.StdErr);
                     }
 
-                    ctx.SuccessStatus("Store package built successfully!");
+                    ctx.SuccessStatus(ErrorAnsiConsole, "Store package built successfully!");
 
                     var cleanedStdOut = System.Text.RegularExpressions.Regex.Replace(result.StdOut, @"\e([^\[\]]|\[.*?[a-zA-Z]|\].*?\a)", string.Empty);
 

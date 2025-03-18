@@ -32,17 +32,18 @@ namespace MSStore.CLI.Commands.Submission
             AddOption(SubmissionCommand.SkipInitialPolling);
         }
 
-        public new class Handler(ILogger<UpdateCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, TelemetryClient telemetryClient) : ICommandHandler
+        public new class Handler(ILogger<UpdateCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : ICommandHandler
         {
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
+            private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
             public string Product { get; set; } = null!;
             public bool SkipInitialPolling { get; set; }
             public string ProductId { get; set; } = null!;
 
-            public static async Task<object?> PackagedUpdateCommandAsync(IStoreAPIFactory storeAPIFactory, string product, string productId, ILogger logger, CancellationToken ct)
+            public static async Task<object?> PackagedUpdateCommandAsync(IAnsiConsole ansiConsole, IStoreAPIFactory storeAPIFactory, string product, string productId, ILogger logger, CancellationToken ct)
             {
                 var updateSubmission = JsonSerializer.Deserialize(product, SourceGenerationContext.GetCustom().DevCenterSubmission);
 
@@ -53,7 +54,7 @@ namespace MSStore.CLI.Commands.Submission
 
                 IStorePackagedAPI storePackagedAPI = null!;
 
-                var application = await AnsiConsole.Status().StartAsync("Retrieving existing application", async ctx =>
+                var application = await ansiConsole.Status().StartAsync("Retrieving existing application", async ctx =>
                 {
                     try
                     {
@@ -71,7 +72,7 @@ namespace MSStore.CLI.Commands.Submission
                     catch (Exception err)
                     {
                         logger.LogError(err, "Error while updating submission product.");
-                        ctx.ErrorStatus(err);
+                        ctx.ErrorStatus(ansiConsole, err);
                         return null;
                     }
                 });
@@ -85,9 +86,9 @@ namespace MSStore.CLI.Commands.Submission
 
                 if (submissionId == null)
                 {
-                    AnsiConsole.MarkupLine("Could not find an existing submission. [b green]Creating new submission[/].");
+                    ansiConsole.MarkupLine("Could not find an existing submission. [b green]Creating new submission[/].");
 
-                    var submission = await storePackagedAPI.CreateNewSubmissionAsync(application.Id, logger, ct);
+                    var submission = await storePackagedAPI.CreateNewSubmissionAsync(ansiConsole, application.Id, logger, ct);
                     submissionId = submission?.Id;
 
                     if (submissionId == null)
@@ -96,7 +97,7 @@ namespace MSStore.CLI.Commands.Submission
                     }
                 }
 
-                return await AnsiConsole.Status().StartAsync("Updating submission product", async ctx =>
+                return await ansiConsole.Status().StartAsync("Updating submission product", async ctx =>
                 {
                     try
                     {
@@ -105,7 +106,7 @@ namespace MSStore.CLI.Commands.Submission
                     catch (Exception err)
                     {
                         logger.LogError(err, "Error while updating submission product.");
-                        ctx.ErrorStatus(err);
+                        ctx.ErrorStatus(ansiConsole, err);
                         return null;
                     }
                 });
@@ -124,7 +125,7 @@ namespace MSStore.CLI.Commands.Submission
 
                 if (ProductTypeHelper.Solve(ProductId) == ProductType.Packaged)
                 {
-                    updateSubmissionData = await PackagedUpdateCommandAsync(_storeAPIFactory, Product, ProductId, _logger, ct);
+                    updateSubmissionData = await PackagedUpdateCommandAsync(_ansiConsole, _storeAPIFactory, Product, ProductId, _logger, ct);
                 }
                 else
                 {
@@ -135,7 +136,7 @@ namespace MSStore.CLI.Commands.Submission
                         throw new MSStoreException("Invalid product provided.");
                     }
 
-                    updateSubmissionData = await AnsiConsole.Status().StartAsync("Updating submission product", async ctx =>
+                    updateSubmissionData = await _ansiConsole.Status().StartAsync("Updating submission product", async ctx =>
                     {
                         try
                         {
@@ -146,7 +147,7 @@ namespace MSStore.CLI.Commands.Submission
                         catch (Exception err)
                         {
                             _logger.LogError(err, "Error while updating submission product.");
-                            ctx.ErrorStatus(err);
+                            ctx.ErrorStatus(_ansiConsole, err);
                             return null;
                         }
                     });

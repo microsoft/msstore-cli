@@ -42,7 +42,7 @@ namespace MSStore.CLI.UnitTests
                                 "--verbose"
                 ], -1);
 
-            initResult.Should().Contain($"Using PublisherDisplayName: {publisherDisplayName}");
+            initResult.Error.Should().Contain($"Using PublisherDisplayName: {publisherDisplayName}");
         }
 
         [TestMethod]

@@ -25,7 +25,7 @@ namespace MSStore.CLI.UnitTests
                     "publish"
                 ], -1);
 
-            result.Should().Contain($"We could not find a project publisher for the project at '{Directory.GetCurrentDirectory()}'.");
+            result.Error.Should().Contain($"We could not find a project publisher for the project at '{Directory.GetCurrentDirectory()}'.");
         }
 
         [TestMethod]
@@ -53,8 +53,8 @@ namespace MSStore.CLI.UnitTests
                     "--verbose"
                 ]);
 
-            result.Should().Contain("Submission commit success! Here is some data:");
-            result.Should().Contain("test.msixupload");
+            result.Error.Should().Contain("Submission commit success! Here is some data:");
+            result.Error.Should().Contain("test.msixupload");
         }
 
         [TestMethod]
@@ -87,9 +87,9 @@ namespace MSStore.CLI.UnitTests
                     "--verbose"
                 ]);
 
-            result.Should().Contain("Submission commit success! Here is some data:");
-            result.Should().Contain("test_x64.msix");
-            result.Should().Contain("test_arm64.msix");
+            result.Error.Should().Contain("Submission commit success! Here is some data:");
+            result.Error.Should().Contain("test_x64.msix");
+            result.Error.Should().Contain("test_arm64.msix");
         }
 
         [TestMethod]
@@ -124,9 +124,9 @@ namespace MSStore.CLI.UnitTests
                     "--verbose"
                 ]);
 
-            result.Should().Contain("Submission commit success! Here is some data:");
-            result.Should().Contain("test_x64.msix");
-            result.Should().Contain("test_arm64.msix");
+            result.Error.Should().Contain("Submission commit success! Here is some data:");
+            result.Error.Should().Contain("test_x64.msix");
+            result.Error.Should().Contain("test_arm64.msix");
         }
 
         [TestMethod]
@@ -135,6 +135,7 @@ namespace MSStore.CLI.UnitTests
             var path = CopyFilesRecursively("FlutterProject");
 
             await FlutterProjectConfigurator.UpdateManifestAsync(
+                ErrorAnsiConsole,
                 new DirectoryInfo(path),
                 new FileInfo(Path.Combine(path, "pubspec.yaml")),
                 FakeApps[0],
@@ -155,8 +156,8 @@ namespace MSStore.CLI.UnitTests
                     "--verbose"
                 ]);
 
-            result.Should().Contain("Submission commit success! Here is some data:");
-            result.Should().Contain("test.msix");
+            result.Error.Should().Contain("Submission commit success! Here is some data:");
+            result.Error.Should().Contain("test.msix");
         }
 
         [TestMethod]
@@ -196,8 +197,8 @@ namespace MSStore.CLI.UnitTests
                     "--verbose"
                 ]);
 
-            result.Should().Contain("Submission commit success! Here is some data:");
-            result.Should().Contain("test.appx");
+            result.Error.Should().Contain("Submission commit success! Here is some data:");
+            result.Error.Should().Contain("test.appx");
         }
 
         [TestMethod]
@@ -234,8 +235,8 @@ namespace MSStore.CLI.UnitTests
                     "--verbose"
                 ]);
 
-            result.Should().Contain("Submission commit success! Here is some data:");
-            result.Should().Contain("test.appxupload");
+            result.Error.Should().Contain("Submission commit success! Here is some data:");
+            result.Error.Should().Contain("test.appxupload");
         }
 
         [TestMethod]
@@ -259,8 +260,8 @@ namespace MSStore.CLI.UnitTests
             ZipFileManager
                 .Verify(x => x.ExtractZip(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
 
-            result.Should().Contain("Submission commit success! Here is some data:");
-            result.Should().Contain("test.msix");
+            result.Error.Should().Contain("Submission commit success! Here is some data:");
+            result.Error.Should().Contain("test.msix");
         }
 
         [TestMethod]
@@ -285,7 +286,7 @@ namespace MSStore.CLI.UnitTests
             ZipFileManager
                 .Verify(x => x.ExtractZip(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
 
-            result.Should().Contain("Skipping submission commit.");
+            result.Error.Should().Contain("Skipping submission commit.");
         }
 
         [TestMethod]
@@ -312,8 +313,8 @@ namespace MSStore.CLI.UnitTests
             ZipFileManager
                 .Verify(x => x.ExtractZip(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
 
-            result.Should().Contain("Submission commit success! Here is some data:");
-            result.Should().Contain("test.msix");
+            result.Error.Should().Contain("Submission commit success! Here is some data:");
+            result.Error.Should().Contain("test.msix");
         }
     }
 }

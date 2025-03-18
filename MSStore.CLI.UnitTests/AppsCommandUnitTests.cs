@@ -23,8 +23,8 @@ namespace MSStore.CLI.UnitTests
                     "list"
                 ]);
 
-            result.Should().ContainAll(FakeApps.Select(a => a.Id));
-            result.Should().ContainAll(FakeApps.Select(a => a.PrimaryName));
+            result.Output.Should().ContainAll(FakeApps.Select(a => a.Id));
+            result.Output.Should().ContainAll(FakeApps.Select(a => a.PrimaryName));
         }
 
         [TestMethod]
@@ -38,7 +38,7 @@ namespace MSStore.CLI.UnitTests
                     appId
                 ]);
 
-            result.Should().Contain($"\"Id\": \"{appId}\",");
+            result.Output.Should().Contain($"\"Id\": \"{appId}\",");
         }
 
         [TestMethod]
@@ -51,7 +51,7 @@ namespace MSStore.CLI.UnitTests
                     Guid.Empty.ToString()
                 ], -1);
 
-            result.Should().Contain("This command is not supported for unpackaged applications.");
+            result.Error.Should().Contain("This command is not supported for unpackaged applications.");
         }
 
         [TestMethod]
@@ -65,7 +65,7 @@ namespace MSStore.CLI.UnitTests
                 ],
                 -1);
 
-            result.Should().Contain("Error!");
+            result.Error.Should().Contain("Error!");
         }
     }
 }

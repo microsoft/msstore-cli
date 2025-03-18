@@ -18,7 +18,7 @@ using Spectre.Console;
 
 namespace MSStore.CLI.ProjectConfigurators
 {
-    internal class MauiProjectConfigurator(IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, INuGetPackageManager nuGetPackageManager, IExternalCommandExecutor externalCommandExecutor, IAppXManifestManager appXManifestManager, IEnvironmentInformationService environmentInformationService, ILogger<MauiProjectConfigurator> logger) : FileProjectConfigurator(browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, environmentInformationService, logger)
+    internal class MauiProjectConfigurator(IBrowserLauncher browserLauncher, IConsoleReader consoleReader, IZipFileManager zipFileManager, IFileDownloader fileDownloader, IAzureBlobManager azureBlobManager, INuGetPackageManager nuGetPackageManager, IExternalCommandExecutor externalCommandExecutor, IAppXManifestManager appXManifestManager, IEnvironmentInformationService environmentInformationService, IAnsiConsole ansiConsole, ILogger<MauiProjectConfigurator> logger) : FileProjectConfigurator(browserLauncher, consoleReader, zipFileManager, fileDownloader, azureBlobManager, environmentInformationService, ansiConsole, logger)
     {
         private readonly INuGetPackageManager _nuGetPackageManager = nuGetPackageManager ?? throw new ArgumentNullException(nameof(nuGetPackageManager));
         private readonly IExternalCommandExecutor _externalCommandExecutor = externalCommandExecutor ?? throw new ArgumentNullException(nameof(externalCommandExecutor));
@@ -67,8 +67,8 @@ namespace MSStore.CLI.ProjectConfigurators
 
             UpdateCSProj(csProjectFile, app);
 
-            AnsiConsole.WriteLine($"Maui project '{csProjectFile.FullName}', with AppX manifest file at '{appxManifest.FullName}', is now configured to build to the Microsoft Store!");
-            AnsiConsole.MarkupLine("For more information on building your Maui project to the Microsoft Store, see [link]https://learn.microsoft.com/dotnet/maui/windows/deployment/overview[/]");
+            ErrorAnsiConsole.WriteLine($"Maui project '{csProjectFile.FullName}', with AppX manifest file at '{appxManifest.FullName}', is now configured to build to the Microsoft Store!");
+            ErrorAnsiConsole.MarkupLine("For more information on building your Maui project to the Microsoft Store, see [link]https://learn.microsoft.com/dotnet/maui/windows/deployment/overview[/]");
 
             return Task.FromResult((0, output));
         }
@@ -168,7 +168,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 return;
             }
 
-            await AnsiConsole.Status().StartAsync("Restoring packages...", async ctx =>
+            await ErrorAnsiConsole.Status().StartAsync("Restoring packages...", async ctx =>
             {
                 try
                 {
@@ -181,7 +181,7 @@ namespace MSStore.CLI.ProjectConfigurators
 
                     _nugetRestoreExecuted[workingDirectory] = true;
 
-                    ctx.SuccessStatus("Packages restored successfully!");
+                    ctx.SuccessStatus(ErrorAnsiConsole, "Packages restored successfully!");
                 }
                 catch (Exception ex)
                 {
@@ -220,7 +220,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 version = new Version(1, 0, 0);
             }
 
-            var bundleUploadFile = await AnsiConsole.Status().StartAsync("Building MSIX...", async ctx =>
+            var bundleUploadFile = await ErrorAnsiConsole.Status().StartAsync("Building MSIX...", async ctx =>
             {
                 try
                 {
@@ -286,7 +286,7 @@ namespace MSStore.CLI.ProjectConfigurators
                         throw new MSStoreException($"Could not find any file with extensions {string.Join(", ", PackageFilesExtensionInclude.Select(e => $"'{e}'"))}!");
                     }
 
-                    ctx.SuccessStatus("MSIX built successfully!");
+                    ctx.SuccessStatus(ErrorAnsiConsole, "MSIX built successfully!");
 
                     return bundleUploadFile;
                 }

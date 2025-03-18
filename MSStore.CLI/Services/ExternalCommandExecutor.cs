@@ -12,8 +12,9 @@ using Spectre.Console;
 
 namespace MSStore.CLI.Services
 {
-    internal class ExternalCommandExecutor(ILogger<ExternalCommandExecutor> logger) : IExternalCommandExecutor
+    internal class ExternalCommandExecutor(IAnsiConsole ansiConsole, ILogger<ExternalCommandExecutor> logger) : IExternalCommandExecutor
     {
+        private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
         private ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         public async Task<ExternalCommandExecutionResult> RunAsync(string command, string arguments, string workingDirectory, CancellationToken ct)
@@ -41,7 +42,7 @@ namespace MSStore.CLI.Services
 
                 if (_logger.IsEnabled(LogLevel.Information))
                 {
-                    AnsiConsole.WriteLine($"Running: {cmd.StartInfo.FileName} {cmd.StartInfo.Arguments}");
+                    _ansiConsole.WriteLine($"Running: {cmd.StartInfo.FileName} {cmd.StartInfo.Arguments}");
                 }
 
                 cmd.StartInfo.RedirectStandardInput = true;
@@ -62,7 +63,7 @@ namespace MSStore.CLI.Services
 
                         if (_logger.IsEnabled(LogLevel.Information))
                         {
-                            AnsiConsole.WriteLine(e.Data);
+                            _ansiConsole.WriteLine(e.Data);
                         }
                     }
                 };
@@ -75,7 +76,7 @@ namespace MSStore.CLI.Services
 
                         if (_logger.IsEnabled(LogLevel.Information))
                         {
-                            AnsiConsole.WriteLine(e.Data);
+                            _ansiConsole.WriteLine(e.Data);
                         }
                     }
                 };

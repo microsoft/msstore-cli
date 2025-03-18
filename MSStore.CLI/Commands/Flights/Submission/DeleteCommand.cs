@@ -25,12 +25,13 @@ namespace MSStore.CLI.Commands.Flights.Submission
             AddOption(Commands.Submission.DeleteCommand.NoConfirmOption);
         }
 
-        public new class Handler(ILogger<DeleteCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IConsoleReader consoleReader, IBrowserLauncher browserLauncher, TelemetryClient telemetryClient) : ICommandHandler
+        public new class Handler(ILogger<DeleteCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IConsoleReader consoleReader, IBrowserLauncher browserLauncher, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : ICommandHandler
         {
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
             private readonly IConsoleReader _consoleReader = consoleReader ?? throw new ArgumentNullException(nameof(consoleReader));
             private readonly IBrowserLauncher _browserLauncher = browserLauncher ?? throw new ArgumentNullException(nameof(browserLauncher));
+            private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
             public string ProductId { get; set; } = null!;
@@ -48,13 +49,13 @@ namespace MSStore.CLI.Commands.Flights.Submission
 
                 if (ProductTypeHelper.Solve(ProductId) == ProductType.Unpackaged)
                 {
-                    AnsiConsole.WriteLine("This command is not supported for unpackaged applications.");
+                    _ansiConsole.WriteLine("This command is not supported for unpackaged applications.");
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
                 }
 
                 IStorePackagedAPI storePackagedAPI = null!;
 
-                var flightSubmissionId = await AnsiConsole.Status().StartAsync("Retrieving Flight Submission", async ctx =>
+                var flightSubmissionId = await _ansiConsole.Status().StartAsync("Retrieving Flight Submission", async ctx =>
                 {
                     try
                     {
@@ -64,13 +65,13 @@ namespace MSStore.CLI.Commands.Flights.Submission
 
                         if (flight?.FlightId == null)
                         {
-                            ctx.ErrorStatus($"Could not find application flight with ID '{ProductId}'/'{FlightId}'");
+                            ctx.ErrorStatus(_ansiConsole, $"Could not find application flight with ID '{ProductId}'/'{FlightId}'");
                             return null;
                         }
 
                         if (flight.PendingFlightSubmission?.Id != null)
                         {
-                            ctx.SuccessStatus($"Found [green]Pending Flight Submission[/].");
+                            ctx.SuccessStatus(_ansiConsole, $"Found [green]Pending Flight Submission[/].");
                             return flight.PendingFlightSubmission.Id;
                         }
 
@@ -80,12 +81,12 @@ namespace MSStore.CLI.Commands.Flights.Submission
                     {
                         if (err.Response.StatusCode == System.Net.HttpStatusCode.Forbidden)
                         {
-                            ctx.ErrorStatus("Could not find the flight submission. Please check the ProductId/FlightId/SubmissionId.");
+                            ctx.ErrorStatus(_ansiConsole, "Could not find the flight submission. Please check the ProductId/FlightId/SubmissionId.");
                             _logger.LogError(err, "Could not find the flight submission. Please check the ProductId/FlightId/SubmissionId.");
                         }
                         else
                         {
-                            ctx.ErrorStatus("Error while retrieving flight submission.");
+                            ctx.ErrorStatus(_ansiConsole, "Error while retrieving flight submission.");
                             _logger.LogError(err, "Error while retrieving flight submission for Application.");
                         }
 
@@ -94,24 +95,24 @@ namespace MSStore.CLI.Commands.Flights.Submission
                     catch (Exception err)
                     {
                         _logger.LogError(err, "Error while retrieving flight submission.");
-                        ctx.ErrorStatus(err);
+                        ctx.ErrorStatus(_ansiConsole, err);
                         return null;
                     }
                 });
 
                 if (flightSubmissionId == null)
                 {
-                    AnsiConsole.WriteLine("Could not find flight submission.");
+                    _ansiConsole.WriteLine("Could not find flight submission.");
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
                 }
 
-                AnsiConsole.WriteLine($"Found Flight Submission with Id '{flightSubmissionId}'");
+                _ansiConsole.WriteLine($"Found Flight Submission with Id '{flightSubmissionId}'");
                 if (NoConfirm == false && !await _consoleReader.YesNoConfirmationAsync("Do you want to delete the pending flight submission?", ct))
                 {
                     return -2;
                 }
 
-                var success = await storePackagedAPI.DeleteSubmissionAsync(ProductId, FlightId, flightSubmissionId, _browserLauncher, _logger, ct);
+                var success = await storePackagedAPI.DeleteSubmissionAsync(_ansiConsole, ProductId, FlightId, flightSubmissionId, _browserLauncher, _logger, ct);
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, success ? 0 : -1, ct);
             }
