@@ -1,0 +1,221 @@
+trigger: none
+name: $(Date:yyyyMMdd).$(Rev:r)
+parameters:
+- name: notifyUsers
+  type: string
+  default: ''
+- name: approversUsers
+  type: string
+  default: ''
+resources:
+  pipelines:
+  - pipeline: '_MSStoreCLI-BuildRelease'
+    project: 'Pax'
+    source: 'MSStoreCLI\MSStore CLI - Release'
+    trigger:
+      branches:
+        include:
+        - rel/v*
+  repositories:
+  - repository: 1ESPipelineTemplates
+    type: git
+    name: 1ESPipelineTemplates/1ESPipelineTemplates
+    ref: refs/tags/release
+extends:
+  template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
+  parameters:
+    pool:
+      name: Azure-Pipelines-1ESPT-ExDShared
+      image: windows-latest
+      os: windows
+    stages:
+    - stage: GitHub_Release_And_MSStore
+      displayName: GitHub Release + MSStore
+      jobs:
+      - job: PreDeploymentApprovalJob
+        displayName: Pre-Deployment Approval
+        condition: succeeded()
+        timeoutInMinutes: 43200
+        pool: server
+        steps:
+        - task: ManualValidation@1
+          inputs:
+            notifyUsers: $(notifyUsers)
+            approvers: $(approversUsers)
+      - job: GitHubRelease_And_MSStore
+        displayName: GitHub Release + MSStore
+        dependsOn: PreDeploymentApprovalJob
+        condition: succeeded()
+        timeoutInMinutes: 0
+        templateContext:
+          type: releaseJob
+          isProduction: true
+          inputs:
+          - input: pipelineArtifact
+            pipeline: '_MSStoreCLI-BuildRelease'
+            artifactName: 'CLI-linux-x64'
+            targetPath: '$(Pipeline.Workspace)/CLI-linux-x64'
+          - input: pipelineArtifact
+            pipeline: '_MSStoreCLI-BuildRelease'
+            artifactName: 'CLI-linux-arm64'
+            targetPath: '$(Pipeline.Workspace)/CLI-linux-arm64'
+          - input: pipelineArtifact
+            pipeline: '_MSStoreCLI-BuildRelease'
+            artifactName: 'MSIX-arm64'
+            targetPath: '$(Pipeline.Workspace)/MSIX-arm64'
+          - input: pipelineArtifact
+            pipeline: '_MSStoreCLI-BuildRelease'
+            artifactName: 'MSIX-x64'
+            targetPath: '$(Pipeline.Workspace)/MSIX-x64'
+          - input: pipelineArtifact
+            pipeline: '_MSStoreCLI-BuildRelease'
+            artifactName: 'CLI-win-arm64'
+            targetPath: '$(Pipeline.Workspace)/CLI-win-arm64'
+          - input: pipelineArtifact
+            pipeline: '_MSStoreCLI-BuildRelease'
+            artifactName: 'CLI-win-x64'
+            targetPath: '$(Pipeline.Workspace)/CLI-win-x64'
+          - input: pipelineArtifact
+            pipeline: '_MSStoreCLI-BuildRelease'
+            artifactName: 'CLI-osx-x64'
+            targetPath: '$(Pipeline.Workspace)/CLI-osx-x64'
+          - input: pipelineArtifact
+            pipeline: '_MSStoreCLI-BuildRelease'
+            artifactName: 'CLI-osx-arm64'
+            targetPath: '$(Pipeline.Workspace)/CLI-osx-arm64'
+        steps:
+        - task: ArchiveFiles@2
+          displayName: Archive Windows x64
+          inputs:
+            rootFolderOrFile: $(System.DefaultWorkingDirectory)/_MSStore CLI - Build Release/CLI-win-x64
+            includeRootFolder: false
+            archiveFile: $(System.DefaultWorkingDirectory)/_MSStore CLI - Build Release/MSStoreCLI-win-x64.zip
+        - task: ArchiveFiles@2
+          displayName: Archive Windows arm64
+          inputs:
+            rootFolderOrFile: $(System.DefaultWorkingDirectory)/_MSStore CLI - Build Release/CLI-win-arm64
+            includeRootFolder: false
+            archiveFile: $(System.DefaultWorkingDirectory)/_MSStore CLI - Build Release/MSStoreCLI-win-arm64.zip
+        - task: ArchiveFiles@2
+          displayName: Archive Linux x64
+          inputs:
+            rootFolderOrFile: $(System.DefaultWorkingDirectory)/_MSStore CLI - Build Release/CLI-linux-x64
+            includeRootFolder: false
+            archiveType: tar
+            archiveFile: $(System.DefaultWorkingDirectory)/_MSStore CLI - Build Release/MSStoreCLI-linux-x64.tar.gz
+        - task: ArchiveFiles@2
+          displayName: Archive Linux arm64
+          inputs:
+            rootFolderOrFile: $(System.DefaultWorkingDirectory)/_MSStore CLI - Build Release/CLI-linux-arm64
+            includeRootFolder: false
+            archiveType: tar
+            archiveFile: $(System.DefaultWorkingDirectory)/_MSStore CLI - Build Release/MSStoreCLI-linux-arm64.tar.gz
+        - task: ArchiveFiles@2
+          displayName: Archive MacOS x64
+          inputs:
+            rootFolderOrFile: $(System.DefaultWorkingDirectory)/_MSStore CLI - Build Release/CLI-osx-x64
+            includeRootFolder: false
+            archiveType: tar
+            archiveFile: $(System.DefaultWorkingDirectory)/_MSStore CLI - Build Release/MSStoreCLI-osx-x64.tar.gz
+        - task: ArchiveFiles@2
+          displayName: Archive MacOS arm64
+          inputs:
+            rootFolderOrFile: $(System.DefaultWorkingDirectory)/_MSStore CLI - Build Release/CLI-osx-arm64
+            includeRootFolder: false
+            archiveType: tar
+            archiveFile: $(System.DefaultWorkingDirectory)/_MSStore CLI - Build Release/MSStoreCLI-osx-arm64.tar.gz
+        - task: PowerShell@2
+          displayName: Create Hashfiles
+          inputs:
+            targetType: inline
+            script: |-
+              foreach($file in Get-FileHash -Path "$(System.DefaultWorkingDirectory)/_MSStore CLI - Build Release/*.tar.gz" -Algorithm SHA256) {
+                $content = $file.Hash.ToLower() + "  " + [System.IO.Path]::GetFileName($file.Path)
+                $path = $file.Path + ".sha256.txt"
+                $content | Out-File $path
+              }
+              foreach($file in Get-FileHash -Path "$(System.DefaultWorkingDirectory)/_MSStore CLI - Build Release/*.zip" -Algorithm SHA256) {
+                $content = $file.Hash.ToLower() + "  " + [System.IO.Path]::GetFileName($file.Path)
+                $path = $file.Path + ".sha256.txt"
+                $content | Out-File $path
+              }
+        - task: GitHubRelease@1
+          displayName: GitHub release (create)
+          inputs:
+            gitHubConnection: github_msstorecli
+            repositoryName: Microsoft/msstore-cli
+            tagSource: userSpecifiedTag
+            tag: $(Build.SourceBranchName)
+            title: Microsoft Store CLI $(Build.SourceBranchName)
+            releaseNotesSource: inline
+            assets: |-
+              $(System.DefaultWorkingDirectory)/_MSStore CLI - Build Release/**/*.tar.gz
+              $(System.DefaultWorkingDirectory)/_MSStore CLI - Build Release/**/*.zip
+              $(System.DefaultWorkingDirectory)/_MSStore CLI - Build Release/**/*.sha256.txt
+            isDraft: true
+            isPreRelease: true
+            changeLogCompareToRelease: lastNonDraftRelease
+        - task: MS-RDX-MRO.windows-store-publish-dev.publish-task.store-publish@3
+          displayName: 'Publish Store'
+          inputs:
+            serviceEndpoint: MSStoreCLI - StoreBroker
+            appId: 9P53PC5S0PHJ
+            sourceFolder: $(System.DefaultWorkingDirectory)/_MSStore CLI - Build Release/
+            contents: |-
+              MSIX-x64/*_x64.msix
+              MSIX-arm64/*_arm64.msix
+            force: true
+            skipPolling: true
+            deletePackages: true
+            numberOfPackagesToKeep: 0
+            targetPublishMode: Manual
+            Visibility: Private
+    - stage: HomeBrew
+      displayName: MacOS HomeBrew Deployment
+      dependsOn: GitHub_Release_And_MSStore
+      variables:
+      - name: GitHubPAT
+        value: 
+      jobs:
+      - job: PreDeploymentApprovalJob
+        displayName: Pre-Deployment Approval
+        condition: succeeded()
+        timeoutInMinutes: 0
+        pool: server
+        steps:
+        - task: ManualValidation@1
+          inputs:
+            notifyUsers: $(notifyUsers)
+            approvers: $(approversUsers)
+      - job: HomeBrewDeployment
+        displayName: HomeBrew Deployment
+        dependsOn: PreDeploymentApprovalJob
+        condition: succeeded()
+        timeoutInMinutes: 0
+        steps:
+        - task: CmdLine@2
+          displayName: Checkout HomeBrew Repo
+          inputs:
+            script: git clone https://oauth2:$(GitHubPAT)@github.com/microsoft/homebrew-msstore-cli.git .
+        - task: DownloadGitHubRelease@0
+          displayName: Download GitHub Release
+          inputs:
+            connection: github_msstorecli
+            userRepository: Microsoft/msstore-cli
+            defaultVersionType: specificTag
+            version: $(Build.SourceBranchName)
+            itemPattern: '*.sha256.txt'
+        - task: PowerShell@2
+          displayName: Update Ruby file
+          inputs:
+            filePath: update-formula.ps1
+            arguments: $(Build.SourceBranchName)
+        - task: CmdLine@2
+          displayName: Git operations
+          inputs:
+            script: |-
+              git config user.email "msstore.cli.dev.bot@microsoft.com"
+              git config user.name "MSStore CLI Dev Bot"
+              git add -f Formula\msstore-cli.rb
+              git commit -m "Update formula with new release ($(Build.SourceBranchName))."
+              git push origin main
