@@ -1,8 +1,6 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Runtime.InteropServices;
-
 namespace MSStore.CLI.UnitTests
 {
     [TestClass]
@@ -27,13 +25,9 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
+        [OSCondition(OperatingSystems.Windows)]
         public async Task PackageCommandForUWPAppsShouldCallMSBuildIfWindows()
         {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                Assert.Inconclusive("This test is only valid on Windows platforms");
-            }
-
             var path = CopyFilesRecursively("UWPProject");
 
             var dirInfo = new DirectoryInfo(path);
@@ -67,13 +61,9 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
+        [OSCondition(OperatingSystems.Windows)]
         public async Task PackageCommandForUWPAppsShouldCallMSBuildWithOutputParameterIfWindows()
         {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                Assert.Inconclusive("This test is only valid on Windows platforms");
-            }
-
             var path = CopyFilesRecursively("UWPProject");
 
             var dirInfo = new DirectoryInfo(path);
@@ -115,13 +105,9 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
+        [OSCondition(OperatingSystems.Windows)]
         public async Task PackageCommandForWinUIAppsShouldCallMSBuildIfWindows()
         {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                Assert.Inconclusive("This test is only valid on Windows platforms");
-            }
-
             var path = CopyFilesRecursively("WinUIProject");
 
             var dirInfo = new DirectoryInfo(path);
@@ -172,13 +158,9 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
+        [OSCondition(OperatingSystems.Windows)]
         public async Task PackageCommandForWinUIAppsShouldCallMSBuildWithOutputParameterIfWindows()
         {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                Assert.Inconclusive("This test is only valid on Windows platforms");
-            }
-
             var path = CopyFilesRecursively("WinUIProject");
 
             var dirInfo = new DirectoryInfo(path);
@@ -240,13 +222,9 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
+        [OSCondition(OperatingSystems.Windows)]
         public async Task PackageCommandForMauiAppsShouldCallMSBuildIfWindows()
         {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                Assert.Inconclusive("This test is only valid on Windows platforms");
-            }
-
             var path = CopyFilesRecursively("MauiProject");
 
             var dirInfo = new DirectoryInfo(path);
@@ -279,13 +257,9 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
+        [OSCondition(OperatingSystems.Windows)]
         public async Task PackageCommandForMauiAppsShouldCallMSBuildWithOutputParameterIfWindows()
         {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                Assert.Inconclusive("This test is only valid on Windows platforms");
-            }
-
             var path = CopyFilesRecursively("MauiProject");
 
             var dirInfo = new DirectoryInfo(path);
@@ -335,13 +309,9 @@ namespace MSStore.CLI.UnitTests
         [DataRow(-6, new[] { "ElectronProject", "Yarn" })]
         [DataRow(-6, new[] { "ReactNativeProject", "Npm" })]
         [DataRow(-6, new[] { "ReactNativeProject", "Yarn" })]
+        [OSCondition(ConditionMode.Exclude, OperatingSystems.Windows)]
         public async Task PackageCommandShouldNotWorkIfNotWindowsOnSpecificPlatforms(int expectedResult, string[] testDataProjectSubPath)
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                Assert.Inconclusive("This test is only valid on non-Windows platforms");
-            }
-
             var path = CopyFilesRecursively(Path.Combine(testDataProjectSubPath));
 
             var dirInfo = new DirectoryInfo(path);
@@ -362,13 +332,9 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
+        [OSCondition(OperatingSystems.Windows)]
         public async Task PackageCommandForFlutterAppsShouldCallFlutter()
         {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                Assert.Inconclusive("This test is only valid on Windows platforms");
-            }
-
             var path = CopyFilesRecursively("FlutterProject");
 
             var dirInfo = new DirectoryInfo(path);
@@ -413,13 +379,9 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
+        [OSCondition(OperatingSystems.Windows)]
         public async Task PackageCommandForFlutterAppsShouldCallFlutterWithOutputParameter()
         {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                Assert.Inconclusive("This test is only valid on Windows platforms");
-            }
-
             var path = CopyFilesRecursively("FlutterProject");
 
             var dirInfo = new DirectoryInfo(path);
@@ -484,13 +446,9 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
+        [OSCondition(OperatingSystems.Windows)]
         public async Task PackageCommandForElectronNpmAppsShouldCallElectronNpm()
         {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                Assert.Inconclusive("This test is only valid on Windows platforms");
-            }
-
             var path = CopyFilesRecursively(Path.Combine("ElectronProject", "Npm"));
 
             var dirInfo = new DirectoryInfo(path);
@@ -524,13 +482,9 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
+        [OSCondition(OperatingSystems.Windows)]
         public async Task PackageCommandForElectronYarnAppsShouldCallElectronYarn()
         {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                Assert.Inconclusive("This test is only valid on Windows platforms");
-            }
-
             var path = CopyFilesRecursively(Path.Combine("ElectronProject", "Yarn"));
 
             var dirInfo = new DirectoryInfo(path);
@@ -566,13 +520,9 @@ namespace MSStore.CLI.UnitTests
         [TestMethod]
         [DataRow("Npm")]
         [DataRow("Yarn")]
+        [OSCondition(OperatingSystems.Windows)]
         public async Task PackageCommandForReactNativeNpmAppsShouldCallMSBuild(string manifestType)
         {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                Assert.Inconclusive("This test is only valid on Windows platforms");
-            }
-
             var path = CopyFilesRecursively(Path.Combine("ReactNativeProject", manifestType));
 
             var dirInfo = new DirectoryInfo(path);

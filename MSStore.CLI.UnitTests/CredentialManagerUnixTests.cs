@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Runtime.InteropServices;
 using MSStore.CLI.Services.CredentialManager.Unix;
 
 namespace MSStore.CLI.UnitTests
@@ -25,26 +24,18 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
+        [OSCondition(ConditionMode.Exclude, OperatingSystems.Windows)]
         public void CredentialManagerUnix_ReadCredential_ShouldReturnEmpty()
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                Assert.Inconclusive("This test is only valid on non-Windows platforms");
-            }
-
             var secret = _credentialManagerUnix.ReadCredential("testUserName");
 
             secret.Should().BeEmpty();
         }
 
         [TestMethod]
+        [OSCondition(ConditionMode.Exclude, OperatingSystems.Windows)]
         public void CredentialManagerUnix_WriteCredential_ShouldPersist()
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                Assert.Inconclusive("This test is only valid on non-Windows platforms");
-            }
-
             _credentialManagerUnix.WriteCredential("testUserName", "testSecret");
 
             var secret = _credentialManagerUnix.ReadCredential("testUserName");
