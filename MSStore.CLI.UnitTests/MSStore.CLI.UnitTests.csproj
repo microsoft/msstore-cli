@@ -1,10 +1,11 @@
-<Project Sdk="MSTest.Sdk/3.8.3">
+﻿<Project Sdk="MSTest.Sdk/3.9.2">
 
   <PropertyGroup>
     <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">net9.0;net9.0-windows10.0.17763.0</TargetFrameworks>
     <TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('windows'))">net9.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <MSTestAnalysisMode>Recommended</MSTestAnalysisMode>
 
     <NoWarn>$(NoWarn);CA1001;CA1812;CS1591</NoWarn>
   </PropertyGroup>
@@ -35,7 +36,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="Microsoft.NET.Test.Sdk" Version="17.13.0" />
+    <PackageReference Update="Microsoft.NET.Test.Sdk" Version="17.14.1" />
   </ItemGroup>
 
   <ItemGroup>
@@ -43,22 +44,22 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="Microsoft.Testing.Extensions.TrxReport" Version="1.6.3" />
+    <PackageReference Update="Microsoft.Testing.Extensions.TrxReport" Version="1.7.2" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="MSTest.Analyzers" Version="3.8.3">
+    <PackageReference Update="MSTest.Analyzers" Version="3.9.2">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="MSTest.TestAdapter" Version="3.8.3" />
+    <PackageReference Update="MSTest.TestAdapter" Version="3.9.2" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="MSTest.TestFramework" Version="3.8.3" />
+    <PackageReference Update="MSTest.TestFramework" Version="3.9.2" />
   </ItemGroup>
 
 </Project>

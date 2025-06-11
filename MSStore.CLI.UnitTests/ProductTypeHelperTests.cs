@@ -13,7 +13,7 @@ namespace MSStore.CLI.UnitTests
         {
             var productId = "12345678-1234-1234-1234-123456789012";
             var productType = ProductTypeHelper.Solve(productId);
-            Assert.AreEqual(productType, ProductType.Unpackaged);
+            Assert.AreEqual(ProductType.Unpackaged, productType);
         }
 
         [TestMethod]
@@ -23,7 +23,7 @@ namespace MSStore.CLI.UnitTests
         public void Test_ProductTypeHelper_Solve_Packaged(string productId)
         {
             var productType = ProductTypeHelper.Solve(productId);
-            Assert.AreEqual(productType, ProductType.Packaged);
+            Assert.AreEqual(ProductType.Packaged, productType);
         }
     }
 }

@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Runtime.InteropServices;
 using MSStore.CLI.Services.PWABuilder;
 
 namespace MSStore.CLI.UnitTests
@@ -466,13 +465,9 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
+        [OSCondition(OperatingSystems.Windows)]
         public async Task ProjectConfiguratorParsesUWPProject()
         {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                Assert.Inconclusive("This test is only valid on Windows platforms");
-            }
-
             var path = CopyFilesRecursively("UWPProject");
 
             DefaultMSBuildExecution(new DirectoryInfo(path));
@@ -494,13 +489,9 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
+        [OSCondition(OperatingSystems.Windows)]
         public async Task ProjectConfiguratorParsesWinUIProject()
         {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                Assert.Inconclusive("This test is only valid on Windows platforms");
-            }
-
             var path = CopyFilesRecursively("WinUIProject");
 
             var dirInfo = new DirectoryInfo(path);
