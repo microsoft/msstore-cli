@@ -30,6 +30,7 @@ jobs:
     - name: Install and Configure Keyring
       if: ${{ matrix.os == 'ubuntu-latest' }}
       run: |
+        sudo apt-get update
         sudo apt-get install -y gnome-keyring
         export $(dbus-launch --sh-syntax)
         export $(echo 'anypass_just_to_unlock' | gnome-keyring-daemon --unlock)
@@ -54,7 +55,7 @@ jobs:
         name: test-results-${{ matrix.os }}
         path: TestResults/*.trx
     - name: Install ReportGenerator
-      run: dotnet tool install --global dotnet-reportgenerator-globaltool --version 5.4.4
+      run: dotnet tool install --global dotnet-reportgenerator-globaltool --version 5.4.11
     - name: Merge code coverage files
       run: reportgenerator "-reports:${{ github.workspace }}/**/*.cobertura.xml" "-targetdir:${{ github.workspace }}/report" "-reporttypes:Cobertura" "-filefilters:-*GenerationContext*.g.cs"
     - name: Publish code coverage results

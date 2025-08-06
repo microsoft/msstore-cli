@@ -8,6 +8,8 @@ namespace MSStore.CLI.UnitTests
     [TestClass]
     public class PublishCommandUnitTests : BaseCommandLineTest
     {
+        public TestContext TestContext { get; set; }
+
         [TestInitialize]
         public void Init()
         {
@@ -37,7 +39,7 @@ namespace MSStore.CLI.UnitTests
 
             AppXManifestManager.Object.UpdateManifest(Path.Combine(path, "Package.appxmanifest"), FakeApps[0], "publisher", null);
             var appPackagesFolder = Directory.CreateDirectory(Path.Combine(path, "AppPackages"));
-            await File.WriteAllTextAsync(Path.Combine(appPackagesFolder.FullName, "test.msixupload"), string.Empty);
+            await File.WriteAllTextAsync(Path.Combine(appPackagesFolder.FullName, "test.msixupload"), string.Empty, TestContext.CancellationTokenSource.Token);
 
             AddDefaultFakeSuccessfulSubmission();
 
@@ -66,8 +68,8 @@ namespace MSStore.CLI.UnitTests
             var appPackagesFolderX64 = Directory.CreateDirectory(Path.Combine(path, "AppPackages", "x64"));
             var appPackagesFolderArm64 = Directory.CreateDirectory(Path.Combine(path, "AppPackages", "arm64"));
 
-            await File.WriteAllTextAsync(Path.Combine(appPackagesFolderX64.FullName, "test_x64.msix"), string.Empty);
-            await File.WriteAllTextAsync(Path.Combine(appPackagesFolderArm64.FullName, "test_arm64.msix"), string.Empty);
+            await File.WriteAllTextAsync(Path.Combine(appPackagesFolderX64.FullName, "test_x64.msix"), string.Empty, TestContext.CancellationTokenSource.Token);
+            await File.WriteAllTextAsync(Path.Combine(appPackagesFolderArm64.FullName, "test_arm64.msix"), string.Empty, TestContext.CancellationTokenSource.Token);
 
             AddDefaultFakeSuccessfulSubmission();
 
@@ -99,8 +101,8 @@ namespace MSStore.CLI.UnitTests
             var appPackagesFolderX64 = Directory.CreateDirectory(Path.Combine(path, "AppPackages", "x64"));
             var appPackagesFolderArm64 = Directory.CreateDirectory(Path.Combine(path, "AppPackages", "arm64"));
 
-            await File.WriteAllTextAsync(Path.Combine(appPackagesFolderX64.FullName, "test_x64.msix"), string.Empty);
-            await File.WriteAllTextAsync(Path.Combine(appPackagesFolderArm64.FullName, "test_arm64.msix"), string.Empty);
+            await File.WriteAllTextAsync(Path.Combine(appPackagesFolderX64.FullName, "test_x64.msix"), string.Empty, TestContext.CancellationTokenSource.Token);
+            await File.WriteAllTextAsync(Path.Combine(appPackagesFolderArm64.FullName, "test_arm64.msix"), string.Empty, TestContext.CancellationTokenSource.Token);
 
             AddDefaultFakeSuccessfulSubmission();
 
@@ -132,7 +134,7 @@ namespace MSStore.CLI.UnitTests
                 null,
                 CancellationToken.None);
             var appPackagesFolder = Directory.CreateDirectory(Path.Combine(path, "build", "windows", "x64", "runner", "Release"));
-            await File.WriteAllTextAsync(Path.Combine(appPackagesFolder.FullName, "test.msix"), string.Empty);
+            await File.WriteAllTextAsync(Path.Combine(appPackagesFolder.FullName, "test.msix"), string.Empty, TestContext.CancellationTokenSource.Token);
 
             AddDefaultFakeSuccessfulSubmission();
 
@@ -162,7 +164,7 @@ namespace MSStore.CLI.UnitTests
                 ElectronManifestManager.Object,
                 CancellationToken.None);
             var appPackagesFolder = Directory.CreateDirectory(Path.Combine(path, "dist"));
-            await File.WriteAllTextAsync(Path.Combine(appPackagesFolder.FullName, "test.appx"), string.Empty);
+            await File.WriteAllTextAsync(Path.Combine(appPackagesFolder.FullName, "test.appx"), string.Empty, TestContext.CancellationTokenSource.Token);
 
             AddDefaultFakeSuccessfulSubmission();
 
@@ -200,7 +202,7 @@ namespace MSStore.CLI.UnitTests
             AppXManifestManager.Object.UpdateManifest(appxManifest.FullName, FakeApps[0], "publisher", null);
 
             var appPackagesFolder = Directory.CreateDirectory(Path.Combine(appxManifest.Directory!.FullName, "AppPackages"));
-            await File.WriteAllTextAsync(Path.Combine(appPackagesFolder.FullName, "test.appxupload"), string.Empty);
+            await File.WriteAllTextAsync(Path.Combine(appPackagesFolder.FullName, "test.appxupload"), string.Empty, TestContext.CancellationTokenSource.Token);
 
             AddDefaultFakeSuccessfulSubmission();
 

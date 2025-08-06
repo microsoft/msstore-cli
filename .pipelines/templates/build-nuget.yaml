@@ -17,6 +17,7 @@ steps:
 - bash: |
     echo "##vso[task.setvariable variable=AgentOS;]${{ parameters.AgentOS }}"
 - script: |
+    sudo apt-get update
     sudo apt-get install -y gnome-keyring dbus-x11
     eval "$(dbus-launch --sh-syntax)"
     echo "##vso[task.setvariable variable=DBUS_SESSION_BUS_ADDRESS;]$DBUS_SESSION_BUS_ADDRESS"
@@ -66,7 +67,7 @@ steps:
   inputs:
     command: custom
     custom: tool
-    arguments: 'install --global dotnet-reportgenerator-globaltool --version 5.4.4'
+    arguments: 'install --global dotnet-reportgenerator-globaltool --version 5.4.11'
 - script: reportgenerator "-reports:$(Build.SourcesDirectory)/**/*.cobertura.xml" "-targetdir:$(Build.SourcesDirectory)/report" "-reporttypes:Cobertura" "-filefilters:-*GenerationContext*.g.cs"
   displayName: Merge code coverage files
 - task: PublishCodeCoverageResults@1
