@@ -35,7 +35,7 @@ namespace MSStore.CLI.Helpers
         }
 
         public static Task<int> TrackCommandEventAsync<T>(this TelemetryClient telemetryClient, int returnCode, IDictionary<string, string>? properties = null, CancellationToken ct = default)
-            where T : ICommandHandler
+            where T : AsynchronousCommandLineAction
         {
             var typeName = typeof(T).FullName;
             if (typeName == null)
@@ -66,13 +66,13 @@ namespace MSStore.CLI.Helpers
         }
 
         public static Task<int> TrackCommandEventAsync<T>(this TelemetryClient telemetryClient, int returnCode, CancellationToken ct = default)
-            where T : ICommandHandler
+            where T : AsynchronousCommandLineAction
         {
             return TrackCommandEventAsync<T>(telemetryClient, returnCode, null, ct);
         }
 
         public static Task<int> TrackCommandEventAsync<T>(this TelemetryClient telemetryClient, string productId, int returnCode, IDictionary<string, string>? properties = null, CancellationToken ct = default)
-            where T : ICommandHandler
+            where T : AsynchronousCommandLineAction
         {
             properties ??= new Dictionary<string, string>();
 
@@ -82,7 +82,7 @@ namespace MSStore.CLI.Helpers
         }
 
         public static Task<int> TrackCommandEventAsync<T>(this TelemetryClient telemetryClient, string productId, int returnCode, CancellationToken ct = default)
-            where T : ICommandHandler
+            where T : AsynchronousCommandLineAction
         {
             return TrackCommandEventAsync<T>(telemetryClient, productId, returnCode, null, ct);
         }

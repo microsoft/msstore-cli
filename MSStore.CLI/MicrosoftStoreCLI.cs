@@ -19,6 +19,17 @@ namespace MSStore.CLI
 {
     internal class MicrosoftStoreCLI : RootCommand
     {
+        internal static Option<bool> VerboseOption { get; }
+
+        static MicrosoftStoreCLI()
+        {
+            VerboseOption = new Option<bool>("--verbose", "-v")
+            {
+                DefaultValueFactory = _ => false,
+                Description = "Verbose output"
+            };
+        }
+
         internal static void WelcomeMessage(IAnsiConsole ansiConsole)
         {
             ansiConsole.WriteLine();
@@ -28,48 +39,43 @@ namespace MSStore.CLI
             ansiConsole.WriteLine();
         }
 
-        internal Option<bool> VerboseOption { get; }
-
-        public MicrosoftStoreCLI()
+        public MicrosoftStoreCLI(InfoCommand infoCommand, ReconfigureCommand reconfigureCommand, SettingsCommand settingsCommand, AppsCommand appsCommand, SubmissionCommand submissionCommand, FlightsCommand flightsCommand, InitCommand initCommand, PackageCommand packageCommand, PublishCommand publishCommand, Handler handler)
             : base(description: "CLI tool to automate Microsoft Store Developer tasks.")
         {
-            VerboseOption = new Option<bool>(
-                aliases: ["--verbose", "-v"],
-                getDefaultValue: () => false,
-                description: "Verbose output");
-            AddGlobalOption(VerboseOption);
+            Subcommands.Add(infoCommand);
+            Subcommands.Add(reconfigureCommand);
+            Subcommands.Add(settingsCommand);
+            Subcommands.Add(appsCommand);
+            Subcommands.Add(submissionCommand);
+            Subcommands.Add(flightsCommand);
+            Subcommands.Add(initCommand);
+            Subcommands.Add(packageCommand);
+            Subcommands.Add(publishCommand);
 
-            AddCommand(new InfoCommand());
-            AddCommand(new ReconfigureCommand());
-            AddCommand(new SettingsCommand());
-            AddCommand(new AppsCommand());
-            AddCommand(new SubmissionCommand());
-            AddCommand(new FlightsCommand());
-            AddCommand(new InitCommand());
-            AddCommand(new PackageCommand());
-            AddCommand(new PublishCommand());
-
-            this.SetHandler(() =>
+            SetAction((parseResult, ct) =>
             {
+                foreach (var option in Options)
+                {
+                    if (option is HelpOption defaultHelpOption && defaultHelpOption.Action is HelpAction helpAction)
+                    {
+                        helpAction.Invoke(parseResult);
+                        return Task.CompletedTask;
+                    }
+                }
+
+                return handler.InvokeAsync(parseResult, ct);
             });
         }
 
-        public new class Handler(IConfigurationManager<Configurations> configurationManager, ICLIConfigurator cliConfigurator, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : ICommandHandler
+        public class Handler(IConfigurationManager<Configurations> configurationManager, ICLIConfigurator cliConfigurator, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : AsynchronousCommandLineAction
         {
             private readonly IConfigurationManager<Configurations> _configurationManager = configurationManager ?? throw new ArgumentNullException(nameof(configurationManager));
             private readonly ICLIConfigurator _cliConfigurator = cliConfigurator ?? throw new ArgumentNullException(nameof(cliConfigurator));
             private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
-            public int Invoke(InvocationContext context)
+            public override async Task<int> InvokeAsync(ParseResult parseResult, CancellationToken ct = default)
             {
-                return -1001;
-            }
-
-            public async Task<int> InvokeAsync(InvocationContext context)
-            {
-                var ct = context.GetCancellationToken();
-
                 var config = await _configurationManager.LoadAsync(ct: ct);
 
                 if (config.SellerId == null)
@@ -81,8 +87,15 @@ namespace MSStore.CLI
                 }
                 else
                 {
-                    HelpBuilder helpBuilder = new(LocalizationResources.Instance, CommandExtensions.GetBufferWidth());
-                    helpBuilder.Write(context.ParseResult.RootCommandResult.Command, Console.Out);
+                    foreach (var option in parseResult.RootCommandResult.Command.Options)
+                    {
+                        if (option is HelpOption defaultHelpOption && defaultHelpOption.Action is HelpAction helpAction)
+                        {
+                            helpAction.Invoke(parseResult);
+                            break;
+                        }
+                    }
+
                     _ansiConsole.MarkupLine("Use of the Microsoft Store Developer CLI is subject to the terms of the Microsoft Privacy Statement: [link]https://aka.ms/privacy[/]");
                 }
 

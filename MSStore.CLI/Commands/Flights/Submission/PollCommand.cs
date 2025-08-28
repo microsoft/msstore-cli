@@ -4,6 +4,7 @@
 using System;
 using System.CommandLine;
 using System.CommandLine.Invocation;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Logging;
@@ -20,11 +21,11 @@ namespace MSStore.CLI.Commands.Flights.Submission
         public PollCommand()
             : base("poll", "Polls until the existing flight submission is PUBLISHED or FAILED.")
         {
-            AddArgument(SubmissionCommand.ProductIdArgument);
-            AddArgument(Flights.GetCommand.FlightIdArgument);
+            Arguments.Add(SubmissionCommand.ProductIdArgument);
+            Arguments.Add(Flights.GetCommand.FlightIdArgument);
         }
 
-        public new class Handler(ILogger<PollCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient, IBrowserLauncher browserLauncher) : ICommandHandler
+        public class Handler(ILogger<PollCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient, IBrowserLauncher browserLauncher) : AsynchronousCommandLineAction
         {
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
@@ -32,27 +33,20 @@ namespace MSStore.CLI.Commands.Flights.Submission
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
             private readonly IBrowserLauncher _browserLauncher = browserLauncher ?? throw new ArgumentNullException(nameof(browserLauncher));
 
-            public string ProductId { get; set; } = null!;
-            public string FlightId { get; set; } = null!;
-
-            public int Invoke(InvocationContext context)
+            public override async Task<int> InvokeAsync(ParseResult parseResult, CancellationToken ct = default)
             {
-                return -1001;
-            }
-
-            public async Task<int> InvokeAsync(InvocationContext context)
-            {
-                var ct = context.GetCancellationToken();
+                var productId = parseResult.GetRequiredValue(SubmissionCommand.ProductIdArgument);
+                var flightId = parseResult.GetRequiredValue(Flights.GetCommand.FlightIdArgument);
 
                 IStorePackagedAPI? storePackagedAPI = null;
 
                 DevCenterFlight? flight = null;
                 ApplicationSubmissionInfo? flightSubmission = null;
 
-                if (ProductTypeHelper.Solve(ProductId) == ProductType.Unpackaged)
+                if (ProductTypeHelper.Solve(productId) == ProductType.Unpackaged)
                 {
                     _ansiConsole.WriteLine("This command is not supported for unpackaged applications.");
-                    return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
+                    return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, -1, ct);
                 }
 
                 DevCenterSubmissionStatusResponse? lastSubmissionStatus = await _ansiConsole.Status().StartAsync("Polling flight submission status", async ctx =>
@@ -61,11 +55,11 @@ namespace MSStore.CLI.Commands.Flights.Submission
                     {
                         storePackagedAPI = await _storeAPIFactory.CreatePackagedAsync(ct: ct);
 
-                        flight = await storePackagedAPI.GetFlightAsync(ProductId, FlightId, ct);
+                        flight = await storePackagedAPI.GetFlightAsync(productId, flightId, ct);
 
                         if (flight?.FlightId == null)
                         {
-                            ctx.ErrorStatus(_ansiConsole, $"Could not find application flight with ID '{ProductId}'/'{FlightId}'");
+                            ctx.ErrorStatus(_ansiConsole, $"Could not find application flight with ID '{productId}'/'{flightId}'");
                             return null;
                         }
 
@@ -73,11 +67,11 @@ namespace MSStore.CLI.Commands.Flights.Submission
 
                         if (flightSubmission?.Id == null)
                         {
-                            ctx.ErrorStatus(_ansiConsole, $"Could not find flight submission for application flight with ID '{ProductId}'/'{FlightId}'");
+                            ctx.ErrorStatus(_ansiConsole, $"Could not find flight submission for application flight with ID '{productId}'/'{flightId}'");
                             return null;
                         }
 
-                        var lastSubmissionStatus = await storePackagedAPI.PollSubmissionStatusAsync(ansiConsole, ProductId, flight.FlightId, flightSubmission.Id, false, _logger, ct: ct);
+                        var lastSubmissionStatus = await storePackagedAPI.PollSubmissionStatusAsync(ansiConsole, productId, flight.FlightId, flightSubmission.Id, false, _logger, ct: ct);
 
                         ctx.SuccessStatus(_ansiConsole);
 
@@ -95,12 +89,12 @@ namespace MSStore.CLI.Commands.Flights.Submission
                 if (lastSubmissionStatus != null && storePackagedAPI != null && flight?.FlightId != null && flightSubmission?.Id != null)
                 {
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(
-                        ProductId,
-                        await storePackagedAPI.HandleLastSubmissionStatusAsync(_ansiConsole, lastSubmissionStatus, ProductId, flight.FlightId, flightSubmission.Id, _browserLauncher, _logger, ct),
+                        productId,
+                        await storePackagedAPI.HandleLastSubmissionStatusAsync(_ansiConsole, lastSubmissionStatus, productId, flight.FlightId, flightSubmission.Id, _browserLauncher, _logger, ct),
                         ct);
                 }
 
-                return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
+                return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, -1, ct);
             }
         }
     }

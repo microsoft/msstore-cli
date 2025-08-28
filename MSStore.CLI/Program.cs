@@ -2,10 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
-using System.CommandLine.Builder;
-using System.CommandLine.Hosting;
 using System.CommandLine.Invocation;
-using System.CommandLine.Parsing;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -44,8 +41,6 @@ namespace MSStore.CLI
             Console.OutputEncoding = System.Text.Encoding.UTF8;
 #endif
 
-            var storeCLI = new MicrosoftStoreCLI();
-
             var minimumLogLevel = LogLevel.Critical;
 
             var telemetryConfigurationManager = new ConfigurationManager<TelemetryConfigurations>(
@@ -60,8 +55,13 @@ namespace MSStore.CLI
                 Out = new AnsiConsoleOutput(Console.Error)
             });
 
-            var builder = new CommandLineBuilder(storeCLI);
-            var parser = builder.UseHost(_ => Host.CreateDefaultBuilder(args), (builder) => builder
+            if (args.Contains(MicrosoftStoreCLI.VerboseOption.Name) || args.Any(MicrosoftStoreCLI.VerboseOption.Aliases.Contains))
+            {
+                minimumLogLevel = LogLevel.Information;
+            }
+
+            var hostBuilder = Host.CreateDefaultBuilder(args)
+                .UseConsoleLifetime()
                 .UseEnvironment("CLI")
                 .ConfigureServices((hostContext, services) =>
                 {
@@ -213,45 +213,11 @@ namespace MSStore.CLI
                 .ConfigureLogging((hostContext, logging) =>
                 {
                     logging.SetMinimumLevel(minimumLogLevel);
-                }))
-                .AddMiddleware(
-                    async (context, next) =>
-                    {
-                        var ct = context.GetCancellationToken();
+                });
 
-                        var host = context.GetHost();
+            IHost host = hostBuilder.Start();
 
-                        var configurationManager = host.Services.GetService<IConfigurationManager<Configurations>>()!;
-                        var credentialManager = host.Services.GetService<ICredentialManager>()!;
-                        var consoleReader = host.Services.GetService<IConsoleReader>()!;
-                        var cliConfigurator = host.Services.GetService<ICLIConfigurator>()!;
-                        var logger = host.Services.GetService<ILogger<Program>>()!;
-
-                        logger.LogInformation("Command is {Command}", context.ParseResult.CommandResult.Command.Name);
-
-                        if (context.ParseResult.CommandResult.Command is MicrosoftStoreCLI
-                            || context.ParseResult.CommandResult.Command is ReconfigureCommand
-                            || await MicrosoftStoreCLI.InitAsync(ansiConsole, configurationManager, credentialManager, consoleReader, cliConfigurator, logger, ct))
-                        {
-                            await next(context);
-                        }
-                    }, MiddlewareOrder.Default)
-                .UseVersionOption()
-                .UseEnvironmentVariableDirective()
-                .UseParseDirective()
-                .UseSuggestDirective()
-                .RegisterWithDotnetSuggest()
-                .UseTypoCorrections()
-                .UseParseErrorReporting()
-                .UseExceptionHandler()
-                .UseHelp()
-                .CancelOnProcessTermination()
-                .Build();
-
-            if (parser.Parse(args).IsVerbose())
-            {
-                minimumLogLevel = LogLevel.Information;
-            }
+            IHostApplicationLifetime lifetime = host.Services.GetRequiredService<IHostApplicationLifetime>();
 
             var argList = args.ToList();
 
@@ -275,7 +241,30 @@ namespace MSStore.CLI
 
             args = [.. argList];
 
-            var result = await parser.InvokeAsync(args);
+            var storeCLI = host.Services.GetRequiredService<MicrosoftStoreCLI>();
+            var parseResult = storeCLI.Parse(args);
+
+            var logger = host.Services.GetService<ILogger<Program>>()!;
+            logger.LogInformation("Command is {Command}", parseResult.CommandResult.Command.Name);
+
+            if (parseResult.CommandResult.Command is not MicrosoftStoreCLI
+                && parseResult.CommandResult.Command is not ReconfigureCommand
+                && !await MicrosoftStoreCLI.InitAsync(ansiConsole, host.Services.GetService<IConfigurationManager<Configurations>>()!, host.Services.GetService<ICredentialManager>()!, host.Services.GetService<IConsoleReader>()!, host.Services.GetService<ICLIConfigurator>()!, logger, lifetime.ApplicationStopping))
+            {
+                // Initialization failed
+                await host.StopAsync();
+                return -1;
+            }
+
+            if (parseResult.Action is ParseErrorAction parseError)
+            {
+                parseError.ShowTypoCorrections = true;
+                parseError.ShowHelp = true;
+            }
+
+            var result = await parseResult.InvokeAsync(parseResult.InvocationConfiguration, lifetime.ApplicationStopping);
+
+            await host.StopAsync();
 
             await telemetryClient.FlushAsync(CancellationToken.None);
 

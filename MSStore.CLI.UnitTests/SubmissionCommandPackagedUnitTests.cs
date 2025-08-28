@@ -23,9 +23,9 @@ namespace MSStore.CLI.UnitTests
             var result = await ParseAndInvokeAsync(
                 [
                     "submission"
-                ]);
+                ], 1);
 
-            result.Error.Should().Contain("Executes commands to a store submission.");
+            result.Output.Should().Contain("Executes commands to a store submission.");
         }
 
         [TestMethod]

@@ -26,15 +26,22 @@ namespace MSStore.CLI.Commands
 {
     internal class InitCommand : Command
     {
-        internal static readonly Argument<string> PathOrUrl;
-        internal static readonly Option<DirectoryInfo?> Output;
-        internal static readonly Option<IEnumerable<BuildArch>> Arch;
-        internal static readonly Option<Version?> Version;
+        internal static readonly Argument<string> PathOrUrlArgument;
+        private static readonly Option<string> PublisherDisplayNameOption;
+        private static readonly Option<bool> PackageOption;
+        private static readonly Option<bool> PublishOption;
+        internal static readonly Option<DirectoryInfo?> OutputOption;
+        internal static readonly Option<IEnumerable<BuildArch>> ArchOption;
+        internal static readonly Option<Version?> VersionOption;
 
         static InitCommand()
         {
-            PathOrUrl = new Argument<string>("pathOrUrl", () => Directory.GetCurrentDirectory().ToString(), "The root directory path where the project file is, or a public URL that points to a PWA.");
-            PathOrUrl.AddValidator((result) =>
+            PathOrUrlArgument = new Argument<string>("pathOrUrl")
+            {
+                DefaultValueFactory = _ => Directory.GetCurrentDirectory().ToString(),
+                Description = "The root directory path where the project file is, or a public URL that points to a PWA.",
+            };
+            PathOrUrlArgument.Validators.Add((result) =>
             {
                 var pathOrUrl = result.Tokens.SingleOrDefault()?.Value ?? Directory.GetCurrentDirectory().ToString();
 
@@ -60,38 +67,41 @@ namespace MSStore.CLI.Commands
                         FileInfo? filePath = new FileInfo(pathOrUrl);
                         if (!filePath.Exists)
                         {
-                            result.ErrorMessage = $"File or directory does not exist: '{pathOrUrl}'.{Environment.NewLine}";
+                            result.AddError($"File or directory does not exist: '{pathOrUrl}'.{Environment.NewLine}");
                         }
                     }
                 }
             });
 
-            Output = new Option<DirectoryInfo?>(
-                aliases:
-                [
-                    "--output",
-                    "-o"
-                ],
-                description: "The output directory where the packaged app will be stored. If not provided, the default directory for each different type of app will be used.");
-
-            Arch = new Option<IEnumerable<BuildArch>>(
-                aliases:
-                [
-                    "--arch",
-                    "-a"
-                ],
-                description: "The architecture(s) to build for. If not provided, the default architecture for the current OS, and project type, will be used.")
+            PublisherDisplayNameOption = new Option<string>("--publisherDisplayName", "-n")
             {
-                AllowMultipleArgumentsPerToken = true,
+                Description = "The Publisher Display Name used to configure the application. If provided, avoids an extra APIs call."
             };
 
-            Version = new Option<Version?>(
-                aliases:
-                [
-                    "--version",
-                    "-ver"
-                ],
-                parseArgument: result =>
+            PackageOption = new Option<bool>("--package")
+            {
+                Description = "If supported by the app type, automatically packs the project."
+            };
+
+            PublishOption = new Option<bool>("--publish")
+            {
+                Description = "If supported by the app type, automatically publishes the project. Implies '--package true'"
+            };
+
+            OutputOption = new Option<DirectoryInfo?>("--output", "-o")
+            {
+                Description = "The output directory where the packaged app will be stored. If not provided, the default directory for each different type of app will be used."
+            };
+
+            ArchOption = new Option<IEnumerable<BuildArch>>("--arch", "-a")
+            {
+                Description = "The architecture(s) to build for. If not provided, the default architecture for the current OS, and project type, will be used.",
+                AllowMultipleArgumentsPerToken = true
+            };
+
+            VersionOption = new Option<Version?>("--version", "-ver")
+            {
+                CustomParser = result =>
                 {
                     var version = result.Tokens.Single().Value;
                     if (System.Version.TryParse(version, out var parsedVersion))
@@ -99,57 +109,28 @@ namespace MSStore.CLI.Commands
                         return parsedVersion;
                     }
 
-                    result.ErrorMessage = $"Invalid version: '{version}'.{Environment.NewLine}";
+                    result.AddError($"Invalid version: '{version}'.{Environment.NewLine}");
                     return null;
                 },
-                description: "The version used when building the app. If not provided, the version from the project file will be used.");
+                Description = "The version used when building the app. If not provided, the version from the project file will be used."
+            };
         }
 
         public InitCommand()
             : base("init", "Helps you setup your application to publish to the Microsoft Store.")
         {
-            AddArgument(PathOrUrl);
-
-            var publisherDisplayName = new Option<string>(
-                aliases:
-                [
-                    "--publisherDisplayName",
-                    "-n"
-                ],
-                description: "The Publisher Display Name used to configure the application. If provided, avoids an extra APIs call.");
-
-            AddOption(publisherDisplayName);
-
-            var package = new Option<bool>(
-                aliases:
-                [
-                    "--package"
-                ],
-                description: "If supported by the app type, automatically packs the project.");
-
-            AddOption(package);
-
-            var publish = new Option<bool>(
-                aliases:
-                [
-                    "--publish"
-                ],
-                description: "If supported by the app type, automatically publishes the project. Implies '--package true'");
-
-            AddOption(publish);
-
-            AddOption(PublishCommand.FlightIdOption);
-
-            AddOption(Output);
-
-            AddOption(Arch);
-
-            AddOption(Version);
-
-            AddOption(PublishCommand.PackageRolloutPercentageOption);
+            Arguments.Add(PathOrUrlArgument);
+            Options.Add(PublisherDisplayNameOption);
+            Options.Add(PackageOption);
+            Options.Add(PublishOption);
+            Options.Add(PublishCommand.FlightIdOption);
+            Options.Add(OutputOption);
+            Options.Add(ArchOption);
+            Options.Add(VersionOption);
+            Options.Add(PublishCommand.PackageRolloutPercentageOption);
         }
 
-        public new class Handler(
+        public class Handler(
             ILogger<InitCommand.Handler> logger,
             IBrowserLauncher browserLauncher,
             IConsoleReader consoleReader,
@@ -160,7 +141,7 @@ namespace MSStore.CLI.Commands
             IImageConverter imageConverter,
             IConfigurationManager<Configurations> configurationManager,
             IAnsiConsole ansiConsole,
-            TelemetryClient telemetryClient) : ICommandHandler
+            TelemetryClient telemetryClient) : AsynchronousCommandLineAction
         {
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             private readonly IBrowserLauncher _browserLauncher = browserLauncher ?? throw new ArgumentNullException(nameof(browserLauncher));
@@ -174,65 +155,50 @@ namespace MSStore.CLI.Commands
             private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
-            public string PathOrUrl { get; set; } = null!;
-
-            public string? PublisherDisplayName { get; set; } = null!;
-
-            public bool? Package { get; set; }
-
-            public bool? Publish { get; set; }
-
-            public string? FlightId { get; set; }
-
-            public Version? Version { get; set; } = null!;
-
-            public float? PackageRolloutPercentage { get; set; }
-
-            public DirectoryInfo? Output { get; set; } = null!;
-
-            public IEnumerable<BuildArch>? Arch { get; set; } = null!;
-
-            public int Invoke(InvocationContext context)
+            public override async Task<int> InvokeAsync(ParseResult parseResult, CancellationToken ct = default)
             {
-                return -1001;
-            }
+                var pathOrUrl = parseResult.GetRequiredValue(PathOrUrlArgument);
+                var publisherDisplayName = parseResult.GetValue(PublisherDisplayNameOption);
+                var package = parseResult.GetValue(PackageOption);
+                var publish = parseResult.GetValue(PublishOption);
+                var flightId = parseResult.GetValue(PublishCommand.FlightIdOption);
+                var version = parseResult.GetValue(VersionOption);
+                var packageRolloutPercentage = parseResult.GetValue(PublishCommand.PackageRolloutPercentageOption);
+                var output = parseResult.GetValue(OutputOption);
+                var arch = parseResult.GetValue(ArchOption);
 
-            public async Task<int> InvokeAsync(InvocationContext context)
-            {
-                var ct = context.GetCancellationToken();
-
-                var configurator = await _projectConfiguratorFactory.FindProjectConfiguratorAsync(PathOrUrl, ct);
+                var configurator = await _projectConfiguratorFactory.FindProjectConfiguratorAsync(pathOrUrl, ct);
 
                 var props = new Dictionary<string, string>
                 {
                     {
-                        "withPDN", (PublisherDisplayName != null).ToString()
+                        "withPDN", (publisherDisplayName != null).ToString()
                     },
                     {
-                        "Package", (Package == true).ToString()
+                        "Package", (package == true).ToString()
                     },
                     {
-                        "Publish", (Publish == true).ToString()
+                        "Publish", (publish == true).ToString()
                     }
                 };
 
                 if (configurator == null)
                 {
-                    _ansiConsole.WriteLine(string.Format(CultureInfo.InvariantCulture, "We could not find a project configurator for the project at '{0}'.", PathOrUrl));
+                    _ansiConsole.WriteLine(string.Format(CultureInfo.InvariantCulture, "We could not find a project configurator for the project at '{0}'.", pathOrUrl));
                     props["ProjType"] = "NF";
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(-1, props, ct);
                 }
 
                 props["ProjType"] = configurator.ToString() ?? string.Empty;
 
-                var validationResult = configurator.ValidateCommand(PathOrUrl, Output, Package, Publish);
+                var validationResult = configurator.ValidateCommand(pathOrUrl, output, package, publish);
 
                 if (validationResult.HasValue)
                 {
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(validationResult.Value, props, ct);
                 }
 
-                if (string.IsNullOrEmpty(PublisherDisplayName))
+                if (string.IsNullOrEmpty(publisherDisplayName))
                 {
                     if (_partnerCenterManager.Enabled)
                     {
@@ -278,25 +244,25 @@ namespace MSStore.CLI.Commands
                             return await _telemetryClient.TrackCommandEventAsync<Handler>(-3, props, ct);
                         }
 
-                        PublisherDisplayName = account.Name;
+                        publisherDisplayName = account.Name;
                     }
                     else
                     {
                         var config = await _configurationManager.LoadAsync(ct: ct);
-                        PublisherDisplayName = config.PublisherDisplayName;
+                        publisherDisplayName = config.PublisherDisplayName;
 
-                        if (string.IsNullOrEmpty(PublisherDisplayName))
+                        if (string.IsNullOrEmpty(publisherDisplayName))
                         {
-                            PublisherDisplayName = await _consoleReader.RequestStringAsync("Please, provide the PublisherDisplayName", false, ct);
-                            if (string.IsNullOrEmpty(PublisherDisplayName))
+                            publisherDisplayName = await _consoleReader.RequestStringAsync("Please, provide the PublisherDisplayName", false, ct);
+                            if (string.IsNullOrEmpty(publisherDisplayName))
                             {
                                 _ansiConsole.MarkupLine("[bold red]Invalid Publisher Display Name[/]");
                                 return await _telemetryClient.TrackCommandEventAsync<Handler>(-1, props, ct);
                             }
 
-                            if (config.PublisherDisplayName != PublisherDisplayName)
+                            if (config.PublisherDisplayName != publisherDisplayName)
                             {
-                                config.PublisherDisplayName = PublisherDisplayName;
+                                config.PublisherDisplayName = publisherDisplayName;
                                 await _configurationManager.SaveAsync(config, ct);
                             }
                         }
@@ -313,16 +279,16 @@ namespace MSStore.CLI.Commands
 
                 _ansiConsole.WriteLine($"This seems to be a {configurator} project.");
 
-                bool verbose = context.ParseResult.IsVerbose();
+                bool verbose = parseResult.IsVerbose();
                 if (verbose)
                 {
-                    _ansiConsole.WriteLine($"Using PublisherDisplayName: {PublisherDisplayName}");
+                    _ansiConsole.WriteLine($"Using PublisherDisplayName: {publisherDisplayName}");
                 }
 
                 _ansiConsole.WriteLine("Let's set it up for you!");
                 _ansiConsole.WriteLine();
 
-                var (result, outputDirectory) = await configurator.ConfigureAsync(PathOrUrl, Output, PublisherDisplayName, app, Version, storePackagedAPI, ct);
+                var (result, outputDirectory) = await configurator.ConfigureAsync(pathOrUrl, output, publisherDisplayName, app, version, storePackagedAPI, ct);
 
                 if (result != 0)
                 {
@@ -331,13 +297,13 @@ namespace MSStore.CLI.Commands
 
                 if (outputDirectory != null)
                 {
-                    Output = outputDirectory;
+                    output = outputDirectory;
                 }
 
-                await configurator.ValidateImagesAsync(_ansiConsole, PathOrUrl, _imageConverter, _logger, ct);
+                await configurator.ValidateImagesAsync(_ansiConsole, pathOrUrl, _imageConverter, _logger, ct);
 
                 outputDirectory = null;
-                if (Package == true || Publish == true)
+                if (package == true || publish == true)
                 {
                     var projectPackager = configurator as IProjectPackager;
                     if (projectPackager == null)
@@ -346,7 +312,7 @@ namespace MSStore.CLI.Commands
                         return await _telemetryClient.TrackCommandEventAsync<Handler>(-4, props, ct);
                     }
 
-                    var buildArchs = Arch?.Distinct();
+                    var buildArchs = arch?.Distinct();
                     if (buildArchs?.Any() != true)
                     {
                         buildArchs = projectPackager.DefaultBuildArchs;
@@ -363,7 +329,7 @@ namespace MSStore.CLI.Commands
                         return await _telemetryClient.TrackCommandEventAsync<Handler>(-6, props, ct);
                     }
 
-                    (result, outputDirectory) = await projectPackager.PackageAsync(PathOrUrl, app, buildArchs, Version, Output, storePackagedAPI, ct);
+                    (result, outputDirectory) = await projectPackager.PackageAsync(pathOrUrl, app, buildArchs, version, output, storePackagedAPI, ct);
                 }
 
                 if (result != 0)
@@ -371,7 +337,7 @@ namespace MSStore.CLI.Commands
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(result, props, ct);
                 }
 
-                if (Publish == true)
+                if (publish == true)
                 {
                     var projectPublisher = configurator as IProjectPublisher;
                     if (projectPublisher == null)
@@ -380,7 +346,7 @@ namespace MSStore.CLI.Commands
                         return await _telemetryClient.TrackCommandEventAsync<Handler>(-5, props, ct);
                     }
 
-                    result = await projectPublisher.PublishAsync(PathOrUrl, app, FlightId, outputDirectory, false, PackageRolloutPercentage, storePackagedAPI, ct);
+                    result = await projectPublisher.PublishAsync(pathOrUrl, app, flightId, outputDirectory, false, packageRolloutPercentage, storePackagedAPI, ct);
                 }
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(result, props, ct);

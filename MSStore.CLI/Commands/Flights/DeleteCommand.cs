@@ -4,6 +4,7 @@
 using System;
 using System.CommandLine;
 using System.CommandLine.Invocation;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Logging;
@@ -20,33 +21,26 @@ namespace MSStore.CLI.Commands.Flights
         public DeleteCommand()
             : base("delete", "Deletes a flight for the specified Application and flight.")
         {
-            AddArgument(SubmissionCommand.ProductIdArgument);
-            AddArgument(GetCommand.FlightIdArgument);
+            Arguments.Add(SubmissionCommand.ProductIdArgument);
+            Arguments.Add(GetCommand.FlightIdArgument);
         }
 
-        public new class Handler(ILogger<DeleteCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : ICommandHandler
+        public class Handler(ILogger<DeleteCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : AsynchronousCommandLineAction
         {
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
             private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
-            public string ProductId { get; set; } = null!;
-            public string FlightId { get; set; } = null!;
-
-            public int Invoke(InvocationContext context)
+            public override async Task<int> InvokeAsync(ParseResult parseResult, CancellationToken ct = default)
             {
-                return -1001;
-            }
+                var productId = parseResult.GetRequiredValue(SubmissionCommand.ProductIdArgument);
+                var flightId = parseResult.GetRequiredValue(GetCommand.FlightIdArgument);
 
-            public async Task<int> InvokeAsync(InvocationContext context)
-            {
-                var ct = context.GetCancellationToken();
-
-                if (ProductTypeHelper.Solve(ProductId) == ProductType.Unpackaged)
+                if (ProductTypeHelper.Solve(productId) == ProductType.Unpackaged)
                 {
                     _ansiConsole.WriteLine("This command is not supported for unpackaged applications.");
-                    return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
+                    return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, -1, ct);
                 }
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(
@@ -56,7 +50,7 @@ namespace MSStore.CLI.Commands.Flights
                         {
                             var storePackagedAPI = await _storeAPIFactory.CreatePackagedAsync(ct: ct);
 
-                            DevCenterError? devCenterError = await storePackagedAPI.DeleteFlightAsync(ProductId, FlightId, ct);
+                            DevCenterError? devCenterError = await storePackagedAPI.DeleteFlightAsync(productId, flightId, ct);
 
                             ctx.SuccessStatus(_ansiConsole, "[bold green]Deleted Flight[/]");
 

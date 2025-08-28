@@ -6,9 +6,9 @@ using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Logging;
@@ -24,19 +24,19 @@ namespace MSStore.CLI.Commands
         public PackageCommand()
             : base("package", "Helps you package your Microsoft Store Application as an MSIX.")
         {
-            AddArgument(InitCommand.PathOrUrl);
-            AddOption(InitCommand.Version);
-            AddOption(InitCommand.Output);
-            AddOption(InitCommand.Arch);
+            Arguments.Add(InitCommand.PathOrUrlArgument);
+            Options.Add(InitCommand.VersionOption);
+            Options.Add(InitCommand.OutputOption);
+            Options.Add(InitCommand.ArchOption);
         }
 
-        public new class Handler(
+        public class Handler(
             IProjectConfiguratorFactory projectConfiguratorFactory,
             IStoreAPIFactory storeAPIFactory,
             IImageConverter imageConverter,
             ILogger<PackageCommand.Handler> logger,
             IAnsiConsole ansiConsole,
-            TelemetryClient telemetryClient) : ICommandHandler
+            TelemetryClient telemetryClient) : AsynchronousCommandLineAction
         {
             private readonly IProjectConfiguratorFactory _projectConfiguratorFactory = projectConfiguratorFactory ?? throw new ArgumentNullException(nameof(projectConfiguratorFactory));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
@@ -45,30 +45,20 @@ namespace MSStore.CLI.Commands
             private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
-            public string PathOrUrl { get; set; } = null!;
-
-            public Version? Version { get; set; } = null!;
-
-            public DirectoryInfo? Output { get; set; } = null!;
-
-            public IEnumerable<BuildArch>? Arch { get; set; } = null!;
-
-            public int Invoke(InvocationContext context)
+            public override async Task<int> InvokeAsync(ParseResult parseResult, CancellationToken ct = default)
             {
-                return -1001;
-            }
+                var pathOrUrl = parseResult.GetRequiredValue(InitCommand.PathOrUrlArgument);
+                var version = parseResult.GetValue(InitCommand.VersionOption);
+                var output = parseResult.GetValue(InitCommand.OutputOption);
+                var arch = parseResult.GetValue(InitCommand.ArchOption);
 
-            public async Task<int> InvokeAsync(InvocationContext context)
-            {
-                var ct = context.GetCancellationToken();
-
-                var configurator = await _projectConfiguratorFactory.FindProjectConfiguratorAsync(PathOrUrl, ct);
+                var configurator = await _projectConfiguratorFactory.FindProjectConfiguratorAsync(pathOrUrl, ct);
 
                 var props = new Dictionary<string, string>();
 
                 if (configurator == null)
                 {
-                    _ansiConsole.WriteLine(string.Format(CultureInfo.InvariantCulture, "We could not find a project configurator for the project at '{0}'.", PathOrUrl));
+                    _ansiConsole.WriteLine(string.Format(CultureInfo.InvariantCulture, "We could not find a project configurator for the project at '{0}'.", pathOrUrl));
                     props["ProjType"] = "NF";
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(-1, props, ct);
                 }
@@ -86,7 +76,7 @@ namespace MSStore.CLI.Commands
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(-4, props, ct);
                 }
 
-                var buildArchs = Arch?.Distinct();
+                var buildArchs = arch?.Distinct();
                 if (buildArchs?.Any() != true)
                 {
                     buildArchs = projectPackager.DefaultBuildArchs;
@@ -97,7 +87,7 @@ namespace MSStore.CLI.Commands
                     props["Archs"] = string.Join(",", buildArchs);
                 }
 
-                await configurator.ValidateImagesAsync(_ansiConsole, PathOrUrl, _imageConverter, _logger, ct);
+                await configurator.ValidateImagesAsync(_ansiConsole, pathOrUrl, _imageConverter, _logger, ct);
 
                 if (projectPackager.PackageOnlyOnWindows && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
@@ -105,7 +95,7 @@ namespace MSStore.CLI.Commands
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(-6, props, ct);
                 }
 
-                var (returnCode, outputDirectory) = await projectPackager.PackageAsync(PathOrUrl, null, buildArchs, Version, Output, storePackagedAPI, ct);
+                var (returnCode, outputDirectory) = await projectPackager.PackageAsync(pathOrUrl, null, buildArchs, version, output, storePackagedAPI, ct);
 
                 if (returnCode == 0 && outputDirectory != null)
                 {

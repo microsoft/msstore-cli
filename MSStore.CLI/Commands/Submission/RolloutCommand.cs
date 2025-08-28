@@ -7,14 +7,13 @@ namespace MSStore.CLI.Commands.Submission
 {
     internal class RolloutCommand : Command
     {
-        public RolloutCommand()
+        public RolloutCommand(Rollout.GetCommand getCommand, Rollout.UpdateCommand updateCommand, Rollout.HaltCommand haltCommand, Rollout.FinalizeCommand finalizeCommand)
             : base("rollout", "Execute rollout related operations")
         {
-            AddCommand(new Rollout.GetCommand());
-            AddCommand(new Rollout.UpdateCommand());
-            AddCommand(new Rollout.HaltCommand());
-            AddCommand(new Rollout.FinalizeCommand());
-            this.SetDefaultHelpHandler();
+            Subcommands.Add(getCommand);
+            Subcommands.Add(updateCommand);
+            Subcommands.Add(haltCommand);
+            Subcommands.Add(finalizeCommand);
         }
     }
 }

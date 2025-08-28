@@ -25,9 +25,9 @@ namespace MSStore.CLI.UnitTests
                 [
                     "flights",
                     "submission"
-                ]);
+                ], 1);
 
-            result.Error.Should().Contain("Execute flight submissions related tasks.");
+            result.Output.Should().Contain("Execute flight submissions related tasks.");
         }
 
         [TestMethod]

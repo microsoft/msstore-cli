@@ -5,6 +5,7 @@ using System;
 using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Logging;
@@ -18,52 +19,51 @@ namespace MSStore.CLI.Commands.Submission
 {
     internal class GetCommand : Command
     {
+        private static readonly Option<string> ModuleOption;
+
+        static GetCommand()
+        {
+            ModuleOption = new Option<string>("--module", "-m")
+            {
+                Description = "Select which module you want to retrieve ('availability', 'listings' or 'properties')."
+            };
+        }
+
         public GetCommand()
             : base("get", "Retrieves the existing draft from the store submission.")
         {
-            var module = new Option<string>(
-                aliases: ["--module", "-m"],
-                description: "Select which module you want to retrieve ('availability', 'listings' or 'properties').");
-
-            AddArgument(SubmissionCommand.ProductIdArgument);
-            AddOption(module);
-            AddOption(SubmissionCommand.LanguageOption);
+            Arguments.Add(SubmissionCommand.ProductIdArgument);
+            Options.Add(ModuleOption);
+            Options.Add(SubmissionCommand.LanguageOption);
         }
 
-        public new class Handler(ILogger<GetCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : ICommandHandler
+        public class Handler(ILogger<GetCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : AsynchronousCommandLineAction
         {
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
             private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
-            public string Module { get; set; } = null!;
-            public string Language { get; set; } = null!;
-            public string ProductId { get; set; } = null!;
-
-            public int Invoke(InvocationContext context)
+            public override async Task<int> InvokeAsync(ParseResult parseResult, CancellationToken ct = default)
             {
-                return -1001;
-            }
-
-            public async Task<int> InvokeAsync(InvocationContext context)
-            {
-                var ct = context.GetCancellationToken();
+                var productId = parseResult.GetRequiredValue(SubmissionCommand.ProductIdArgument);
+                var module = parseResult.GetValue(ModuleOption);
+                var language = parseResult.GetRequiredValue(SubmissionCommand.LanguageOption);
 
                 var submission = await _ansiConsole.Status().StartAsync("Retrieving Submission", async ctx =>
                 {
                     try
                     {
                         object? submission = null;
-                        if (ProductTypeHelper.Solve(ProductId) == ProductType.Packaged)
+                        if (ProductTypeHelper.Solve(productId) == ProductType.Packaged)
                         {
                             var storePackagedAPI = await _storeAPIFactory.CreatePackagedAsync(ct: ct);
 
-                            var application = await storePackagedAPI.GetApplicationAsync(ProductId, ct);
+                            var application = await storePackagedAPI.GetApplicationAsync(productId, ct);
 
                             if (application?.Id == null)
                             {
-                                ctx.ErrorStatus(_ansiConsole, $"Could not find application with ID '{ProductId}'");
+                                ctx.ErrorStatus(_ansiConsole, $"Could not find application with ID '{productId}'");
                                 return -1;
                             }
 
@@ -75,7 +75,7 @@ namespace MSStore.CLI.Commands.Submission
 
                             try
                             {
-                                submission = await storeAPI.GetDraftAsync(ProductId, Module, Language, ct);
+                                submission = await storeAPI.GetDraftAsync(productId, module, language, ct);
                             }
                             catch (ArgumentException ex)
                             {
@@ -112,12 +112,12 @@ namespace MSStore.CLI.Commands.Submission
 
                 if (submission == null)
                 {
-                    return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
+                    return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, -1, ct);
                 }
 
                 AnsiConsole.WriteLine(JsonSerializer.Serialize(submission, submission.GetType(), SourceGenerationContext.GetCustom(true)));
 
-                return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, 0, ct);
+                return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, 0, ct);
             }
         }
     }

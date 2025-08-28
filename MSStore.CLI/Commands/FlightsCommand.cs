@@ -8,15 +8,14 @@ namespace MSStore.CLI.Commands
 {
     internal class FlightsCommand : Command
     {
-        public FlightsCommand()
+        public FlightsCommand(ListCommand listCommand, GetCommand getCommand, DeleteCommand deleteCommand, CreateCommand createCommand, FlightSubmissionCommand flightSubmissionCommand)
             : base("flights", "Execute flights related tasks.")
         {
-            AddCommand(new ListCommand());
-            AddCommand(new GetCommand());
-            AddCommand(new DeleteCommand());
-            AddCommand(new CreateCommand());
-            AddCommand(new FlightSubmissionCommand());
-            this.SetDefaultHelpHandler();
+            Subcommands.Add(listCommand);
+            Subcommands.Add(getCommand);
+            Subcommands.Add(deleteCommand);
+            Subcommands.Add(createCommand);
+            Subcommands.Add(flightSubmissionCommand);
         }
     }
 }

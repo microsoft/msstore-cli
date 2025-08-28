@@ -5,6 +5,7 @@ using System;
 using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Logging;
@@ -22,31 +23,24 @@ namespace MSStore.CLI.Commands.Apps
         public GetCommand()
             : base("get", "Retrieves the Application details.")
         {
-            AddArgument(SubmissionCommand.ProductIdArgument);
+            Arguments.Add(SubmissionCommand.ProductIdArgument);
         }
 
-        public new class Handler(ILogger<GetCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : ICommandHandler
+        public class Handler(ILogger<GetCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : AsynchronousCommandLineAction
         {
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
             private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
-            public string ProductId { get; set; } = null!;
-
-            public int Invoke(InvocationContext context)
+            public override async Task<int> InvokeAsync(ParseResult parseResult, CancellationToken ct = default)
             {
-                return -1001;
-            }
+                string productId = parseResult.GetRequiredValue(SubmissionCommand.ProductIdArgument);
 
-            public async Task<int> InvokeAsync(InvocationContext context)
-            {
-                var ct = context.GetCancellationToken();
-
-                if (ProductTypeHelper.Solve(ProductId) == ProductType.Unpackaged)
+                if (ProductTypeHelper.Solve(productId) == ProductType.Unpackaged)
                 {
                     _ansiConsole.WriteLine("This command is not supported for unpackaged applications.");
-                    return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
+                    return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, -1, ct);
                 }
 
                 object? application = null;
@@ -54,11 +48,11 @@ namespace MSStore.CLI.Commands.Apps
                 {
                     try
                     {
-                        if (ProductTypeHelper.Solve(ProductId) == ProductType.Packaged)
+                        if (ProductTypeHelper.Solve(productId) == ProductType.Packaged)
                         {
                             var storePackagedAPI = await _storeAPIFactory.CreatePackagedAsync(ct: ct);
 
-                            application = await storePackagedAPI.GetApplicationAsync(ProductId, ct);
+                            application = await storePackagedAPI.GetApplicationAsync(productId, ct);
                         }
                     }
                     catch (MSStoreHttpException err)
@@ -95,7 +89,7 @@ namespace MSStore.CLI.Commands.Apps
                 {
                     if (app?.Id == null)
                     {
-                        _ansiConsole.MarkupLine($"Could not find application with ID '{ProductId}'");
+                        _ansiConsole.MarkupLine($"Could not find application with ID '{productId}'");
                         return await _telemetryClient.TrackCommandEventAsync<Handler>(-1, ct);
                     }
                     else

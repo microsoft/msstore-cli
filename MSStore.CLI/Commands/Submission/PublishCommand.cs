@@ -4,6 +4,7 @@
 using System;
 using System.CommandLine;
 using System.CommandLine.Invocation;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Logging;
@@ -19,42 +20,35 @@ namespace MSStore.CLI.Commands.Submission
         public PublishCommand()
             : base("publish", "Starts the submission process for the existing Draft.")
         {
-            AddArgument(SubmissionCommand.ProductIdArgument);
+            Arguments.Add(SubmissionCommand.ProductIdArgument);
         }
 
-        public new class Handler(ILogger<PublishCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : ICommandHandler
+        public class Handler(ILogger<PublishCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : AsynchronousCommandLineAction
         {
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
             private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
-            public string ProductId { get; set; } = null!;
-
-            public int Invoke(InvocationContext context)
+            public override async Task<int> InvokeAsync(ParseResult parseResult, CancellationToken ct = default)
             {
-                return -1001;
-            }
-
-            public async Task<int> InvokeAsync(InvocationContext context)
-            {
-                var ct = context.GetCancellationToken();
+                var productId = parseResult.GetRequiredValue(SubmissionCommand.ProductIdArgument);
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(
-                    ProductId,
+                    productId,
                     await _ansiConsole.Status().StartAsync("Publishing submission", async ctx =>
                 {
                     try
                     {
-                        if (ProductTypeHelper.Solve(ProductId) == ProductType.Packaged)
+                        if (ProductTypeHelper.Solve(productId) == ProductType.Packaged)
                         {
                             var storePackagedAPI = await _storeAPIFactory.CreatePackagedAsync(ct: ct);
 
-                            var application = await storePackagedAPI.GetApplicationAsync(ProductId, ct);
+                            var application = await storePackagedAPI.GetApplicationAsync(productId, ct);
 
                             if (application?.Id == null)
                             {
-                                ctx.ErrorStatus(_ansiConsole, $"Could not find application with ID '{ProductId}'");
+                                ctx.ErrorStatus(_ansiConsole, $"Could not find application with ID '{productId}'");
                                 return -1;
                             }
 
@@ -62,7 +56,7 @@ namespace MSStore.CLI.Commands.Submission
 
                             if (submission?.Id == null)
                             {
-                                ctx.ErrorStatus(_ansiConsole, $"Could not find submission for application with ID '{ProductId}'");
+                                ctx.ErrorStatus(_ansiConsole, $"Could not find submission for application with ID '{productId}'");
                                 return -1;
                             }
 
@@ -79,7 +73,7 @@ namespace MSStore.CLI.Commands.Submission
                                 return 0;
                             }
 
-                            ctx.ErrorStatus(_ansiConsole, $"Could not commit submission for application with ID '{ProductId}'");
+                            ctx.ErrorStatus(_ansiConsole, $"Could not commit submission for application with ID '{productId}'");
                             _ansiConsole.MarkupLine($"[red]{submissionCommit.ToErrorMessage()}[/]");
 
                             return -1;
@@ -88,7 +82,7 @@ namespace MSStore.CLI.Commands.Submission
                         {
                             var storeAPI = await _storeAPIFactory.CreateAsync(ct: ct);
 
-                            var submissionId = await storeAPI.PublishSubmissionAsync(ProductId, ct);
+                            var submissionId = await storeAPI.PublishSubmissionAsync(productId, ct);
 
                             if (submissionId == null)
                             {

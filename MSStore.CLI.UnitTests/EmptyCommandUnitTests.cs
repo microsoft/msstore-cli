@@ -13,7 +13,7 @@ namespace MSStore.CLI.UnitTests
 
             var result = await ParseAndInvokeAsync([]);
 
-            result.Error.Should().Contain("CLI tool to automate Microsoft Store Developer tasks.");
+            result.Output.Should().Contain("CLI tool to automate Microsoft Store Developer tasks.");
         }
 
         [TestMethod]

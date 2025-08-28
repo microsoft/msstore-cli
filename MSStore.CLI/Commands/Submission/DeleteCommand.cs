@@ -4,6 +4,7 @@
 using System;
 using System.CommandLine;
 using System.CommandLine.Invocation;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Logging;
@@ -20,21 +21,22 @@ namespace MSStore.CLI.Commands.Submission
 
         static DeleteCommand()
         {
-            NoConfirmOption = new Option<bool>(
-                "--no-confirm",
-                () => false,
-                "Do not prompt for confirmation.");
+            NoConfirmOption = new Option<bool>("--no-confirm")
+            {
+                DefaultValueFactory = _ => false,
+                Description = "Do not prompt for confirmation."
+            };
         }
 
         public DeleteCommand()
             : base("delete", "Deletes the pending submission from the store.")
         {
-            AddArgument(SubmissionCommand.ProductIdArgument);
+            Arguments.Add(SubmissionCommand.ProductIdArgument);
 
-            AddOption(NoConfirmOption);
+            Options.Add(NoConfirmOption);
         }
 
-        public new class Handler(ILogger<DeleteCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IConsoleReader consoleReader, IBrowserLauncher browserLauncher, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : ICommandHandler
+        public class Handler(ILogger<DeleteCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IConsoleReader consoleReader, IBrowserLauncher browserLauncher, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : AsynchronousCommandLineAction
         {
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
@@ -43,23 +45,15 @@ namespace MSStore.CLI.Commands.Submission
             private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
-            public string ProductId { get; set; } = null!;
-
-            public bool? NoConfirm { get; set; }
-
-            public int Invoke(InvocationContext context)
+            public override async Task<int> InvokeAsync(ParseResult parseResult, CancellationToken ct = default)
             {
-                return -1001;
-            }
+                var productId = parseResult.GetRequiredValue(SubmissionCommand.ProductIdArgument);
+                var noConfirm = parseResult.GetRequiredValue(NoConfirmOption);
 
-            public async Task<int> InvokeAsync(InvocationContext context)
-            {
-                var ct = context.GetCancellationToken();
-
-                if (ProductTypeHelper.Solve(ProductId) == ProductType.Unpackaged)
+                if (ProductTypeHelper.Solve(productId) == ProductType.Unpackaged)
                 {
                     _ansiConsole.WriteLine("This command is not supported for unpackaged applications.");
-                    return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
+                    return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, -1, ct);
                 }
 
                 API.Packaged.IStorePackagedAPI storePackagedAPI = null!;
@@ -70,11 +64,11 @@ namespace MSStore.CLI.Commands.Submission
                     {
                         storePackagedAPI = await _storeAPIFactory.CreatePackagedAsync(ct: ct);
 
-                        var application = await storePackagedAPI.GetApplicationAsync(ProductId, ct);
+                        var application = await storePackagedAPI.GetApplicationAsync(productId, ct);
 
                         if (application?.Id == null)
                         {
-                            ctx.ErrorStatus(_ansiConsole, $"Could not find application with ID '{ProductId}'");
+                            ctx.ErrorStatus(_ansiConsole, $"Could not find application with ID '{productId}'");
                             return null;
                         }
 
@@ -112,18 +106,18 @@ namespace MSStore.CLI.Commands.Submission
                 if (submissionId == null)
                 {
                     _ansiConsole.WriteLine("No pending submission found.");
-                    return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
+                    return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, -1, ct);
                 }
 
                 _ansiConsole.WriteLine($"Found Pending Submission with Id '{submissionId}'");
-                if (NoConfirm == false && !await _consoleReader.YesNoConfirmationAsync("Do you want to delete the pending submission?", ct))
+                if (noConfirm == false && !await _consoleReader.YesNoConfirmationAsync("Do you want to delete the pending submission?", ct))
                 {
                     return -2;
                 }
 
-                var success = await storePackagedAPI.DeleteSubmissionAsync(_ansiConsole, ProductId, null, submissionId, _browserLauncher, _logger, ct);
+                var success = await storePackagedAPI.DeleteSubmissionAsync(_ansiConsole, productId, null, submissionId, _browserLauncher, _logger, ct);
 
-                return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, success ? 0 : -1, ct);
+                return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, success ? 0 : -1, ct);
             }
         }
     }

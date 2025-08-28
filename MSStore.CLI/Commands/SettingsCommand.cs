@@ -5,6 +5,7 @@ using System;
 using System.CommandLine;
 using System.CommandLine.Help;
 using System.CommandLine.Invocation;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Logging;
@@ -12,54 +13,47 @@ using MSStore.CLI.Commands.Settings;
 using MSStore.CLI.Helpers;
 using MSStore.CLI.Services;
 using MSStore.CLI.Services.Telemetry;
-using Spectre.Console;
 
 namespace MSStore.CLI.Commands
 {
     internal class SettingsCommand : Command
     {
-        public SettingsCommand()
-            : base("settings", "Change settings of the Microsoft Store Developer CLI.")
+        private static readonly Option<bool?> EnableTelemetryOption;
+
+        static SettingsCommand()
         {
-            var enableTelemetry = new Option<bool>(
-                "--enableTelemetry",
-                "Enable (empty/true) or Disable (false) telemetry.");
-            enableTelemetry.AddAlias("-t");
-            AddOption(enableTelemetry);
-
-            AddCommand(new SetPublisherDisplayNameCommand());
-
-            this.SetHandler(() =>
+            EnableTelemetryOption = new Option<bool?>("--enableTelemetry", "-t")
             {
-            });
+                Description = "Enable (empty/true) or Disable (false) telemetry."
+            };
         }
 
-        public new class Handler(TelemetryClient telemetryClient, IConfigurationManager<TelemetryConfigurations> telemetryConfigurationManager, IConfigurationManager<Configurations> configurationManager, ILogger<SettingsCommand.Handler> logger) : ICommandHandler
+        public SettingsCommand(SetPublisherDisplayNameCommand setPublisherDisplayNameCommand)
+            : base("settings", "Change settings of the Microsoft Store Developer CLI.")
+        {
+            Options.Add(EnableTelemetryOption);
+
+            Subcommands.Add(setPublisherDisplayNameCommand);
+        }
+
+        public class Handler(TelemetryClient telemetryClient, IConfigurationManager<TelemetryConfigurations> telemetryConfigurationManager, IConfigurationManager<Configurations> configurationManager, ILogger<SettingsCommand.Handler> logger) : AsynchronousCommandLineAction
         {
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
             private readonly IConfigurationManager<TelemetryConfigurations> _telemetryConfigurationManager = telemetryConfigurationManager ?? throw new ArgumentNullException(nameof(telemetryConfigurationManager));
             private readonly IConfigurationManager<Configurations> _configurationManager = configurationManager ?? throw new ArgumentNullException(nameof(configurationManager));
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-            public bool? EnableTelemetry { get; set; }
-
-            public int Invoke(InvocationContext context)
+            public override async Task<int> InvokeAsync(ParseResult parseResult, CancellationToken ct = default)
             {
-                return -1001;
-            }
-
-            public async Task<int> InvokeAsync(InvocationContext context)
-            {
-                var ct = context.GetCancellationToken();
+                var enableTelemetry = parseResult.GetValue(EnableTelemetryOption);
 
                 try
                 {
                     var telemetryConfigurations = await _telemetryConfigurationManager.LoadAsync(true, ct);
 
-                    if (!EnableTelemetry.HasValue)
+                    if (!enableTelemetry.HasValue)
                     {
-                        HelpBuilder helpBuilder = new(LocalizationResources.Instance, CommandExtensions.GetBufferWidth());
-                        helpBuilder.Write(context.ParseResult.CommandResult.Command, Console.Out);
+                        new HelpAction().Invoke(parseResult);
 
                         _logger.LogInformation("TelemetryEnabled = {TelemetryEnabled}", telemetryConfigurations.TelemetryEnabled);
 
@@ -68,7 +62,8 @@ namespace MSStore.CLI.Commands
                     }
                     else
                     {
-                        telemetryConfigurations.TelemetryEnabled = EnableTelemetry.Value;
+                        telemetryConfigurations.TelemetryEnabled = enableTelemetry.Value;
+                        _logger.LogInformation("TelemetryEnabled set to '{TelemetryEnabled}'", telemetryConfigurations.TelemetryEnabled);
                         await _telemetryConfigurationManager.SaveAsync(telemetryConfigurations, ct);
                     }
 

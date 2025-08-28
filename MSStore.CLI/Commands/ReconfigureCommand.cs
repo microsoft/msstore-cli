@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using MSStore.CLI.Helpers;
@@ -16,106 +17,119 @@ namespace MSStore.CLI.Commands
 {
     internal class ReconfigureCommand : Command
     {
+        private static readonly Option<Guid?> TenantIdOption;
+        private static readonly Option<string> SellerIdOption;
+        private static readonly Option<Guid?> ClientIdOption;
+        private static readonly Option<string> ClientSecretOption;
+        private static readonly Option<string> CertificateThumbprintOption;
+        private static readonly Option<FileInfo?> CertificateFilePathOption;
+        private static readonly Option<string> CertificatePasswordOption;
+        private static readonly Option<bool> ResetOption;
+
+        static ReconfigureCommand()
+        {
+            TenantIdOption = new Option<Guid?>("--tenantId", "-t")
+            {
+                Description = "Specify the tenant Id that should be used."
+            };
+
+            SellerIdOption = new Option<string>("--sellerId", "-s")
+            {
+                Description = "Specify the seller Id that should be used."
+            };
+
+            ClientIdOption = new Option<Guid?>("--clientId", "-c")
+            {
+                Description = "Specify the client Id that should be used."
+            };
+
+            ClientSecretOption = new Option<string>("--clientSecret", "-cs")
+            {
+                Description = "Specify the client Secret that should be used."
+            };
+
+            CertificateThumbprintOption = new Option<string>("--certificateThumbprint", "-ct")
+            {
+                Description = "Specify the certificate Thumbprint that should be used."
+            };
+
+            CertificateFilePathOption = new Option<FileInfo?>("--certificateFilePath", "-cfp")
+            {
+                Description = "Specify the certificate file path that should be used."
+            };
+
+            CertificatePasswordOption = new Option<string>("--certificatePassword", "-cp")
+            {
+                Description = "Specify the certificate password that should be used."
+            };
+
+            ResetOption = new Option<bool>("--reset")
+            {
+                Description = "Only reset the credentials, without starting over."
+            };
+        }
+
         public ReconfigureCommand()
             : base("reconfigure", "Re-configure the Microsoft Store Developer CLI.")
         {
-            var tenantId = new Option<Guid>(
-                aliases: ["--tenantId", "-t"],
-                description: "Specify the tenant Id that should be used.");
-
-            var sellerId = new Option<string>(
-                aliases: ["--sellerId", "-s"],
-                description: "Specify the seller Id that should be used.");
-
-            var clientId = new Option<Guid>(
-                aliases: ["--clientId", "-c"],
-                description: "Specify the client Id that should be used.");
-
-            var clientSecret = new Option<string>(
-                aliases: ["--clientSecret", "-cs"],
-                description: "Specify the client Secret that should be used.");
-
-            var certificateThumbprint = new Option<string>(
-                aliases: ["--certificateThumbprint", "-ct"],
-                description: "Specify the certificate Thumbprint that should be used.");
-
-            var certificateFilePath = new Option<FileInfo?>(
-                aliases: ["--certificateFilePath", "-cfp"],
-                description: "Specify the certificate file path that should be used.");
-
-            var certificatePassword = new Option<string>(
-                aliases: ["--certificatePassword", "-cp"],
-                description: "Specify the certificate password that should be used.");
-
-            var reset = new Option<bool>(
-                aliases: ["--reset"],
-                description: "Only reset the credentials, without starting over.");
-
-            AddOption(tenantId);
-            AddOption(sellerId);
-            AddOption(clientId);
-            AddOption(clientSecret);
-            AddOption(certificateThumbprint);
-            AddOption(certificateFilePath);
-            AddOption(certificatePassword);
-            AddOption(reset);
+            Options.Add(TenantIdOption);
+            Options.Add(SellerIdOption);
+            Options.Add(ClientIdOption);
+            Options.Add(ClientSecretOption);
+            Options.Add(CertificateThumbprintOption);
+            Options.Add(CertificateFilePathOption);
+            Options.Add(CertificatePasswordOption);
+            Options.Add(ResetOption);
         }
 
-        public new class Handler(ICLIConfigurator cliConfigurator, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : ICommandHandler
+        public class Handler(ICLIConfigurator cliConfigurator, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : AsynchronousCommandLineAction
         {
             private readonly ICLIConfigurator _cliConfigurator = cliConfigurator;
             private readonly IAnsiConsole _ansiConsole = ansiConsole;
             private readonly TelemetryClient _telemetryClient = telemetryClient;
 
-            public Guid? TenantId { get; set; }
-            public string? SellerId { get; set; }
-            public Guid? ClientId { get; set; }
-            public string? ClientSecret { get; set; }
-            public string? CertificateThumbprint { get; set; }
-            public FileInfo? CertificateFilePath { get; set; }
-            public string? CertificatePassword { get; set; }
-            public bool? Reset { get; set; }
-
-            public int Invoke(InvocationContext context)
+            public override async Task<int> InvokeAsync(ParseResult parseResult, CancellationToken ct = default)
             {
-                return -1001;
-            }
+                var tenantId = parseResult.GetValue(TenantIdOption);
+                var sellerId = parseResult.GetValue(SellerIdOption);
+                var clientId = parseResult.GetValue(ClientIdOption);
+                var clientSecret = parseResult.GetValue(ClientSecretOption);
+                var certificateThumbprint = parseResult.GetValue(CertificateThumbprintOption);
+                var certificateFilePath = parseResult.GetValue(CertificateFilePathOption);
+                var certificatePassword = parseResult.GetValue(CertificatePasswordOption);
+                var reset = parseResult.GetValue(ResetOption);
 
-            public async Task<int> InvokeAsync(InvocationContext context)
-            {
-                var ct = context.GetCancellationToken();
-
-                bool askConfirmation = TenantId == null ||
-                                       SellerId == null ||
-                                       ClientId == null ||
-                                       (ClientSecret == null &&
-                                        CertificateThumbprint == null &&
-                                        CertificateFilePath == null);
+                bool askConfirmation = tenantId == null ||
+                                       sellerId == null ||
+                                       clientId == null ||
+                                       (clientSecret == null &&
+                                        certificateThumbprint == null &&
+                                        certificateFilePath == null);
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(
-                    (Reset == true
+                    (reset == true
                         ? await _cliConfigurator.ResetAsync(ct: ct)
                         : await _cliConfigurator.ConfigureAsync(
                             _ansiConsole,
                             askConfirmation,
-                            tenantId: TenantId,
-                            sellerId: SellerId,
-                            clientId: ClientId,
-                            clientSecret: ClientSecret,
-                            certificateThumbprint: CertificateThumbprint,
-                            certificateFilePath: CertificateFilePath?.FullName,
-                            certificatePassword: CertificatePassword,
+                            tenantId: tenantId,
+                            sellerId: sellerId,
+                            clientId: clientId,
+                            clientSecret: clientSecret,
+                            certificateThumbprint: certificateThumbprint,
+                            certificateFilePath: certificateFilePath?.FullName,
+                            certificatePassword: certificatePassword,
                             ct: ct)) ? 0 : -1,
                     new Dictionary<string, string>
                     {
-                        { "reset", (Reset == true).ToString() },
-                        { "withTenant", (TenantId != null).ToString() },
-                        { "withSellerId", (SellerId != null).ToString() },
-                        { "withClientId", (ClientId != null).ToString() },
-                        { "withClientSecret", (ClientSecret != null).ToString() },
-                        { "withCertificateThumbprint", (CertificateThumbprint != null).ToString() },
-                        { "withCertificateFilePath", (CertificateFilePath != null).ToString() },
-                        { "withCertificatePassword", (CertificatePassword != null).ToString() }
+                        { "reset", (reset == true).ToString() },
+                        { "withTenant", (tenantId != null).ToString() },
+                        { "withSellerId", (sellerId != null).ToString() },
+                        { "withClientId", (clientId != null).ToString() },
+                        { "withClientSecret", (clientSecret != null).ToString() },
+                        { "withCertificateThumbprint", (certificateThumbprint != null).ToString() },
+                        { "withCertificateFilePath", (certificateFilePath != null).ToString() },
+                        { "withCertificatePassword", (certificatePassword != null).ToString() }
                     },
                     ct);
             }

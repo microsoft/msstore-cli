@@ -5,6 +5,7 @@ using System;
 using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Logging;
@@ -21,42 +22,35 @@ namespace MSStore.CLI.Commands.Submission
         public GetListingAssetsCommand()
             : base("getListingAssets", "Retrieves the existing draft listing assets from the store submission.")
         {
-            AddArgument(SubmissionCommand.ProductIdArgument);
-            AddOption(SubmissionCommand.LanguageOption);
+            Arguments.Add(SubmissionCommand.ProductIdArgument);
+            Options.Add(SubmissionCommand.LanguageOption);
         }
 
-        public new class Handler(ILogger<GetListingAssetsCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : ICommandHandler
+        public class Handler(ILogger<GetListingAssetsCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : AsynchronousCommandLineAction
         {
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
             private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
-            public string Language { get; set; } = null!;
-            public string ProductId { get; set; } = null!;
-
-            public int Invoke(InvocationContext context)
+            public override async Task<int> InvokeAsync(ParseResult parseResult, CancellationToken ct = default)
             {
-                return -1001;
-            }
-
-            public async Task<int> InvokeAsync(InvocationContext context)
-            {
-                var ct = context.GetCancellationToken();
+                var productId = parseResult.GetRequiredValue(SubmissionCommand.ProductIdArgument);
+                var language = parseResult.GetRequiredValue(SubmissionCommand.LanguageOption);
 
                 var ret = await _ansiConsole.Status().StartAsync<object?>("Retrieving listing assets", async ctx =>
                 {
                     try
                     {
-                        if (ProductTypeHelper.Solve(ProductId) == ProductType.Packaged)
+                        if (ProductTypeHelper.Solve(productId) == ProductType.Packaged)
                         {
                             var storePackagedAPI = await _storeAPIFactory.CreatePackagedAsync(ct: ct);
 
-                            var application = await storePackagedAPI.GetApplicationAsync(ProductId, ct);
+                            var application = await storePackagedAPI.GetApplicationAsync(productId, ct);
 
                             if (application?.Id == null)
                             {
-                                ctx.ErrorStatus(_ansiConsole, $"Could not find application with ID '{ProductId}'");
+                                ctx.ErrorStatus(_ansiConsole, $"Could not find application with ID '{productId}'");
                                 return -1;
                             }
 
@@ -68,7 +62,7 @@ namespace MSStore.CLI.Commands.Submission
                         {
                             var storeAPI = await _storeAPIFactory.CreateAsync(ct: ct);
 
-                            var draft = await storeAPI.GetDraftListingAssetsAsync(ProductId, Language, ct);
+                            var draft = await storeAPI.GetDraftListingAssetsAsync(productId, language, ct);
 
                             ctx.SuccessStatus(_ansiConsole);
 
@@ -113,7 +107,7 @@ namespace MSStore.CLI.Commands.Submission
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(0, ct);
                 }
 
-                return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
+                return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, -1, ct);
             }
         }
     }

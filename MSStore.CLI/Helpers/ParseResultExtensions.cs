@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-using System.CommandLine.Parsing;
+using System.CommandLine;
 
 namespace MSStore.CLI.Helpers
 {
@@ -10,7 +10,7 @@ namespace MSStore.CLI.Helpers
         public static bool IsVerbose(this ParseResult parseResult)
         {
             return parseResult.RootCommandResult.Command is MicrosoftStoreCLI storeCLI &&
-                    parseResult.GetValueForOption(storeCLI.VerboseOption);
+                    parseResult.GetValue(MicrosoftStoreCLI.VerboseOption);
         }
     }
 }
