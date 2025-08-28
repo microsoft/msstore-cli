@@ -5,6 +5,7 @@ using System;
 using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Logging;
@@ -19,47 +20,44 @@ namespace MSStore.CLI.Commands.Flights.Submission
 {
     internal class UpdateCommand : Command
     {
+        private static readonly Argument<string> ProductArgument;
+
+        static UpdateCommand()
+        {
+            ProductArgument = new Argument<string>("product")
+            {
+                Description = "The updated JSON product representation."
+            };
+        }
+
         public UpdateCommand()
             : base("update", "Updates the existing flight draft with the provided JSON.")
         {
-            var product = new Argument<string>(
-                "product",
-                description: "The updated JSON product representation.");
-
-            AddArgument(SubmissionCommand.ProductIdArgument);
-            AddArgument(Flights.GetCommand.FlightIdArgument);
-            AddArgument(product);
-            AddOption(SubmissionCommand.SkipInitialPolling);
+            Arguments.Add(SubmissionCommand.ProductIdArgument);
+            Arguments.Add(Flights.GetCommand.FlightIdArgument);
+            Arguments.Add(ProductArgument);
         }
 
-        public new class Handler(ILogger<UpdateCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : ICommandHandler
+        public class Handler(ILogger<UpdateCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : AsynchronousCommandLineAction
         {
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
             private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
-            public string Product { get; set; } = null!;
-            public bool SkipInitialPolling { get; set; }
-            public string ProductId { get; set; } = null!;
-            public string FlightId { get; set; } = null!;
-
-            public int Invoke(InvocationContext context)
+            public override async Task<int> InvokeAsync(ParseResult parseResult, CancellationToken ct = default)
             {
-                return -1001;
-            }
+                var productId = parseResult.GetRequiredValue(SubmissionCommand.ProductIdArgument);
+                var flightId = parseResult.GetRequiredValue(Flights.GetCommand.FlightIdArgument);
+                var product = parseResult.GetRequiredValue(ProductArgument);
 
-            public async Task<int> InvokeAsync(InvocationContext context)
-            {
-                var ct = context.GetCancellationToken();
-
-                if (ProductTypeHelper.Solve(ProductId) == ProductType.Unpackaged)
+                if (ProductTypeHelper.Solve(productId) == ProductType.Unpackaged)
                 {
                     _ansiConsole.WriteLine("This command is not supported for unpackaged applications.");
-                    return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
+                    return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, -1, ct);
                 }
 
-                var updateFlightSubmission = JsonSerializer.Deserialize(Product, SourceGenerationContext.GetCustom().DevCenterFlightSubmissionUpdate);
+                var updateFlightSubmission = JsonSerializer.Deserialize(product, SourceGenerationContext.GetCustom().DevCenterFlightSubmissionUpdate);
 
                 if (updateFlightSubmission == null)
                 {
@@ -74,11 +72,11 @@ namespace MSStore.CLI.Commands.Flights.Submission
                     {
                         storePackagedAPI = await _storeAPIFactory.CreatePackagedAsync(ct: ct);
 
-                        var flight = await storePackagedAPI.GetFlightAsync(ProductId, FlightId, ct);
+                        var flight = await storePackagedAPI.GetFlightAsync(productId, flightId, ct);
 
                         if (flight?.FlightId == null)
                         {
-                            throw new MSStoreException($"Could not find application flight with ID '{ProductId}'/'{FlightId}'");
+                            throw new MSStoreException($"Could not find application flight with ID '{productId}'/'{flightId}'");
                         }
 
                         return flight;
@@ -102,7 +100,7 @@ namespace MSStore.CLI.Commands.Flights.Submission
                 {
                     _ansiConsole.MarkupLine("Could not find an existing flight submission. [b green]Creating new flight submission[/].");
 
-                    var flightSubmission = await storePackagedAPI.CreateNewFlightSubmissionAsync(_ansiConsole, ProductId, FlightId, _logger, ct);
+                    var flightSubmission = await storePackagedAPI.CreateNewFlightSubmissionAsync(_ansiConsole, productId, flightId, _logger, ct);
                     submissionId = flightSubmission?.Id;
 
                     if (submissionId == null)
@@ -115,7 +113,7 @@ namespace MSStore.CLI.Commands.Flights.Submission
                 {
                     try
                     {
-                        return await storePackagedAPI.UpdateFlightSubmissionAsync(ProductId, FlightId, submissionId, updateFlightSubmission, ct);
+                        return await storePackagedAPI.UpdateFlightSubmissionAsync(productId, flightId, submissionId, updateFlightSubmission, ct);
                     }
                     catch (Exception err)
                     {
@@ -127,12 +125,12 @@ namespace MSStore.CLI.Commands.Flights.Submission
 
                 if (updatedFlightSubmission == null)
                 {
-                    return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
+                    return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, -1, ct);
                 }
 
                 AnsiConsole.WriteLine(JsonSerializer.Serialize(updatedFlightSubmission, SourceGenerationContext.GetCustom(true).DevCenterFlightSubmission));
 
-                return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, 0, ct);
+                return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, 0, ct);
             }
         }
     }

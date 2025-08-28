@@ -14,32 +14,35 @@ namespace MSStore.CLI.Commands
 
         static SubmissionCommand()
         {
-            LanguageOption = new Option<string>(
-                aliases: ["--language", "-l"],
-                getDefaultValue: () => "en",
-                description: "Select which language you want to retrieve.");
-            SkipInitialPolling = new Option<bool>(
-                aliases: ["--skipInitialPolling", "-s"],
-                getDefaultValue: () => false,
-                description: "Skip the initial polling before executing the action.");
-            ProductIdArgument = new Argument<string>(
-                name: "productId",
-                description: "The product ID.");
+            LanguageOption = new Option<string>("--language", "-l")
+            {
+                DefaultValueFactory = _ => "en",
+                Description = "Select which language you want to retrieve."
+            };
+
+            SkipInitialPolling = new Option<bool>("--skipInitialPolling", "-s")
+            {
+                DefaultValueFactory = _ => false,
+                Description = "Skip the initial polling before executing the action."
+            };
+            ProductIdArgument = new Argument<string>("productId")
+            {
+                Description = "The product ID."
+            };
         }
 
-        public SubmissionCommand()
+        public SubmissionCommand(StatusCommand statusCommand, GetCommand getCommand, GetListingAssetsCommand getListingAssetsCommand, UpdateMetadataCommand updateMetadataCommand, UpdateCommand updateCommand, PollCommand pollCommand, Submission.PublishCommand publishCommand, DeleteCommand deleteCommand, RolloutCommand rolloutCommand)
             : base("submission", "Executes commands to a store submission.")
         {
-            AddCommand(new StatusCommand());
-            AddCommand(new GetCommand());
-            AddCommand(new GetListingAssetsCommand());
-            AddCommand(new UpdateMetadataCommand());
-            AddCommand(new UpdateCommand());
-            AddCommand(new PollCommand());
-            AddCommand(new Submission.PublishCommand());
-            AddCommand(new DeleteCommand());
-            AddCommand(new RolloutCommand());
-            this.SetDefaultHelpHandler();
+            Subcommands.Add(statusCommand);
+            Subcommands.Add(getCommand);
+            Subcommands.Add(getListingAssetsCommand);
+            Subcommands.Add(updateMetadataCommand);
+            Subcommands.Add(updateCommand);
+            Subcommands.Add(pollCommand);
+            Subcommands.Add(publishCommand);
+            Subcommands.Add(deleteCommand);
+            Subcommands.Add(rolloutCommand);
         }
     }
 }

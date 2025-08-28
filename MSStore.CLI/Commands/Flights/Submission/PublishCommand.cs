@@ -4,6 +4,7 @@
 using System;
 using System.CommandLine;
 using System.CommandLine.Invocation;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Logging;
@@ -19,48 +20,41 @@ namespace MSStore.CLI.Commands.Flights.Submission
         public PublishCommand()
             : base("publish", "Starts the flight submission process for the existing Draft.")
         {
-            AddArgument(SubmissionCommand.ProductIdArgument);
-            AddArgument(Flights.GetCommand.FlightIdArgument);
+            Arguments.Add(SubmissionCommand.ProductIdArgument);
+            Arguments.Add(Flights.GetCommand.FlightIdArgument);
         }
 
-        public new class Handler(ILogger<PublishCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : ICommandHandler
+        public class Handler(ILogger<PublishCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : AsynchronousCommandLineAction
         {
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
             private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
-            public string ProductId { get; set; } = null!;
-            public string FlightId { get; set; } = null!;
-
-            public int Invoke(InvocationContext context)
+            public override async Task<int> InvokeAsync(ParseResult parseResult, CancellationToken ct = default)
             {
-                return -1001;
-            }
+                var productId = parseResult.GetRequiredValue(SubmissionCommand.ProductIdArgument);
+                var flightId = parseResult.GetRequiredValue(Flights.GetCommand.FlightIdArgument);
 
-            public async Task<int> InvokeAsync(InvocationContext context)
-            {
-                var ct = context.GetCancellationToken();
-
-                if (ProductTypeHelper.Solve(ProductId) == ProductType.Unpackaged)
+                if (ProductTypeHelper.Solve(productId) == ProductType.Unpackaged)
                 {
                     _ansiConsole.WriteLine("This command is not supported for unpackaged applications.");
-                    return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
+                    return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, -1, ct);
                 }
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(
-                    ProductId,
+                    productId,
                     await _ansiConsole.Status().StartAsync("Publishing flight submission", async ctx =>
                 {
                     try
                     {
                         var storePackagedAPI = await _storeAPIFactory.CreatePackagedAsync(ct: ct);
 
-                        var flight = await storePackagedAPI.GetFlightAsync(ProductId, FlightId, ct);
+                        var flight = await storePackagedAPI.GetFlightAsync(productId, flightId, ct);
 
                         if (flight?.FlightId == null)
                         {
-                            ctx.ErrorStatus(_ansiConsole, $"Could not find application flight with ID '{ProductId}'/'{FlightId}'");
+                            ctx.ErrorStatus(_ansiConsole, $"Could not find application flight with ID '{productId}'/'{flightId}'");
                             return -1;
                         }
 
@@ -68,11 +62,11 @@ namespace MSStore.CLI.Commands.Flights.Submission
 
                         if (flightSubmission?.Id == null)
                         {
-                            ctx.ErrorStatus(_ansiConsole, $"Could not find flight submission for application flight with ID '{ProductId}'/'{FlightId}'");
+                            ctx.ErrorStatus(_ansiConsole, $"Could not find flight submission for application flight with ID '{productId}'/'{flightId}'");
                             return -1;
                         }
 
-                        var flightSubmissionCommit = await storePackagedAPI.CommitFlightSubmissionAsync(ProductId, FlightId, flightSubmission.Id, ct);
+                        var flightSubmissionCommit = await storePackagedAPI.CommitFlightSubmissionAsync(productId, flightId, flightSubmission.Id, ct);
 
                         if (flightSubmissionCommit == null)
                         {
@@ -85,7 +79,7 @@ namespace MSStore.CLI.Commands.Flights.Submission
                             return 0;
                         }
 
-                        ctx.ErrorStatus(_ansiConsole, $"Could not commit flight submission for application flight with ID '{ProductId}'/'{FlightId}'");
+                        ctx.ErrorStatus(_ansiConsole, $"Could not commit flight submission for application flight with ID '{productId}'/'{flightId}'");
                         _ansiConsole.MarkupLine($"[red]{flightSubmissionCommit.ToErrorMessage()}[/]");
 
                         return -1;

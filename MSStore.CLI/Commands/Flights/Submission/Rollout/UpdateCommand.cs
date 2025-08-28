@@ -5,6 +5,7 @@ using System;
 using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Logging;
@@ -18,50 +19,49 @@ namespace MSStore.CLI.Commands.Flights.Submission.Rollout
 {
     internal class UpdateCommand : Command
     {
+        private static readonly Argument<float> PercentageArgument;
+
+        static UpdateCommand()
+        {
+            PercentageArgument = new Argument<float>("percentage")
+            {
+                Description = "The percentage of users that will receive the submission rollout."
+            };
+        }
+
         public UpdateCommand()
             : base("update", "Update the flight rollout percentage of a submission.")
         {
-            AddArgument(SubmissionCommand.ProductIdArgument);
-            AddArgument(Flights.GetCommand.FlightIdArgument);
-            AddOption(Commands.Submission.Rollout.GetCommand.SubmissionIdOption);
-
-            var percentage = new Argument<float>(
-                "percentage",
-                description: "The percentage of users that will receive the submission rollout.");
-            AddArgument(percentage);
+            Arguments.Add(SubmissionCommand.ProductIdArgument);
+            Arguments.Add(Flights.GetCommand.FlightIdArgument);
+            Options.Add(Commands.Submission.Rollout.GetCommand.SubmissionIdOption);
+            Arguments.Add(PercentageArgument);
         }
 
-        public new class Handler(ILogger<UpdateCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : ICommandHandler
+        public class Handler(ILogger<UpdateCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : AsynchronousCommandLineAction
         {
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
             private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
-            public string ProductId { get; set; } = null!;
-            public string FlightId { get; set; } = null!;
-            public string? SubmissionId { get; set; }
-            public float Percentage { get; set; }
-
-            public int Invoke(InvocationContext context)
+            public override async Task<int> InvokeAsync(ParseResult parseResult, CancellationToken ct = default)
             {
-                return -1001;
-            }
+                var productId = parseResult.GetRequiredValue(SubmissionCommand.ProductIdArgument);
+                var flightId = parseResult.GetRequiredValue(Flights.GetCommand.FlightIdArgument);
+                var submissionId = parseResult.GetValue(Commands.Submission.Rollout.GetCommand.SubmissionIdOption);
+                var percentage = parseResult.GetRequiredValue(PercentageArgument);
 
-            public async Task<int> InvokeAsync(InvocationContext context)
-            {
-                var ct = context.GetCancellationToken();
-
-                if (ProductTypeHelper.Solve(ProductId) == ProductType.Unpackaged)
+                if (ProductTypeHelper.Solve(productId) == ProductType.Unpackaged)
                 {
                     _ansiConsole.WriteLine("This command is not supported for unpackaged applications.");
-                    return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
+                    return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, -1, ct);
                 }
 
-                if (Percentage < 0 || Percentage > 100)
+                if (percentage < 0 || percentage > 100)
                 {
                     _ansiConsole.WriteLine("The percentage must be between 0 and 100.");
-                    return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
+                    return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, -1, ct);
                 }
 
                 var flightSubmissionRollout = await _ansiConsole.Status().StartAsync("Updating Flight Submission Rollout", async ctx =>
@@ -70,26 +70,26 @@ namespace MSStore.CLI.Commands.Flights.Submission.Rollout
                     {
                         var storePackagedAPI = await _storeAPIFactory.CreatePackagedAsync(ct: ct);
 
-                        if (SubmissionId == null)
+                        if (submissionId == null)
                         {
-                            var flight = await storePackagedAPI.GetFlightAsync(ProductId, FlightId, ct);
+                            var flight = await storePackagedAPI.GetFlightAsync(productId, flightId, ct);
 
                             if (flight?.FlightId == null)
                             {
-                                ctx.ErrorStatus(_ansiConsole, $"Could not find application flight with ID '{ProductId}'/'{FlightId}'");
+                                ctx.ErrorStatus(_ansiConsole, $"Could not find application flight with ID '{productId}'/'{flightId}'");
                                 return null;
                             }
 
-                            SubmissionId = flight.GetAnyFlightSubmissionId();
+                            submissionId = flight.GetAnyFlightSubmissionId();
 
-                            if (SubmissionId == null)
+                            if (submissionId == null)
                             {
                                 ctx.ErrorStatus(_ansiConsole, "Could not find the flight submission. Please check the ProductId/FlightId.");
                                 return null;
                             }
                         }
 
-                        return await storePackagedAPI.UpdatePackageRolloutPercentageAsync(ProductId, SubmissionId, FlightId, Percentage, ct);
+                        return await storePackagedAPI.UpdatePackageRolloutPercentageAsync(productId, submissionId, flightId, percentage, ct);
                     }
                     catch (MSStoreHttpException err)
                     {
@@ -116,12 +116,12 @@ namespace MSStore.CLI.Commands.Flights.Submission.Rollout
 
                 if (flightSubmissionRollout == null)
                 {
-                    return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
+                    return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, -1, ct);
                 }
 
                 AnsiConsole.WriteLine(JsonSerializer.Serialize(flightSubmissionRollout, SourceGenerationContext.GetCustom(true).PackageRollout));
 
-                return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, 0, ct);
+                return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, 0, ct);
             }
         }
     }

@@ -1,4 +1,4 @@
-﻿<Project Sdk="MSTest.Sdk/3.10.1">
+﻿<Project Sdk="MSTest.Sdk/3.10.3">
 
   <PropertyGroup>
     <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">net9.0;net9.0-windows10.0.17763.0</TargetFrameworks>
@@ -44,22 +44,22 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="Microsoft.Testing.Extensions.TrxReport" Version="1.8.1" />
+    <PackageReference Update="Microsoft.Testing.Extensions.TrxReport" Version="1.8.3" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="MSTest.Analyzers" Version="3.10.1">
+    <PackageReference Update="MSTest.Analyzers" Version="3.10.3">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="MSTest.TestAdapter" Version="3.10.1" />
+    <PackageReference Update="MSTest.TestAdapter" Version="3.10.3" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="MSTest.TestFramework" Version="3.10.1" />
+    <PackageReference Update="MSTest.TestFramework" Version="3.10.3" />
   </ItemGroup>
 
 </Project>

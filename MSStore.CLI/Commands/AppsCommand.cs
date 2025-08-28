@@ -8,12 +8,11 @@ namespace MSStore.CLI.Commands
 {
     internal class AppsCommand : Command
     {
-        public AppsCommand()
+        public AppsCommand(ListCommand listCommand, GetCommand getCommand)
             : base("apps", "Execute apps related tasks.")
         {
-            AddCommand(new ListCommand());
-            AddCommand(new GetCommand());
-            this.SetDefaultHelpHandler();
+            Subcommands.Add(listCommand);
+            Subcommands.Add(getCommand);
         }
     }
 }

@@ -8,6 +8,7 @@ using System.CommandLine.Invocation;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Logging;
@@ -22,17 +23,20 @@ namespace MSStore.CLI.Commands
     {
         internal static readonly Option<string> FlightIdOption;
         internal static readonly Option<float> PackageRolloutPercentageOption;
+        private static readonly Option<DirectoryInfo?> InputDirectoryOption;
+        private static readonly Option<string> AppIdOption;
+        private static readonly Option<bool> NoCommitOption;
 
         static PublishCommand()
         {
-            FlightIdOption = new Option<string>(
-                aliases: ["--flightId", "-f"],
-                description: "Specifies the Flight Id where the package will be published.");
-            PackageRolloutPercentageOption = new Option<float>(
-                aliases: ["--packageRolloutPercentage", "-prp"],
-                description: "Specifies the rollout percentage of the package. The value must be between 0 and 100.",
-                isDefault: false,
-                parseArgument: result =>
+            FlightIdOption = new Option<string>("--flightId", "-f")
+            {
+                Description = "Specifies the Flight Id where the package will be published."
+            };
+            PackageRolloutPercentageOption = new Option<float>("--packageRolloutPercentage", "-prp")
+            {
+                Description = "Specifies the rollout percentage of the package. The value must be between 0 and 100.",
+                CustomParser = result =>
                 {
                     if (result.Tokens.Count == 0)
                     {
@@ -42,34 +46,25 @@ namespace MSStore.CLI.Commands
                     string? percentage = result.Tokens.Single().Value;
                     if (!float.TryParse(percentage, out float parsedPercentage))
                     {
-                        result.ErrorMessage = "Invalid rollout percentage. The value must be between 0 and 100.";
+                        result.AddError("Invalid rollout percentage. The value must be between 0 and 100.");
                         return 100f;
                     }
                     else if (parsedPercentage < 0 || parsedPercentage > 100)
                     {
-                        result.ErrorMessage = "Invalid rollout percentage. The value must be between 0 and 100.";
+                        result.AddError("Invalid rollout percentage. The value must be between 0 and 100.");
                         return 100f;
                     }
                     else
                     {
                         return parsedPercentage;
                     }
-                });
-        }
+                }
+            };
 
-        public PublishCommand()
-            : base("publish", "Publishes your Application to the Microsoft Store.")
-        {
-            AddArgument(InitCommand.PathOrUrl);
-
-            var inputDirectory = new Option<DirectoryInfo?>(
-                aliases:
-                [
-                    "--inputDirectory",
-                    "-i"
-                ],
-                description: "The directory where the '.msix' or '.msixupload' file to be used for the publishing command. If not provided, the cli will try to find the best candidate based on the 'pathOrUrl' argument.",
-                parseArgument: result =>
+            InputDirectoryOption = new Option<DirectoryInfo?>("--inputDirectory", "-i")
+            {
+                Description = "The directory where the '.msix' or '.msixupload' file to be used for the publishing command. If not provided, the cli will try to find the best candidate based on the 'pathOrUrl' argument.",
+                CustomParser = result =>
                 {
                     if (result.Tokens.Count == 0)
                     {
@@ -79,49 +74,45 @@ namespace MSStore.CLI.Commands
                     string? directoryPath = result.Tokens.Single().Value;
                     if (!Directory.Exists(directoryPath))
                     {
-                        result.ErrorMessage = "Input directory does not exist.";
+                        result.AddError("Input directory does not exist.");
                         return null;
                     }
                     else
                     {
                         return new DirectoryInfo(directoryPath);
                     }
-                });
+                }
+            };
 
-            AddOption(inputDirectory);
+            AppIdOption = new Option<string>("--appId", "-id")
+            {
+                Description = "Specifies the Application Id. Only needed if the project has not been initialized before with the 'init' command."
+            };
 
-            var appIdOption = new Option<string>(
-                aliases:
-                [
-                    "--appId",
-                    "-id"
-                ],
-                description: "Specifies the Application Id. Only needed if the project has not been initialized before with the 'init' command.");
-
-            AddOption(appIdOption);
-
-            var noCommitOption = new Option<bool>(
-                aliases:
-                [
-                    "--noCommit",
-                    "-nc"
-                ],
-                description: "Disables committing the submission, keeping it in draft state.",
-                getDefaultValue: () => false);
-
-            AddOption(noCommitOption);
-
-            AddOption(FlightIdOption);
-
-            AddOption(PackageRolloutPercentageOption);
+            NoCommitOption = new Option<bool>("--noCommit", "-nc")
+            {
+                Description = "Disables committing the submission, keeping it in draft state.",
+                DefaultValueFactory = _ => false
+            };
         }
 
-        public new class Handler(
+        public PublishCommand()
+            : base("publish", "Publishes your Application to the Microsoft Store.")
+        {
+            Arguments.Add(InitCommand.PathOrUrlArgument);
+            Options.Add(InputDirectoryOption);
+            Options.Add(AppIdOption);
+            Options.Add(NoCommitOption);
+            Options.Add(FlightIdOption);
+            Options.Add(PackageRolloutPercentageOption);
+        }
+
+        public class Handler(
             IProjectConfiguratorFactory projectConfiguratorFactory,
             IStoreAPIFactory storeAPIFactory,
             TelemetryClient telemetryClient,
             IAnsiConsole ansiConsole,
-            ILogger<PublishCommand.Handler> logger) : ICommandHandler
+            ILogger<PublishCommand.Handler> logger) : AsynchronousCommandLineAction
         {
             private readonly IProjectConfiguratorFactory _projectConfiguratorFactory = projectConfiguratorFactory ?? throw new ArgumentNullException(nameof(projectConfiguratorFactory));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
@@ -129,33 +120,22 @@ namespace MSStore.CLI.Commands
             private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-            public string PathOrUrl { get; set; } = null!;
-
-            public string? AppId { get; set; }
-
-            public string? FlightId { get; set; }
-            public float? PackageRolloutPercentage { get; set; }
-
-            public DirectoryInfo? InputDirectory { get; set; } = null!;
-
-            public bool NoCommit { get; set; }
-
-            public int Invoke(InvocationContext context)
+            public override async Task<int> InvokeAsync(ParseResult parseResult, CancellationToken ct = default)
             {
-                return -1001;
-            }
+                var pathOrUrl = parseResult.GetRequiredValue(InitCommand.PathOrUrlArgument);
+                var appId = parseResult.GetValue(AppIdOption);
+                var flightId = parseResult.GetValue(FlightIdOption);
+                var packageRolloutPercentage = parseResult.GetValue(PackageRolloutPercentageOption);
+                var inputDirectory = parseResult.GetValue(InputDirectoryOption);
+                var noCommit = parseResult.GetRequiredValue(NoCommitOption);
 
-            public async Task<int> InvokeAsync(InvocationContext context)
-            {
-                var ct = context.GetCancellationToken();
-
-                var projectPublisher = await _projectConfiguratorFactory.FindProjectPublisherAsync(PathOrUrl, ct);
+                var projectPublisher = await _projectConfiguratorFactory.FindProjectPublisherAsync(pathOrUrl, ct);
 
                 var props = new Dictionary<string, string>();
 
                 if (projectPublisher == null)
                 {
-                    _ansiConsole.WriteLine(string.Format(CultureInfo.InvariantCulture, "We could not find a project publisher for the project at '{0}'.", PathOrUrl));
+                    _ansiConsole.WriteLine(string.Format(CultureInfo.InvariantCulture, "We could not find a project publisher for the project at '{0}'.", pathOrUrl));
                     props["ProjType"] = "NF";
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(-1, props, ct);
                 }
@@ -168,13 +148,13 @@ namespace MSStore.CLI.Commands
 
                 API.Packaged.Models.DevCenterApplication? app = null;
 
-                if (!string.IsNullOrEmpty(AppId))
+                if (!string.IsNullOrEmpty(appId))
                 {
                     app = await _ansiConsole.Status().StartAsync("Retrieving application...", async ctx =>
                     {
                         try
                         {
-                            var app = await storePackagedAPI.GetApplicationAsync(AppId, ct);
+                            var app = await storePackagedAPI.GetApplicationAsync(appId, ct);
 
                             ctx.SuccessStatus(_ansiConsole, "Ok! Found the app!");
                             return app;
@@ -182,7 +162,7 @@ namespace MSStore.CLI.Commands
                         catch (Exception)
                         {
                             ctx.ErrorStatus(_ansiConsole, "Could not retrieve your application. Please make sure you have the correct AppId.");
-                            _logger.LogError("Could not find application with id '{AppId}'.", AppId);
+                            _logger.LogError("Could not find application with id '{AppId}'.", appId);
                             return null;
                         }
                     });
@@ -194,7 +174,7 @@ namespace MSStore.CLI.Commands
                 }
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(
-                    await projectPublisher.PublishAsync(PathOrUrl, app, FlightId, InputDirectory, NoCommit, PackageRolloutPercentage, storePackagedAPI, ct), props, ct);
+                    await projectPublisher.PublishAsync(pathOrUrl, app, flightId, inputDirectory, noCommit, packageRolloutPercentage, storePackagedAPI, ct), props, ct);
             }
         }
     }

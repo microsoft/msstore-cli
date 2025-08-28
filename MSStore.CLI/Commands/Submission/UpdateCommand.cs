@@ -20,28 +20,30 @@ namespace MSStore.CLI.Commands.Submission
 {
     internal class UpdateCommand : Command
     {
+        private static readonly Argument<string> ProductArgument;
+
+        static UpdateCommand()
+        {
+            ProductArgument = new Argument<string>("product")
+            {
+                Description = "The updated JSON product representation."
+            };
+        }
+
         public UpdateCommand()
             : base("update", "Updates the existing draft with the provided JSON.")
         {
-            var product = new Argument<string>(
-                "product",
-                description: "The updated JSON product representation.");
-
-            AddArgument(SubmissionCommand.ProductIdArgument);
-            AddArgument(product);
-            AddOption(SubmissionCommand.SkipInitialPolling);
+            Arguments.Add(SubmissionCommand.ProductIdArgument);
+            Arguments.Add(ProductArgument);
+            Options.Add(SubmissionCommand.SkipInitialPolling);
         }
 
-        public new class Handler(ILogger<UpdateCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : ICommandHandler
+        public class Handler(ILogger<UpdateCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : AsynchronousCommandLineAction
         {
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
             private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
-
-            public string Product { get; set; } = null!;
-            public bool SkipInitialPolling { get; set; }
-            public string ProductId { get; set; } = null!;
 
             public static async Task<object?> PackagedUpdateCommandAsync(IAnsiConsole ansiConsole, IStoreAPIFactory storeAPIFactory, string product, string productId, ILogger logger, CancellationToken ct)
             {
@@ -112,24 +114,21 @@ namespace MSStore.CLI.Commands.Submission
                 });
             }
 
-            public int Invoke(InvocationContext context)
+            public override async Task<int> InvokeAsync(ParseResult parseResult, CancellationToken ct = default)
             {
-                return -1001;
-            }
-
-            public async Task<int> InvokeAsync(InvocationContext context)
-            {
-                var ct = context.GetCancellationToken();
+                var productId = parseResult.GetRequiredValue(SubmissionCommand.ProductIdArgument);
+                var product = parseResult.GetRequiredValue(ProductArgument);
+                var skipInitialPolling = parseResult.GetRequiredValue(SubmissionCommand.SkipInitialPolling);
 
                 object? updateSubmissionData = null;
 
-                if (ProductTypeHelper.Solve(ProductId) == ProductType.Packaged)
+                if (ProductTypeHelper.Solve(productId) == ProductType.Packaged)
                 {
-                    updateSubmissionData = await PackagedUpdateCommandAsync(_ansiConsole, _storeAPIFactory, Product, ProductId, _logger, ct);
+                    updateSubmissionData = await PackagedUpdateCommandAsync(_ansiConsole, _storeAPIFactory, product, productId, _logger, ct);
                 }
                 else
                 {
-                    var updatePackagesRequest = JsonSerializer.Deserialize(Product, SourceGenerationContext.GetCustom().UpdatePackagesRequest);
+                    var updatePackagesRequest = JsonSerializer.Deserialize(product, SourceGenerationContext.GetCustom().UpdatePackagesRequest);
 
                     if (updatePackagesRequest == null)
                     {
@@ -142,7 +141,7 @@ namespace MSStore.CLI.Commands.Submission
                         {
                             var storeAPI = await _storeAPIFactory.CreateAsync(ct: ct);
 
-                            return await storeAPI.UpdateProductPackagesAsync(ProductId, updatePackagesRequest, SkipInitialPolling, ct);
+                            return await storeAPI.UpdateProductPackagesAsync(productId, updatePackagesRequest, skipInitialPolling, ct);
                         }
                         catch (Exception err)
                         {
@@ -155,12 +154,12 @@ namespace MSStore.CLI.Commands.Submission
 
                 if (updateSubmissionData == null)
                 {
-                    return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
+                    return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, -1, ct);
                 }
 
                 AnsiConsole.WriteLine(JsonSerializer.Serialize(updateSubmissionData, updateSubmissionData.GetType(), SourceGenerationContext.GetCustom(true)));
 
-                return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, 0, ct);
+                return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, 0, ct);
             }
         }
     }

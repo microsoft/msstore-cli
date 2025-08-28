@@ -5,6 +5,7 @@ using System;
 using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Globalization;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Logging;
@@ -19,79 +20,73 @@ namespace MSStore.CLI.Commands.Flights
         public ListCommand()
             : base("list", "Retrieves all the Flights for the specified Application.")
         {
-            AddArgument(SubmissionCommand.ProductIdArgument);
+            Arguments.Add(SubmissionCommand.ProductIdArgument);
         }
 
-        public new class Handler(ILogger<ListCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : ICommandHandler
+        public class Handler(ILogger<ListCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : AsynchronousCommandLineAction
         {
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
             private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
-            public string ProductId { get; set; } = null!;
-
-            public int Invoke(InvocationContext context)
+            public override async Task<int> InvokeAsync(ParseResult parseResult, CancellationToken ct = default)
             {
-                return -1001;
-            }
+                var productId = parseResult.GetRequiredValue(SubmissionCommand.ProductIdArgument);
 
-            public async Task<int> InvokeAsync(InvocationContext context)
-            {
-                var ct = context.GetCancellationToken();
-
-                if (ProductTypeHelper.Solve(ProductId) == ProductType.Unpackaged)
+                if (ProductTypeHelper.Solve(productId) == ProductType.Unpackaged)
                 {
                     _ansiConsole.WriteLine("This command is not supported for unpackaged applications.");
-                    return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
+                    return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, -1, ct);
                 }
 
-                return await _telemetryClient.TrackCommandEventAsync<Handler>(
-                    await _ansiConsole.Status().StartAsync("Retrieving Flights", async ctx =>
+                var flightsList = await _ansiConsole.Status().StartAsync("Retrieving Flights", async ctx =>
+                {
+                    try
                     {
-                        try
-                        {
-                            var storePackagedAPI = await _storeAPIFactory.CreatePackagedAsync(ct: ct);
+                        var storePackagedAPI = await _storeAPIFactory.CreatePackagedAsync(ct: ct);
 
-                            var flightsList = await storePackagedAPI.GetFlightsAsync(ProductId, ct);
+                        var flightsList = await storePackagedAPI.GetFlightsAsync(productId, ct);
 
-                            ctx.SuccessStatus(_ansiConsole, "[bold green]Retrieved Flights[/]");
+                        ctx.SuccessStatus(_ansiConsole, "[bold green]Retrieved Flights[/]");
 
-                            if (flightsList?.Count > 0)
-                            {
-                                var table = new Table();
-                                table.AddColumns(string.Empty, "FlightId", "FriendlyName", "LastPublishedFlightSubmission.Id", "PendingFlightSubmission.Id", "GroupIds", "RankHigherThan");
+                        return flightsList;
+                    }
+                    catch (Exception err)
+                    {
+                        _logger.LogError(err, "Error while retrieving Flights.");
+                        ctx.ErrorStatus(_ansiConsole, err);
+                        return null;
+                    }
+                });
 
-                                int i = 1;
-                                foreach (var f in flightsList)
-                                {
-                                    table.AddRow(
-                                        i.ToString(CultureInfo.InvariantCulture),
-                                        $"[bold u]{f.FlightId}[/]",
-                                        $"[bold u]{f.FriendlyName}[/]",
-                                        $"[bold u]{f.LastPublishedFlightSubmission?.Id}[/]",
-                                        $"[bold u]{f.PendingFlightSubmission?.Id}[/]",
-                                        $"[bold u]{string.Join(", ", f.GroupIds ?? [])}[/]",
-                                        $"[bold u]{f.RankHigherThan}[/]");
-                                    i++;
-                                }
+                if (flightsList?.Count > 0)
+                {
+                    var table = new Table();
+                    table.AddColumns(string.Empty, "FlightId", "FriendlyName", "LastPublishedFlightSubmission.Id", "PendingFlightSubmission.Id", "GroupIds", "RankHigherThan");
 
-                                AnsiConsole.Write(table);
-                            }
-                            else
-                            {
-                                _ansiConsole.MarkupLine("The application has [bold][u]no[/] Flights[/].");
-                            }
+                    int i = 1;
+                    foreach (var f in flightsList)
+                    {
+                        table.AddRow(
+                            i.ToString(CultureInfo.InvariantCulture),
+                            $"[bold u]{f.FlightId}[/]",
+                            $"[bold u]{f.FriendlyName}[/]",
+                            $"[bold u]{f.LastPublishedFlightSubmission?.Id}[/]",
+                            $"[bold u]{f.PendingFlightSubmission?.Id}[/]",
+                            $"[bold u]{string.Join(", ", f.GroupIds ?? [])}[/]",
+                            $"[bold u]{f.RankHigherThan}[/]");
+                        i++;
+                    }
 
-                            return 0;
-                        }
-                        catch (Exception err)
-                        {
-                            _logger.LogError(err, "Error while retrieving Flights.");
-                            ctx.ErrorStatus(_ansiConsole, err);
-                            return -1;
-                        }
-                    }), ct);
+                    AnsiConsole.Write(table);
+                    return await _telemetryClient.TrackCommandEventAsync<Handler>(0, ct);
+                }
+                else
+                {
+                    _ansiConsole.MarkupLine("The application has [bold][u]no[/] Flights[/].");
+                    return await _telemetryClient.TrackCommandEventAsync<Handler>(-1, ct);
+                }
             }
         }
     }

@@ -2,11 +2,7 @@
 // Licensed under the MIT License.
 
 using System.CommandLine;
-using System.CommandLine.Builder;
-using System.CommandLine.Hosting;
 using System.CommandLine.Invocation;
-using System.CommandLine.IO;
-using System.CommandLine.Parsing;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -35,7 +31,6 @@ namespace MSStore.CLI.UnitTests
 {
     public class BaseCommandLineTest
     {
-        internal MicrosoftStoreCLI Cli { get; private set; } = null!;
         internal Mock<IConsoleReader> FakeConsole { get; private set; } = null!;
         internal Mock<IConfigurationManager<Configurations>> FakeConfigurationManager { get; private set; } = null!;
         internal Mock<IConfigurationManager<TelemetryConfigurations>> FakeTelemetryConfigurationManager { get; private set; } = null!;
@@ -97,7 +92,7 @@ namespace MSStore.CLI.UnitTests
             Id = new Guid("F3C1CCB6-09C0-4BAB-BABA-C034BFB60EF9")
         };
 
-        private Parser _parser = null!;
+        private IHostBuilder _hostBuilder = null!;
         protected IAnsiConsole ErrorAnsiConsole { get; private set; } = null!;
 
         protected static string CopyFilesRecursively(string sourcePath, [CallerMemberName] string caller = null!)
@@ -204,11 +199,7 @@ namespace MSStore.CLI.UnitTests
                 .Setup(fac => fac.CreatePackagedAsync(It.IsAny<Configurations>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(FakeStorePackagedAPI.Object);
 
-            Cli = [];
-
             StorePackagedAPI.DefaultSubmissionPollDelay = TimeSpan.Zero;
-
-            Cli.AddCommand(new TestCommand(this));
 
             var azureBlobManagerMock = new Mock<IAzureBlobManager>();
             azureBlobManagerMock
@@ -242,8 +233,7 @@ namespace MSStore.CLI.UnitTests
 
             TokenManager = new Mock<ITokenManager>();
 
-            var builder = new CommandLineBuilder(Cli);
-            _parser = builder.UseHost(_ => Host.CreateDefaultBuilder(null), (builder) => builder
+            _hostBuilder = Host.CreateDefaultBuilder(null)
                 .UseEnvironment("CLI")
                 .ConfigureServices((hostContext, services) =>
                 {
@@ -279,8 +269,7 @@ namespace MSStore.CLI.UnitTests
                         .AddScoped(sp => PWAAppInfoManager.Object)
                         .AddScoped<IElectronManifestManager>(sp => ElectronManifestManager.Object)
                         .AddScoped(sp => NuGetPackageManager.Object)
-                        .AddScoped<IAppXManifestManager>(sp => AppXManifestManager.Object)
-                        .AddSingleton(Cli);
+                        .AddScoped<IAppXManifestManager>(sp => AppXManifestManager.Object);
 
                     services.AddLogging(builder =>
                     {
@@ -292,39 +281,7 @@ namespace MSStore.CLI.UnitTests
                 .ConfigureLogging((hostContext, logging) =>
                 {
                     logging.SetMinimumLevel(LogLevel.Debug);
-                }))
-                .AddMiddleware(
-                    async (context, next) =>
-                    {
-                        var ct = context.GetCancellationToken();
-
-                        var host = context.GetHost();
-
-                        var configurationManager = host.Services.GetService<IConfigurationManager<Configurations>>()!;
-                        var credentialManager = host.Services.GetService<ICredentialManager>()!;
-                        var consoleReader = host.Services.GetService<IConsoleReader>()!;
-                        var cliConfigurator = host.Services.GetService<ICLIConfigurator>()!;
-                        var logger = host.Services.GetService<ILogger<Program>>()!;
-
-                        if (context.ParseResult.CommandResult.Command is MicrosoftStoreCLI
-                            || context.ParseResult.CommandResult.Command is ReconfigureCommand
-                            || context.ParseResult.CommandResult.Command is TestCommand
-                            || await MicrosoftStoreCLI.InitAsync(ErrorAnsiConsole, configurationManager, credentialManager, consoleReader, cliConfigurator, logger, ct))
-                        {
-                            await next(context).ConfigureAwait(false);
-                        }
-                    }, MiddlewareOrder.Default)
-                .UseVersionOption()
-                .UseEnvironmentVariableDirective()
-                .UseParseDirective()
-                .UseSuggestDirective()
-                .RegisterWithDotnetSuggest()
-                .UseTypoCorrections()
-                .UseParseErrorReporting()
-                .UseExceptionHandler()
-                .UseHelp()
-                .CancelOnProcessTermination()
-                .Build();
+                });
         }
 
         protected void FakeLogin(string? publisherDisplayName = null)
@@ -792,7 +749,7 @@ namespace MSStore.CLI.UnitTests
             }
         }
 
-        protected Task<(string Output, string Error)> RunTestAsync(Func<InvocationContext, Task>? testCallback)
+        protected Task<(string Output, string Error)> RunTestAsync(Func<ParseResult, IHost, CancellationToken, Task>? testCallback)
         {
             _testCallback = testCallback;
 
@@ -818,18 +775,38 @@ namespace MSStore.CLI.UnitTests
             AnsiConsole.Profile.Capabilities.Ansi = true;
             AnsiConsole.Profile.Capabilities.Unicode = true;
 
-            var parseResult = _parser.Parse(args);
+            IHost host = _hostBuilder.Start();
 
-            if (parseResult.Errors.Any())
+            var storeCLI = host.Services.GetRequiredService<MicrosoftStoreCLI>();
+            storeCLI.Subcommands.Add(new TestCommand(this, host));
+            var parseResult = storeCLI.Parse(args);
+
+            IHostApplicationLifetime lifetime = host.Services.GetRequiredService<IHostApplicationLifetime>();
+
+            if (parseResult.CommandResult.Command is not MicrosoftStoreCLI
+                && parseResult.CommandResult.Command is not ReconfigureCommand
+                && parseResult.CommandResult.Command is not TestCommand
+                && !await MicrosoftStoreCLI.InitAsync(ErrorAnsiConsole, host.Services.GetService<IConfigurationManager<Configurations>>()!, host.Services.GetService<ICredentialManager>()!, host.Services.GetService<IConsoleReader>()!, host.Services.GetService<ICLIConfigurator>()!, host.Services.GetService<ILogger<Program>>()!, lifetime.ApplicationStopping))
             {
-                throw new ArgumentException(string.Join(Environment.NewLine, parseResult.Errors.Select(e => e.Message)));
+                // Initialization failed
+                await host.StopAsync();
+                return (Output: string.Empty, Error: string.Empty);
             }
 
-            var testOutputConsole = new TestConsole(outputCapture, errorCapture);
+            if (parseResult.Action is ParseErrorAction parseError)
+            {
+                parseError.ShowTypoCorrections = true;
+                parseError.ShowHelp = true;
+            }
 
-            var invokeTask = parseResult.InvokeAsync(testOutputConsole);
+            parseResult.InvocationConfiguration.Output = outputCapture;
+            parseResult.InvocationConfiguration.Error = errorCapture;
+
+            var invokeTask = parseResult.InvokeAsync(parseResult.InvocationConfiguration);
 
             var result = await invokeTask.ConfigureAwait(false);
+
+            await host.StopAsync();
 
             if (expectedResult.HasValue)
             {
@@ -858,13 +835,13 @@ namespace MSStore.CLI.UnitTests
             return errorCapture;
         }
 
-        private Func<InvocationContext, Task>? _testCallback;
+        private Func<ParseResult, IHost, CancellationToken, Task>? _testCallback;
 
-        private async Task TestAsync(InvocationContext invocationContext)
+        private async Task TestAsync(ParseResult parseResult, IHost host, CancellationToken cancellationToken)
         {
             if (_testCallback != null)
             {
-                await _testCallback(invocationContext);
+                await _testCallback(parseResult, host, cancellationToken);
             }
         }
 
@@ -872,15 +849,15 @@ namespace MSStore.CLI.UnitTests
         {
             private readonly BaseCommandLineTest _baseCommandLineTest;
 
-            public TestCommand(BaseCommandLineTest baseCommandLineTest)
+            public TestCommand(BaseCommandLineTest baseCommandLineTest, IHost host)
                 : base("test")
             {
                 _baseCommandLineTest = baseCommandLineTest;
-                this.SetHandler(_baseCommandLineTest.TestAsync);
+                SetAction((parseResult, ct) => _baseCommandLineTest.TestAsync(parseResult, host, ct));
             }
         }
 
-        internal sealed class OutputCapture : TextWriter, IStandardStreamWriter, IDisposable
+        internal sealed class OutputCapture : TextWriter, IDisposable
         {
 #pragma warning disable CA2213 // Disposable fields should be disposed
             private readonly TextWriter _stdOutWriter;
@@ -906,15 +883,6 @@ namespace MSStore.CLI.UnitTests
                 Captured.WriteLine(value);
                 _stdOutWriter.WriteLine(value);
             }
-        }
-
-        internal sealed class TestConsole(BaseCommandLineTest.OutputCapture outputCapture, BaseCommandLineTest.OutputCapture errorCapture) : IConsole
-        {
-            public IStandardStreamWriter Error { get; set; } = errorCapture;
-            public IStandardStreamWriter Out { get; set; } = outputCapture;
-            public bool IsOutputRedirected { get; set; }
-            public bool IsErrorRedirected { get; set; }
-            public bool IsInputRedirected { get; set; }
         }
 
         internal sealed class CustomAnsiConsoleOutput(TextWriter writer) : IAnsiConsoleOutput

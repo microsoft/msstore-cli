@@ -4,6 +4,7 @@
 using System;
 using System.CommandLine;
 using System.CommandLine.Invocation;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Logging;
@@ -19,33 +20,26 @@ namespace MSStore.CLI.Commands.Flights.Submission
         public StatusCommand()
             : base("status", "Retrieves the current status of the store flight submission.")
         {
-            AddArgument(SubmissionCommand.ProductIdArgument);
-            AddArgument(Flights.GetCommand.FlightIdArgument);
+            Arguments.Add(SubmissionCommand.ProductIdArgument);
+            Arguments.Add(Flights.GetCommand.FlightIdArgument);
         }
 
-        public new class Handler(ILogger<StatusCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : ICommandHandler
+        public class Handler(ILogger<StatusCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : AsynchronousCommandLineAction
         {
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
             private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
-            public string ProductId { get; set; } = null!;
-            public string FlightId { get; set; } = null!;
-
-            public int Invoke(InvocationContext context)
+            public override async Task<int> InvokeAsync(ParseResult parseResult, CancellationToken ct = default)
             {
-                return -1001;
-            }
+                var productId = parseResult.GetRequiredValue(SubmissionCommand.ProductIdArgument);
+                var flightId = parseResult.GetRequiredValue(Flights.GetCommand.FlightIdArgument);
 
-            public async Task<int> InvokeAsync(InvocationContext context)
-            {
-                var ct = context.GetCancellationToken();
-
-                if (ProductTypeHelper.Solve(ProductId) == ProductType.Unpackaged)
+                if (ProductTypeHelper.Solve(productId) == ProductType.Unpackaged)
                 {
                     _ansiConsole.WriteLine("This command is not supported for unpackaged applications.");
-                    return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
+                    return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, -1, ct);
                 }
 
                 var devCenterFlightSubmission = await _ansiConsole.Status().StartAsync<DevCenterFlightSubmission?>("Retrieving flight submission status", async ctx =>
@@ -54,15 +48,15 @@ namespace MSStore.CLI.Commands.Flights.Submission
                     {
                         var storePackagedAPI = await _storeAPIFactory.CreatePackagedAsync(ct: ct);
 
-                        var flight = await storePackagedAPI.GetFlightAsync(ProductId, FlightId, ct);
+                        var flight = await storePackagedAPI.GetFlightAsync(productId, flightId, ct);
 
                         if (flight?.FlightId == null)
                         {
-                            ctx.ErrorStatus(_ansiConsole, $"Could not find application flight with ID '{ProductId}'/'{FlightId}'");
+                            ctx.ErrorStatus(_ansiConsole, $"Could not find application flight with ID '{productId}'/'{flightId}'");
                             return null;
                         }
 
-                        return await storePackagedAPI.GetAnyFlightSubmissionAsync(_ansiConsole, ProductId, flight, ctx, _logger, ct);
+                        return await storePackagedAPI.GetAnyFlightSubmissionAsync(_ansiConsole, productId, flight, ctx, _logger, ct);
                     }
                     catch (Exception err)
                     {
@@ -74,7 +68,7 @@ namespace MSStore.CLI.Commands.Flights.Submission
 
                 if (devCenterFlightSubmission?.Id == null)
                 {
-                    return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, -1, ct);
+                    return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, -1, ct);
                 }
 
                 if (devCenterFlightSubmission.Status != null)
@@ -82,9 +76,9 @@ namespace MSStore.CLI.Commands.Flights.Submission
                     ansiConsole.MarkupLine($"Submission Status = [green]{devCenterFlightSubmission.Status}[/]");
                 }
 
-                devCenterFlightSubmission.StatusDetails?.PrintAllTables(_ansiConsole, ProductId, devCenterFlightSubmission.Id, _logger);
+                devCenterFlightSubmission.StatusDetails?.PrintAllTables(_ansiConsole, productId, devCenterFlightSubmission.Id, _logger);
 
-                return await _telemetryClient.TrackCommandEventAsync<Handler>(ProductId, 0, ct);
+                return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, 0, ct);
             }
         }
     }

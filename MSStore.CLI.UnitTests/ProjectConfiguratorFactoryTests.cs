@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-using System.CommandLine.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using MSStore.CLI.ProjectConfigurators;
 
@@ -33,11 +32,8 @@ namespace MSStore.CLI.UnitTests
                 pathOrUrl = path;
             }
 
-            await RunTestAsync(async (context) =>
+            await RunTestAsync(async (parseResult, host, ct) =>
             {
-                var ct = context.GetCancellationToken();
-
-                var host = context.GetHost();
                 var projectConfiguratorFactory = host.Services.GetService<IProjectConfiguratorFactory>()!;
 
                 if (testDataProjectSubPath != null && testDataProjectSubPath.Length != 0 && path != null)

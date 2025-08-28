@@ -4,6 +4,7 @@
 using System;
 using System.CommandLine;
 using System.CommandLine.Invocation;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Logging;
@@ -20,21 +21,14 @@ namespace MSStore.CLI.Commands
         {
         }
 
-        public new class Handler(IConfigurationManager<Configurations> configurationManager, TelemetryClient telemetryClient, ILogger<InfoCommand.Handler> logger) : ICommandHandler
+        public class Handler(IConfigurationManager<Configurations> configurationManager, TelemetryClient telemetryClient, ILogger<InfoCommand.Handler> logger) : AsynchronousCommandLineAction
         {
             private readonly IConfigurationManager<Configurations> _configurationManager = configurationManager ?? throw new ArgumentNullException(nameof(configurationManager));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-            public int Invoke(InvocationContext context)
+            public override async Task<int> InvokeAsync(ParseResult parseResult, CancellationToken ct = default)
             {
-                return -1001;
-            }
-
-            public async Task<int> InvokeAsync(InvocationContext context)
-            {
-                var ct = context.GetCancellationToken();
-
                 var config = await _configurationManager.LoadAsync(ct: ct);
 
                 var table = new Table
@@ -58,7 +52,7 @@ namespace MSStore.CLI.Commands
                     table.AddRow($"[bold u]Certificate Path[/]", $"[bold u]{config.CertificateFilePath}[/]");
                 }
 
-                bool verbose = context.ParseResult.IsVerbose();
+                bool verbose = parseResult.IsVerbose();
 
                 if (verbose && !string.IsNullOrEmpty(config.StoreApiServiceUrl))
                 {
