@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation. All rights reserved.
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Collections.Generic;
@@ -15,5 +15,16 @@ namespace MSStore.API.Packaged.Models
         public List<string>? RecommendedHardware { get; set; }
         public List<string>? MinimumHardware { get; set; }
         public string? Title { get; set; }
+        public string? LicenseTerms { get; set; }
+        public string? CopyrightAndTrademarkInfo { get; set; }
+        public string? ShortDescription { get; set; }
+        public string? ShortTitle { get; set; }
+        public string? VoiceTitle { get; set; }
+        public string? DevStudio { get; set; }
+
+
+
+
+
     }
 }
