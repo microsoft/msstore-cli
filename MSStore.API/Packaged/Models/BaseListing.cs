@@ -21,10 +21,5 @@ namespace MSStore.API.Packaged.Models
         public string? ShortTitle { get; set; }
         public string? VoiceTitle { get; set; }
         public string? DevStudio { get; set; }
-
-
-
-
-
     }
 }
