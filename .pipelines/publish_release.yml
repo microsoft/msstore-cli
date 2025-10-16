@@ -155,7 +155,7 @@ extends:
             isDraft: true
             isPreRelease: true
             changeLogCompareToRelease: lastNonDraftRelease
-        - task: MS-RDX-MRO.windows-store-publish-dev.publish-task.store-publish@3
+        - task: MS-RDX-MRO.windows-store-publish.publish-task.store-publish@3
           displayName: 'Publish Store'
           inputs:
             serviceEndpoint: MSStoreCLI - StoreBroker
