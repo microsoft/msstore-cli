@@ -9,7 +9,7 @@ namespace MSStore.CLI.Commands
     internal class AppsCommand : Command
     {
         public AppsCommand(ListCommand listCommand, GetCommand getCommand)
-            : base("apps", "Execute apps related tasks.")
+            : base("apps", "Execute apps related tasks")
         {
             Subcommands.Add(listCommand);
             Subcommands.Add(getCommand);
