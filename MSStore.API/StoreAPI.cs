@@ -530,8 +530,9 @@ namespace MSStore.API
                       moduleStatus.Errors.Count > 0 &&
                       moduleStatus.Errors.Any((e) => e.Target != "packages" || e.Code == "packageuploaderror"))
                 {
-                    Debug.WriteLine(moduleStatus.Errors);
-                    return false;
+                    var errorMessages = string.Join("; ", moduleStatus.Errors.Select(e => $"{e.Code}: {e.Message}"));
+                    Debug.WriteLine($"Module status polling errors: {errorMessages}");
+                    throw new MSStoreWrappedErrorException($"Module status polling failed for product '{productId}'.", moduleStatus.Errors);
                 }
 
                 if (!moduleStatus.IsSuccess)
