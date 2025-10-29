@@ -45,9 +45,9 @@ jobs:
       run: dotnet build MSStore.CLI.sln --no-restore /p:Configuration=Release
     - name: Test net9.0
       run: dotnet run --project MSStore.CLI.UnitTests -f net9.0 --no-build -c Release --coverage --coverage-output-format cobertura --report-trx --results-directory ./TestResults
-    - name: Test net9.0-windows10.0.17763.0
+    - name: Test net9.0-windows10.0.26100.0
       if: ${{ matrix.os == 'windows-latest' }}
-      run: dotnet run --project MSStore.CLI.UnitTests -f net9.0-windows10.0.17763.0 --no-build -c Release --coverage --coverage-output-format cobertura --report-trx --results-directory ./TestResults
+      run: dotnet run --project MSStore.CLI.UnitTests -f net9.0-windows10.0.26100.0 --no-build -c Release --coverage --coverage-output-format cobertura --report-trx --results-directory ./TestResults
     - name: Publish test results
       if: ${{ !cancelled() }}
       uses: actions/upload-artifact@v4
@@ -84,7 +84,7 @@ jobs:
         include:
           - os: windows-latest
             dotnet-os: win
-            dotnet-framework: net9.0-windows10.0.17763.0
+            dotnet-framework: net9.0-windows10.0.26100.0
           - os: ubuntu-latest
             dotnet-os: linux
             dotnet-framework: net9.0
@@ -145,3 +145,4 @@ jobs:
       with:
         name: CLI-MSIX-${{ matrix.dotnet-arch }}
         path: ${{ github.workspace }}/MSStore.CLI.MSIX/AppPackages/${{ matrix.dotnet-arch }}/MSStore.CLI.MSIX_${{ env.GitBuildVersionSimple }}.0_${{ matrix.dotnet-arch }}_Test.msix
+        
