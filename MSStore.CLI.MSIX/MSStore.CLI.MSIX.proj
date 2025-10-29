@@ -29,7 +29,7 @@
             <_MakeMsix_Path Condition="'$(_MakeMsix_Path)' == ''">$(_MakeMsix_Directory)$(_MakeMsix_Executable)</_MakeMsix_Path>
             <_MakeMsix_Parameters>/o /h SHA256</_MakeMsix_Parameters>
             <_MakeMsixCommand>&quot;$(_MakeMsix_Path)&quot; pack $(_MakeMsix_Parameters) /d $(_MakeMsix_WorkDir) /p $(_MakeMsix_OutFilename)</_MakeMsixCommand>
-            <_MakePRI_Directory>C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\</_MakePRI_Directory>
+            <_MakePRI_Directory>C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\</_MakePRI_Directory>
             <_MakePRI_Executable>makepri.exe</_MakePRI_Executable>
             <_MakePRI_Path Condition="'$(_MakePRI_Path)' == ''">$(_MakePRI_Directory)$(_MakePRI_Executable)</_MakePRI_Path>
             <_MakePRI_CreateConfig_Parameters>/cf $(_MakePri_WorkDir)priconfig.xml /dq en-US /o</_MakePRI_CreateConfig_Parameters>
