@@ -89,7 +89,7 @@ namespace MSStore.CLI.Commands.Apps
                 {
                     if (app?.Id == null)
                     {
-                        _ansiConsole.MarkupLine($"Could not find application with ID '{productId}'");
+                        _ansiConsole.MarkupLine($"Could not find application  with ID '{productId}'");
                         return await _telemetryClient.TrackCommandEventAsync<Handler>(-1, ct);
                     }
                     else
@@ -98,7 +98,6 @@ namespace MSStore.CLI.Commands.Apps
                         return await _telemetryClient.TrackCommandEventAsync<Handler>(0, ct);
                     }
                 }
-
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(-2, ct);
             }
