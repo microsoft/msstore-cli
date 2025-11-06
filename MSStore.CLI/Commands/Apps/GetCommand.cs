@@ -99,6 +99,7 @@ namespace MSStore.CLI.Commands.Apps
                     }
                 }
 
+
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(-2, ct);
             }
         }
