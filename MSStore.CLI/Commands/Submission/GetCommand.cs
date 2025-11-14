@@ -113,12 +113,12 @@ namespace MSStore.CLI.Commands.Submission
 
                 if (submission == null)
                 {
-                    return await telemetryClient.TrackCommandEventAsync<Handler>(productId, -1, ct);
+                    return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, -1, ct);
                 }
 
                 AnsiConsole.WriteLine(JsonSerializer.Serialize(submission, submission.GetType(), SourceGenerationContext.GetCustom(true)));
 
-                return await telemetryClient.TrackCommandEventAsync<Handler>(productId, 0, ct);
+                return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, 0, ct);
             }
         }
     }
