@@ -9,6 +9,7 @@ using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
+using MSStore.CLI.Services;
 
 namespace MSStore.CLI.Helpers
 {
@@ -20,6 +21,7 @@ namespace MSStore.CLI.Helpers
 
             properties.Add("ret", returnCode.ToString(CultureInfo.InvariantCulture));
 
+            properties.Add("Source", EnvironmentInfo.GetEnvironmentInfo());
             telemetryClient.TrackEvent(eventName, properties);
             if (!await telemetryClient.FlushAsync(ct))
             {

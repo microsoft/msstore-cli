@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System;
-using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Text.Json;
@@ -51,8 +50,6 @@ namespace MSStore.CLI.Commands.Submission
                 var module = parseResult.GetValue(ModuleOption);
                 var language = parseResult.GetRequiredValue(SubmissionCommand.LanguageOption);
 
-                // Detect if running in GitHub workflow
-                var isGitHubWorkflow = IsRunningInGitHubWorkflow();
                 var submission = await _ansiConsole.Status().StartAsync("Retrieving Submission", async ctx =>
                 {
                     try
@@ -115,29 +112,12 @@ namespace MSStore.CLI.Commands.Submission
 
                 if (submission == null)
                 {
-                    return await TrackCommandEventWithContextAsync(productId, -1, isGitHubWorkflow, ct);
+                    return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, -1, ct);
                 }
 
                 AnsiConsole.WriteLine(JsonSerializer.Serialize(submission, submission.GetType(), SourceGenerationContext.GetCustom(true)));
 
-                return await TrackCommandEventWithContextAsync(productId, 0, isGitHubWorkflow, ct);
-            }
-
-            private static bool IsRunningInGitHubWorkflow()
-            {
-                // GitHub Actions sets several environment variables that we can check
-                return !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GITHUB_ACTIONS")) ||
-                       !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GITHUB_WORKFLOW"));
-            }
-
-            private async Task<int> TrackCommandEventWithContextAsync(string productId, int result, bool isGitHubWorkflow, CancellationToken ct)
-            {
-                var properties = new Dictionary<string, string>();
-
-                // Add GitHub workflow context to telemetry if running in GitHub workflow
-                properties.Add("IsGitHubWorkflow", isGitHubWorkflow ? "true" : "false");
-
-                return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, result, properties, ct);
+                return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, 0, ct);
             }
         }
     }
