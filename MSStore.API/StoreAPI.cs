@@ -520,6 +520,9 @@ namespace MSStore.API
                 IsReady = false
             };
 
+            var timeout = TimeSpan.FromSeconds(120);
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
             while (status != null && !status.IsReady)
             {
                 var moduleStatus = await GetModuleStatusAsync(productId, ct);
@@ -559,13 +562,22 @@ namespace MSStore.API
                 if (status?.IsReady == true)
                 {
                     Debug.WriteLine("Success!");
+                    stopwatch.Stop();
                     return true;
+                }
+
+                // Check if timeout has been reached before waiting
+                if (stopwatch.Elapsed >= timeout)
+                {
+                    stopwatch.Stop();
+                    throw new TimeoutException($"Module status polling timed out after {timeout.TotalMinutes} minute(s) for product '{productId}'. One of the app modules is not in ready status.");
                 }
 
                 Debug.WriteLine("Waiting 10 seconds.");
                 await Task.Delay(10000, ct);
             }
 
+            stopwatch.Stop();
             return false;
         }
     }
