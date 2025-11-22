@@ -22,7 +22,7 @@ namespace MSStore.CLI.Commands
     internal class PublishCommand : Command
     {
         internal static readonly Option<string> FlightIdOption;
-        internal static readonly Option<float> PackageRolloutPercentageOption;
+        internal static readonly Option<float?> PackageRolloutPercentageOption;
         private static readonly Option<DirectoryInfo?> InputDirectoryOption;
         private static readonly Option<string> AppIdOption;
         private static readonly Option<bool> NoCommitOption;
@@ -33,7 +33,7 @@ namespace MSStore.CLI.Commands
             {
                 Description = "Specifies the Flight Id where the package will be published."
             };
-            PackageRolloutPercentageOption = new Option<float>("--packageRolloutPercentage", "-prp")
+            PackageRolloutPercentageOption = new Option<float?>("--packageRolloutPercentage", "-prp")
             {
                 Description = "Specifies the rollout percentage of the package. The value must be between 0 and 100.",
                 CustomParser = result =>
