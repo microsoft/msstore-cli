@@ -138,7 +138,7 @@ namespace MSStore.CLI.ProjectConfigurators
             return Task.FromResult<(string, List<SubmissionImage>)>((description, images));
         }
 
-        public virtual async Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, string? flightId, DirectoryInfo? inputDirectory, bool noCommit, float? packageRolloutPercentage, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public virtual async Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, string? flightId, DirectoryInfo? inputDirectory, bool noCommit, float? packageRolloutPercentage, bool replacePackages, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             var (projectRootPath, projectFile) = GetInfo(pathOrUrl);
 
@@ -181,7 +181,7 @@ namespace MSStore.CLI.ProjectConfigurators
 
             Logger.LogInformation("Trying to publish these {FileCount} files: {FileNames}", packageFiles.Count(), string.Join(", ", packageFiles.Select(f => $"'{f.FullName}'")));
 
-            return await storePackagedAPI.PublishAsync(ErrorAnsiConsole, app, flightId, GetFirstSubmissionDataAsync, AllowTargetFutureDeviceFamilies, output, packageFiles, noCommit, packageRolloutPercentage, _browserLauncher, _consoleReader, _zipFileManager, _fileDownloader, _azureBlobManager, _environmentInformationService, _logger, ct);
+            return await storePackagedAPI.PublishAsync(ErrorAnsiConsole, app, flightId, GetFirstSubmissionDataAsync, AllowTargetFutureDeviceFamilies, output, packageFiles, noCommit, packageRolloutPercentage, replacePackages, _browserLauncher, _consoleReader, _zipFileManager, _fileDownloader, _azureBlobManager, _environmentInformationService, _logger, ct);
         }
 
         protected virtual DirectoryInfo GetInputDirectory(DirectoryInfo projectRootPath)

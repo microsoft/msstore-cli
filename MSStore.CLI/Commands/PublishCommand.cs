@@ -23,6 +23,7 @@ namespace MSStore.CLI.Commands
     {
         internal static readonly Option<string> FlightIdOption;
         internal static readonly Option<float> PackageRolloutPercentageOption;
+        internal static readonly Option<bool> ReplacePackagesOption;
         private static readonly Option<DirectoryInfo?> InputDirectoryOption;
         private static readonly Option<string> AppIdOption;
         private static readonly Option<bool> NoCommitOption;
@@ -59,6 +60,12 @@ namespace MSStore.CLI.Commands
                         return parsedPercentage;
                     }
                 }
+            };
+
+            ReplacePackagesOption = new Option<bool>("--replacePackages", "-rp")
+            {
+                Description = "If provided, replaces all app packages",
+                DefaultValueFactory = _ => false
             };
 
             InputDirectoryOption = new Option<DirectoryInfo?>("--inputDirectory", "-i")
@@ -105,6 +112,7 @@ namespace MSStore.CLI.Commands
             Options.Add(NoCommitOption);
             Options.Add(FlightIdOption);
             Options.Add(PackageRolloutPercentageOption);
+            Options.Add(ReplacePackagesOption);
         }
 
         public class Handler(
@@ -126,6 +134,8 @@ namespace MSStore.CLI.Commands
                 var appId = parseResult.GetValue(AppIdOption);
                 var flightId = parseResult.GetValue(FlightIdOption);
                 var packageRolloutPercentage = parseResult.GetValue(PackageRolloutPercentageOption);
+                var replacePackages = parseResult.GetValue(ReplacePackagesOption);
+
                 var inputDirectory = parseResult.GetValue(InputDirectoryOption);
                 var noCommit = parseResult.GetRequiredValue(NoCommitOption);
 
@@ -174,7 +184,9 @@ namespace MSStore.CLI.Commands
                 }
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(
-                    await projectPublisher.PublishAsync(pathOrUrl, app, flightId, inputDirectory, noCommit, packageRolloutPercentage, storePackagedAPI, ct), props, ct);
+                    await projectPublisher.PublishAsync(pathOrUrl, app, flightId, inputDirectory, noCommit, packageRolloutPercentage, replacePackages, storePackagedAPI, ct),
+                    props,
+                    ct);
             }
         }
     }
