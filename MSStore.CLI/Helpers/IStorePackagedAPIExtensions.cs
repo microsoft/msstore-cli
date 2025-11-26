@@ -352,6 +352,7 @@ namespace MSStore.CLI.Helpers
             IEnumerable<FileInfo> input,
             bool noCommit,
             float? packageRolloutPercentage,
+            bool replacePackages,
             IBrowserLauncher browserLauncher,
             IConsoleReader consoleReader,
             IZipFileManager zipFileManager,
@@ -517,7 +518,7 @@ namespace MSStore.CLI.Helpers
             ansiConsole.MarkupLine("New Submission [green]properly configured[/].");
             logger.LogInformation("New Submission properly configured. FileUploadUrl: {FileUploadUrl}", submission.FileUploadUrl);
 
-            var uploadZipFilePath = await PrepareBundleAsync(ansiConsole, submission, output, input, zipFileManager, fileDownloader, logger, ct);
+            var uploadZipFilePath = await PrepareBundleAsync(ansiConsole, submission, output, input, zipFileManager, fileDownloader, replacePackages, logger, ct);
 
             if (uploadZipFilePath == null)
             {
@@ -624,7 +625,7 @@ namespace MSStore.CLI.Helpers
             return await storePackagedAPI.HandleLastSubmissionStatusAsync(ansiConsole, lastSubmissionStatus, app.Id, flightId, submission.Id, browserLauncher, logger, ct);
         }
 
-        private static async Task<string?> PrepareBundleAsync(IAnsiConsole ansiConsole, IDevCenterSubmission submission, DirectoryInfo output, IEnumerable<FileInfo> packageFiles, IZipFileManager zipFileManager, IFileDownloader fileDownloader, ILogger logger, CancellationToken ct)
+        private static async Task<string?> PrepareBundleAsync(IAnsiConsole ansiConsole, IDevCenterSubmission submission, DirectoryInfo output, IEnumerable<FileInfo> packageFiles, IZipFileManager zipFileManager, IFileDownloader fileDownloader, bool replacePackages, ILogger logger, CancellationToken ct)
         {
             DevCenterSubmission? devCenterSubmission = submission as DevCenterSubmission;
             DevCenterFlightSubmission? devCenterFlightSubmission = submission as DevCenterFlightSubmission;
@@ -692,10 +693,24 @@ namespace MSStore.CLI.Helpers
 
                             if (devCenterSubmission != null)
                             {
+                                if (replacePackages && devCenterSubmission.ApplicationPackages != null)
+                                {
+                                    foreach(var pkg in devCenterSubmission.ApplicationPackages)
+                                    {
+                                        pkg.FileStatus = FileStatus.PendingDelete;
+                                    }
+                                }
                                 devCenterSubmission.ApplicationPackages?.Add(newApplicationPackage);
                             }
                             else if (devCenterFlightSubmission != null)
                             {
+                                if (replacePackages && devCenterFlightSubmission.FlightPackages != null)
+                                {
+                                    foreach (var pkg in devCenterFlightSubmission.FlightPackages)
+                                    {
+                                        pkg.FileStatus = FileStatus.PendingDelete;
+                                    }
+                                }
                                 devCenterFlightSubmission.FlightPackages?.Add(newApplicationPackage);
                             }
 
