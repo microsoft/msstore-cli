@@ -102,7 +102,7 @@ namespace MSStore.CLI.Commands.Submission
                 var currentSubmission = await storePackagedAPI.GetSubmissionAsync(application.Id, submissionId, ct);
                 if (currentSubmission?.Pricing != null && currentSubmission?.Pricing?.PriceId == "Base")
                 {
-                    await storePackagedAPI.DeleteSubmissionAsync(application.Id, currentSubmission.Id, ct);
+                    await storePackagedAPI.DeleteSubmissionAsync(application.Id, submissionId: currentSubmission.Id!, ct);
                     ansiConsole.MarkupLine("[red bold]App updates are supported only for Free products.[/]");
                     return -1;
                 }
