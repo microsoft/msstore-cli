@@ -492,9 +492,11 @@ namespace MSStore.CLI.Helpers
             DevCenterSubmission? devCenterSubmission = submission as DevCenterSubmission;
             DevCenterFlightSubmission? devCenterFlightSubmission = submission as DevCenterFlightSubmission;
 
-            if (devCenterSubmission?.Pricing != null && devCenterSubmission.Pricing.IsAdvancedPricingModel)
+            if (devCenterSubmission?.Pricing != null && devCenterSubmission?.Pricing?.PriceId == "Base")
             {
-                devCenterSubmission.Pricing.PriceId = null;
+                await storePackagedAPI.DeleteSubmissionAsync(app.Id, submission.Id, ct);
+                ansiConsole.MarkupLine("[red bold]App updates are supported only for Free products.[/]");
+                return -1;
             }
 
             if ((devCenterSubmission != null && devCenterSubmission.ApplicationPackages == null) ||
