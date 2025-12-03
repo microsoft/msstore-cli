@@ -18,11 +18,12 @@ namespace MSStore.CLI.Services
     {
         private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
-        public async Task<string> UploadFileAsync(string blobUri, string localFilePath, IProgress<double> progress, CancellationToken ct)
+        public async Task<string> UploadFileAsync(string blobUri, string localFilePath, IProgress<double> progress, long uploadTimeout, CancellationToken ct)
         {
             using var fileStream = new FileStream(localFilePath, FileMode.Open, FileAccess.Read);
 
             var blobClientOptions = new BlobClientOptions();
+            blobClientOptions.Retry.NetworkTimeout = TimeSpan.FromSeconds(uploadTimeout);
             blobClientOptions.AddPolicy(new AddCorrelationIdHeaderPolicy(_telemetryClient), HttpPipelinePosition.PerCall);
             var blobClient = new BlobClient(new Uri(blobUri.Replace("+", "%2B")), blobClientOptions);
             var blobUploadOptions = new BlobUploadOptions
