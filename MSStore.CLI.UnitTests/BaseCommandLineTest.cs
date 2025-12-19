@@ -203,7 +203,7 @@ namespace MSStore.CLI.UnitTests
 
             var azureBlobManagerMock = new Mock<IAzureBlobManager>();
             azureBlobManagerMock
-                .Setup(x => x.UploadFileAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IProgress<double>>(), It.IsAny<CancellationToken>()))
+                .Setup(x => x.UploadFileAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IProgress<double>>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(string.Empty);
 
             var fileDownloader = new Mock<IFileDownloader>();
