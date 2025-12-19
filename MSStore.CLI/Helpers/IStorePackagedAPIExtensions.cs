@@ -650,11 +650,11 @@ namespace MSStore.CLI.Helpers
                         List<ApplicationPackage>? packages;
                         if (devCenterSubmission != null)
                         {
-                            packages = devCenterSubmission.ApplicationPackages.FilterUnsupported();
+                            packages = devCenterSubmission.ApplicationPackages;
                         }
                         else if (devCenterFlightSubmission != null)
                         {
-                            packages = devCenterFlightSubmission.FlightPackages.FilterUnsupported();
+                            packages = devCenterFlightSubmission.FlightPackages;
                         }
                         else
                         {
@@ -665,7 +665,7 @@ namespace MSStore.CLI.Helpers
 
                         foreach (var file in packageFiles)
                         {
-                            var applicationPackage = packages.FirstOrDefault(p => Path.GetExtension(p.FileName) == file.Extension);
+                            var applicationPackage = packages?.FirstOrDefault(p => Path.GetExtension(p.FileName) == file.Extension);
                             if (applicationPackage != null)
                             {
                                 if (applicationPackage.FileStatus == FileStatus.PendingUpload)
