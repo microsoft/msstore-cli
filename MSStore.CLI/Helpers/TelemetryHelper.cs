@@ -15,6 +15,16 @@ namespace MSStore.CLI.Helpers
 {
     internal static class TelemetryHelper
     {
+        private static async Task<string> GetSellerId(CancellationToken ct)
+        {
+            var configurationManager = new ConfigurationManager<Configurations>(
+                                ConfigurationsSourceGenerationContext.Default.Configurations,
+                                "settings.json",
+                                null);
+            var config = await configurationManager.LoadAsync(false, ct);
+            return config.SellerId?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
+        }
+
         public static async Task<int> TrackCommandEventAsync(this TelemetryClient telemetryClient, string eventName, int returnCode, IDictionary<string, string>? properties = null, CancellationToken ct = default)
         {
             properties ??= new Dictionary<string, string>();
@@ -22,6 +32,9 @@ namespace MSStore.CLI.Helpers
             properties.Add("ret", returnCode.ToString(CultureInfo.InvariantCulture));
 
             properties.Add("Source", EnvironmentInfo.GetEnvironmentInfo());
+
+            properties.Add("SellerId", await GetSellerId(ct));
+
             telemetryClient.TrackEvent(eventName, properties);
             if (!await telemetryClient.FlushAsync(ct))
             {
