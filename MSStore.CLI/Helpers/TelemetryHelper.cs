@@ -17,12 +17,19 @@ namespace MSStore.CLI.Helpers
     {
         private static async Task<string> GetSellerId(CancellationToken ct)
         {
-            var configurationManager = new ConfigurationManager<Configurations>(
-                                ConfigurationsSourceGenerationContext.Default.Configurations,
-                                "settings.json",
-                                null);
-            var config = await configurationManager.LoadAsync(false, ct);
-            return config.SellerId?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
+            try
+            {
+                var configurationManager = new ConfigurationManager<Configurations>(
+                                    ConfigurationsSourceGenerationContext.Default.Configurations,
+                                    "settings.json",
+                                    null);
+                var config = await configurationManager.LoadAsync(false, ct);
+                return config.SellerId?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
+            }
+            catch (Exception)
+            {
+                return string.Empty;
+            }
         }
 
         public static async Task<int> TrackCommandEventAsync(this TelemetryClient telemetryClient, string eventName, int returnCode, IDictionary<string, string>? properties = null, CancellationToken ct = default)
