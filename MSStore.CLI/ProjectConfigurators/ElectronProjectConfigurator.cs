@@ -406,7 +406,7 @@ namespace MSStore.CLI.ProjectConfigurators
             _electronManifest ??= await _electronManifestManager.LoadAsync(fileInfo, ct);
         }
 
-        public override async Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, string? flightId, DirectoryInfo? inputDirectory, bool noCommit, float? packageRolloutPercentage, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public override async Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, string? flightId, DirectoryInfo? inputDirectory, bool noCommit, float? packageRolloutPercentage, long uploadTimeout, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             if (_electronManifest == null)
             {
@@ -414,7 +414,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 await EnsureElectronManifestAsync(manifestFile, ct);
             }
 
-            return await base.PublishAsync(pathOrUrl, app, flightId, inputDirectory, noCommit, packageRolloutPercentage, storePackagedAPI, ct);
+            return await base.PublishAsync(pathOrUrl, app, flightId, inputDirectory, noCommit, packageRolloutPercentage, uploadTimeout, storePackagedAPI, ct);
         }
     }
 }

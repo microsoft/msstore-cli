@@ -9,6 +9,6 @@ namespace MSStore.CLI.Services
 {
     internal interface IAzureBlobManager
     {
-        Task<string> UploadFileAsync(string blobUri, string localFilePath, IProgress<double> progress, CancellationToken ct);
+        Task<string> UploadFileAsync(string blobUri, string localFilePath, IProgress<double> progress, long uploadTimeout, CancellationToken ct);
     }
 }

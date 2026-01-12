@@ -352,6 +352,7 @@ namespace MSStore.CLI.Helpers
             IEnumerable<FileInfo> input,
             bool noCommit,
             float? packageRolloutPercentage,
+            long uploadTimeout,
             IBrowserLauncher browserLauncher,
             IConsoleReader consoleReader,
             IZipFileManager zipFileManager,
@@ -567,7 +568,7 @@ namespace MSStore.CLI.Helpers
                     var task = ctx.AddTask("[green]Uploading Bundle to [u]Azure blob[/][/]");
                     try
                     {
-                        await azureBlobManager.UploadFileAsync(submission.FileUploadUrl, uploadZipFilePath, task, ct);
+                        await azureBlobManager.UploadFileAsync(submission.FileUploadUrl, uploadZipFilePath, task, uploadTimeout, ct);
                         ansiConsole.MarkupLine($":check_mark_button: [green]Successfully uploaded the application package.[/]");
                         return true;
                     }
