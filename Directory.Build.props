@@ -22,8 +22,14 @@
     <RunSettingsFilePath>$(MSBuildThisFileDirectory)\.runsettings</RunSettingsFilePath>
     <Nullable>enable</Nullable>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
-    <!-- BROKEN: IL Trimming, until Microsoft.Identity.Client supports it, just so it builds --><!--
-    <NoWarn>$(NoWarn);IL2026;IL2046;IL2055;IL2057;IL2060;IL2062;IL2065;IL2067;IL2070;IL2072</NoWarn>-->
+    <!--
+      To be removed when https://github.com/microsoft/ApplicationInsights-dotnet/pull/3120 is merged
+      We don't actually hit these trimmer errors, but they are being reported by the Microsoft.ApplicationInsights package
+      so we need to suppress them until the package is updated to fix the underlying issue.
+    -->
+    <NoWarn>$(NoWarn);IL2026;IL3050</NoWarn>
+    <!-- The CA1873 and CA1848 warnings are ILogger.LogInformation, but we are ok with the performance implications in this case. -->
+    <NoWarn>$(NoWarn);CA1873;CA1848</NoWarn>
   </PropertyGroup>
   
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
@@ -32,7 +38,7 @@
   <ItemGroup>
     <PackageReference Include="Nerdbank.GitVersioning" Condition="!Exists('packages.config')">
       <PrivateAssets>all</PrivateAssets>
-      <Version>3.7.115</Version>
+      <Version>3.9.50</Version>
     </PackageReference>
   </ItemGroup>
 </Project>

@@ -34,19 +34,19 @@ namespace MSStore.CLI.Services.CredentialManager.Unix
         }
 
         [SupportedOSPlatform("linux")]
-        [DllImport(LibSecret, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Auto)]
+        [DllImport(LibSecret, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Ansi, BestFitMapping = false, ThrowOnUnmappableChar = true)]
         public static extern IntPtr secret_schema_new(string name, int flags, string attribute1, int attribute1Type, string attribute2, int attribute2Type, IntPtr end);
 
         [SupportedOSPlatform("linux")]
-        [DllImport(LibSecret, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Auto)]
+        [DllImport(LibSecret, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Ansi, BestFitMapping = false, ThrowOnUnmappableChar = true)]
         public static extern int secret_password_store_sync(IntPtr schema, string collection, string label, string password, IntPtr cancellable, out IntPtr error, string attribute1Type, string attribute1Value, string attribute2Type, string attribute2Value, IntPtr end);
 
         [SupportedOSPlatform("linux")]
-        [DllImport(LibSecret, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Auto)]
+        [DllImport(LibSecret, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Ansi, BestFitMapping = false, ThrowOnUnmappableChar = true)]
         public static extern string secret_password_lookup_sync(IntPtr schema, IntPtr cancellable, out IntPtr error, string attribute1Type, string attribute1Value, string attribute2Type, string attribute2Value, IntPtr end);
 
         [SupportedOSPlatform("linux")]
-        [DllImport(LibSecret, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Auto)]
+        [DllImport(LibSecret, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Ansi, BestFitMapping = false, ThrowOnUnmappableChar = true)]
         public static extern int secret_password_clear_sync(IntPtr schema, IntPtr cancellable, out IntPtr error, string attribute1Type, string attribute1Value, string attribute2Type, string attribute2Value, IntPtr end);
 
         [SupportedOSPlatform("macos")]
@@ -70,11 +70,11 @@ namespace MSStore.CLI.Services.CredentialManager.Unix
         public static extern int SecKeychainItemFreeContent(IntPtr attrList, IntPtr data);
 
         [SupportedOSPlatform("macos")]
-        [DllImport(SecurityFramework, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(SecurityFramework, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl, BestFitMapping = false, ThrowOnUnmappableChar = true)]
         public static extern int SecKeychainFindGenericPassword(IntPtr keychainOrArray, uint serviceNameLength, string serviceName, uint accountNameLength, string accountName, out uint passwordLength, out IntPtr passwordData, out IntPtr itemRef);
 
         [SupportedOSPlatform("macos")]
-        [DllImport(SecurityFramework, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(SecurityFramework, CharSet = CharSet.Ansi, CallingConvention = CallingConvention.Cdecl, BestFitMapping = false, ThrowOnUnmappableChar = true)]
         public static extern int SecKeychainAddGenericPassword(IntPtr keychain, uint serviceNameLength, string serviceName, uint accountNameLength, string accountName, uint passwordLength, byte[] passwordData, out IntPtr itemRef);
 
         [SupportedOSPlatform("macos")]
