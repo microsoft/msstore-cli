@@ -317,7 +317,7 @@ namespace MSStore.CLI.ProjectConfigurators
             return Task.FromResult((0, (DirectoryInfo?)new DirectoryInfo(pathOrUrl)));
         }
 
-        public async Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, string? flightId, DirectoryInfo? inputDirectory, bool noCommit, float? packageRolloutPercentage, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
+        public async Task<int> PublishAsync(string pathOrUrl, DevCenterApplication? app, string? flightId, DirectoryInfo? inputDirectory, bool noCommit, float? packageRolloutPercentage, long uploadTimeout, IStorePackagedAPI storePackagedAPI, CancellationToken ct)
         {
             Uri? uri = GetUri(pathOrUrl);
 
@@ -391,6 +391,7 @@ namespace MSStore.CLI.ProjectConfigurators
                 packageFiles,
                 noCommit,
                 packageRolloutPercentage,
+                uploadTimeout,
                 _browserLauncher,
                 _consoleReader,
                 _zipFileManager,

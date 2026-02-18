@@ -23,6 +23,7 @@ namespace MSStore.CLI.Commands
     {
         internal static readonly Option<string> FlightIdOption;
         internal static readonly Option<float?> PackageRolloutPercentageOption;
+        internal static readonly Option<long> UploadTimeoutOption;
         private static readonly Option<DirectoryInfo?> InputDirectoryOption;
         private static readonly Option<string> AppIdOption;
         private static readonly Option<bool> NoCommitOption;
@@ -94,6 +95,34 @@ namespace MSStore.CLI.Commands
                 Description = "Disables committing the submission, keeping it in draft state.",
                 DefaultValueFactory = _ => false
             };
+
+            UploadTimeoutOption = new Option<long>("--uploadTimeout", "-ut")
+            {
+                Description = "Specifies timeout in seconds for package upload to blob storage. Valid only for MSIX and PWA packages.",
+                CustomParser = result =>
+                {
+                    if (result.Tokens.Count == 0)
+                    {
+                        return 100;
+                    }
+
+                    string? seconds = result.Tokens.Single().Value;
+                    if (!long.TryParse(seconds, out long parsedSeconds))
+                    {
+                        result.AddError("Invalid seconds value. The value must be between 100 and 100000.");
+                        return 100;
+                    }
+                    else if (parsedSeconds < 100 || parsedSeconds > 100000)
+                    {
+                        result.AddError("Invalid seconds value. The value must be between 100 and 100000.");
+                        return 100;
+                    }
+                    else
+                    {
+                        return parsedSeconds;
+                    }
+                }
+            };
         }
 
         public PublishCommand()
@@ -105,6 +134,7 @@ namespace MSStore.CLI.Commands
             Options.Add(NoCommitOption);
             Options.Add(FlightIdOption);
             Options.Add(PackageRolloutPercentageOption);
+            Options.Add(UploadTimeoutOption);
         }
 
         public class Handler(
@@ -128,6 +158,7 @@ namespace MSStore.CLI.Commands
                 var packageRolloutPercentage = parseResult.GetValue(PackageRolloutPercentageOption);
                 var inputDirectory = parseResult.GetValue(InputDirectoryOption);
                 var noCommit = parseResult.GetRequiredValue(NoCommitOption);
+                var uploadTimeout = parseResult.GetValue(UploadTimeoutOption);
 
                 var projectPublisher = await _projectConfiguratorFactory.FindProjectPublisherAsync(pathOrUrl, ct);
 
@@ -174,7 +205,7 @@ namespace MSStore.CLI.Commands
                 }
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(
-                    await projectPublisher.PublishAsync(pathOrUrl, app, flightId, inputDirectory, noCommit, packageRolloutPercentage, storePackagedAPI, ct), props, ct);
+                    await projectPublisher.PublishAsync(pathOrUrl, app, flightId, inputDirectory, noCommit, packageRolloutPercentage, uploadTimeout, storePackagedAPI, ct), props, ct);
             }
         }
     }
