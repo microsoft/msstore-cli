@@ -25,6 +25,7 @@ using MSStore.CLI.Services;
 using MSStore.CLI.Services.CredentialManager;
 using MSStore.CLI.Services.ElectronManager;
 using MSStore.CLI.Services.Graph;
+using MSStore.CLI.Services.Http;
 using MSStore.CLI.Services.PartnerCenter;
 using MSStore.CLI.Services.PWABuilder;
 using MSStore.CLI.Services.Telemetry;
@@ -117,7 +118,7 @@ namespace MSStore.CLI
                         })
                         .ConfigurePrimaryHttpMessageHandler(() =>
                         {
-                            return new HttpClientHandler
+                            return new RetryAfterHttpHandler
                             {
                                 CheckCertificateRevocationList = true
                             };
