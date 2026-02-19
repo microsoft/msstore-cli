@@ -28,15 +28,8 @@ steps:
 - script: nbgv cloud
   condition: not(startsWith(variables.AgentOS, 'Darwin'))
   displayName: Set Version
-- script: dotnet build MSStore.CLI --no-restore --self-contained -r ${{ parameters.dotnet_runtime }}-${{ parameters.dotnet_arch }} -f ${{ parameters.dotnet_framework }} /p:Configuration=${{ parameters.dotnet_configuration }}
-  displayName: Build CLI
-- task: DownloadPipelineArtifact@2
-  inputs:
-    buildType: 'current'
-    artifactName: 'NuGetDLLs'
-    targetPath: '$(System.DefaultWorkingDirectory)/MSStore.CLI/bin/${{ parameters.dotnet_configuration }}/${{ parameters.dotnet_framework }}/${{ parameters.dotnet_runtime }}-${{ parameters.dotnet_arch }}'
-- script: dotnet publish MSStore.CLI --no-build --self-contained -r ${{ parameters.dotnet_runtime }}-${{ parameters.dotnet_arch }} -f ${{ parameters.dotnet_framework }} /p:Configuration=${{ parameters.dotnet_configuration }} /p:PublishProfile=${{ parameters.dotnet_runtime }}-${{ parameters.dotnet_arch }}
-  displayName: Publish NoSelfContained CLI
+- script: dotnet publish MSStore.CLI --self-contained -r ${{ parameters.dotnet_runtime }}-${{ parameters.dotnet_arch }} -f ${{ parameters.dotnet_framework }} /p:Configuration=${{ parameters.dotnet_configuration }} /p:PublishProfile=${{ parameters.dotnet_runtime }}-${{ parameters.dotnet_arch }}
+  displayName: Publish CLI
 - ${{ if eq(parameters['DoEsrp'], 'true') }}:
   - task: EsrpCodeSigning@5
     displayName: Code Sign ESRP - CLI - 3rd Party Dependencies
@@ -50,9 +43,8 @@ steps:
       AuthSignCertName: ${{ parameters.signingIdentity.signCertName }}
       FolderPath: '$(System.DefaultWorkingDirectory)/MSStore.CLI/bin/${{ parameters.dotnet_configuration }}/${{ parameters.dotnet_framework }}/${{ parameters.dotnet_runtime }}-${{ parameters.dotnet_arch }}/publish'
       Pattern: |
-        Meziantou.Framework.Win32.CredentialManager.dll,
-        Spectre.Console.dll,
-        SkiaSharp.dll,
+        libSkiaSharp.dll,
+        msalruntime_${{ parameters.dotnet_arch }}.dll,
       signConfigType: inlineSignParams
       inlineOperation: |
         [
@@ -91,12 +83,6 @@ steps:
       FolderPath: '$(System.DefaultWorkingDirectory)/MSStore.CLI/bin/${{ parameters.dotnet_configuration }}/${{ parameters.dotnet_framework }}/${{ parameters.dotnet_runtime }}-${{ parameters.dotnet_arch }}/publish'
       Pattern: |
         msstore.exe
-        msstore.dll
-        MSStore.API.dll
-        Microsoft.*.dll
-        !Microsoft.Windows.SDK.NET.dll
-        System.CommandLine*.dll
-        !System.CommandLine.resources.dll
       UseMinimatch: true
       signConfigType: inlineSignParams
       inlineOperation: |

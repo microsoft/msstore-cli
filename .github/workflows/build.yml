@@ -10,8 +10,8 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build-nuget-and-tests:
-    name: Build Nuget and Run Tests
+  build-and-test:
+    name: Build and Run Tests
     strategy:
       fail-fast: false
       matrix:
@@ -64,15 +64,6 @@ jobs:
         name: Cobertura-${{ matrix.os }}
         path: ${{ github.workspace }}/report/Cobertura.xml
     # TODO: Publish github comment with code coverage
-    - name: Pack NuGet
-      if: ${{ matrix.os == 'ubuntu-latest' }}
-      run: dotnet pack MSStore.API --no-build -c Release
-    - name: Upload Artifact - NuGet
-      if: ${{ matrix.os == 'ubuntu-latest' }}
-      uses: actions/upload-artifact@v6
-      with:
-        name: NuGet
-        path: MSStore.API/bin/Release/*.nupkg
   
   build-cli:
     strategy:
@@ -110,12 +101,8 @@ jobs:
       run: dotnet tool install --tool-path . nbgv
     - name: Set Version
       run: ./nbgv cloud
-    - name: Restore CLI
-      run: dotnet restore MSStore.CLI -r ${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }} /p:Configuration=Release
-    - name: Build CLI
-      run: dotnet build MSStore.CLI --no-restore --self-contained -r ${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }} -f ${{ matrix.dotnet-framework }} /p:Configuration=Release
     - name: Publish SelfContained CLI
-      run: dotnet publish MSStore.CLI --no-build --self-contained -r ${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }} -f ${{ matrix.dotnet-framework }} /p:Configuration=Release /p:PublishProfile=${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }}
+      run: dotnet publish MSStore.CLI --self-contained -r ${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }} -f ${{ matrix.dotnet-framework }} /p:Configuration=Release /p:PublishProfile=${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }}
     - run: |
          New-Item -ItemType File -Path ".\MSStore.CLI.MSIX\obj\${{ matrix.dotnet-arch }}\appxmanifest.xml" -Force
          Copy-Item ".\MSStore.CLI.MSIX\Package.appxmanifest" -Destination ".\MSStore.CLI.MSIX\obj\${{ matrix.dotnet-arch }}\appxmanifest.xml" -Force

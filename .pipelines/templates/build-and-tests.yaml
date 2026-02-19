@@ -6,12 +6,6 @@ parameters:
   - name: AgentOS
     type: string
     default: ''
-  - name: DoEsrp
-    type: boolean
-    default: false
-  - name: signingIdentity
-    type: object
-    default: {}
 
 steps:
 - bash: |
@@ -75,57 +69,6 @@ steps:
   inputs:
     codeCoverageTool: 'Cobertura'
     summaryFileLocation: '$(Build.SourcesDirectory)/report/Cobertura.xml'
-- ${{ if eq(parameters['DoEsrp'], 'true') }}:
-  - task: EsrpCodeSigning@5
-    displayName: Code Sign ESRP - API DLL
-    condition: startsWith(variables.AgentOS, 'Linux')
-    inputs:
-      ConnectedServiceName: ${{ parameters.signingIdentity.serviceName }}
-      AppRegistrationClientId: ${{ parameters.signingIdentity.appId }}
-      AppRegistrationTenantId: ${{ parameters.signingIdentity.tenantId }}
-      AuthAKVName: ${{ parameters.signingIdentity.akvName }}
-      AuthCertName: ${{ parameters.signingIdentity.authCertName }}
-      AuthSignCertName: ${{ parameters.signingIdentity.signCertName }}
-      FolderPath: '$(System.DefaultWorkingDirectory)/MSStore.API/bin/${{ parameters.dotnet_configuration }}/net10.0'
-      Pattern: 'MSStore.API.dll'
-      signConfigType: inlineSignParams
-      inlineOperation: |
-       [ 
-           {
-               "KeyCode": "CP-233863-SN",
-               "OperationCode": "StrongNameSign",
-               "Parameters": { },
-               "ToolName": "sign",
-               "ToolVersion": "1.0"
-           },
-           {
-               "KeyCode": "CP-233863-SN",
-               "OperationCode": "StrongNameVerify",
-               "Parameters": { },
-               "ToolName": "sign",
-               "ToolVersion": "1.0"
-           },
-           {
-               "KeyCode": "CP-230012",
-               "OperationCode": "SigntoolSign",
-               "Parameters": {
-                   "OpusName": "Microsoft Store CLI",
-                   "OpusInfo": "https://github.com/Microsoft/msstore-cli",
-                   "FileDigest": "/fd \"SHA256\"",
-                   "PageHash": "/PH",
-                   "TimeStamp": "/tr \"http://rfc3161.gtm.corp.microsoft.com/TSS/HttpTspServer\" /td sha256"
-               },
-               "ToolName": "sign",
-               "ToolVersion": "1.0"
-            },
-            {
-               "KeyCode": "CP-230012",
-               "OperationCode": "SigntoolVerify",
-               "Parameters": {},
-               "ToolName": "sign",
-               "ToolVersion": "1.0"
-            }
-       ]
 - task: ComponentGovernanceComponentDetection@0
   displayName: 'Component Governance Detection'
   inputs:

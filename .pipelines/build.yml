@@ -16,11 +16,6 @@ parameters:
     type: object
     default:
       - Release
-  - name: buildPlatforms
-    type: object
-    default:
-      - x64
-      - arm64
   - name: pools
     type: object
     default:
@@ -71,9 +66,7 @@ extends:
               - task: NuGetAuthenticate@1
               - script: dotnet restore MSStore.CLI.sln /p:Configuration=${{ dotnet_config }}
                 displayName: Restore dependencies
-              - template: ./.pipelines/templates/build-nuget.yaml@self
+              - template: ./.pipelines/templates/build-and-tests.yaml@self
                 parameters:
                   dotnet_configuration: ${{ dotnet_config }}
                   AgentOS: $(Agent.OS)
-                  DoEsrp: false
-                  signingIdentity: {}
