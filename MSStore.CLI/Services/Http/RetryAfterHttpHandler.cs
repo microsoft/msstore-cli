@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace MSStore.CLI.Services.Http
 {
-    public sealed class RetryAfterHttpHandler : HttpClientHandler
+    internal sealed class RetryAfterHttpHandler : HttpClientHandler
     {
         /// <inheritdoc/>
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
