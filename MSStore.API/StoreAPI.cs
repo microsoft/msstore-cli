@@ -39,19 +39,22 @@ namespace MSStore.API
         /// Initializes a new instance of the <see cref="StoreAPI"/> class.
         /// </summary>
         /// <param name="configurations">An instance of ClientConfiguration that contains all parameters populated</param>
-        /// <param name="clientSecret">The client secret of the Microsoft Entra Application that is registered to call Store APIs</param>
+        /// <param name="clientSecretOrAssertion">The client secret or client assertion of the Microsoft Entra Application that is registered to call Store APIs</param>
+        /// <param name="isClientAssertion">Whether the <paramref name="clientSecretOrAssertion"/> parameter is the client assertion</param>
         /// <param name="serviceUrl">The Store API URL used to make the API calls.</param>
         /// <param name="scope">The Scope from the Store APIs that will be used to request the access token.</param>
         /// <param name="logger">ILogger for logs.</param>
         public StoreAPI(
             StoreConfigurations configurations,
-            string clientSecret,
+            string clientSecretOrAssertion,
+            bool isClientAssertion,
             string? serviceUrl,
             string? scope,
             ILogger? logger = null)
             : this(configurations, serviceUrl, scope, logger)
         {
-            ClientSecret = clientSecret;
+            ClientSecretOrAssertion = clientSecretOrAssertion;
+            IsClientAssertion = isClientAssertion;
             Certificate = null;
         }
 
@@ -71,7 +74,7 @@ namespace MSStore.API
             ILogger? logger = null)
             : this(configurations, serviceUrl, scope, logger)
         {
-            ClientSecret = null;
+            ClientSecretOrAssertion = null;
             Certificate = certificate;
         }
 
@@ -104,7 +107,8 @@ namespace MSStore.API
 
         private ILogger? Logger { get; }
 
-        public string? ClientSecret { get; }
+        public string? ClientSecretOrAssertion { get; }
+        public bool IsClientAssertion { get; }
         public X509Certificate2? Certificate { get; }
         public string ServiceUrl { get; set; }
         public string Scope { get; set; }
@@ -141,12 +145,13 @@ namespace MSStore.API
                     Logger,
                     ct);
             }
-            else if (!string.IsNullOrEmpty(ClientSecret))
+            else if (!string.IsNullOrEmpty(ClientSecretOrAssertion))
             {
                 accessToken = await SubmissionClient.GetClientCredentialAccessTokenAsync(
                     Config.TenantId!.Value.ToString(),
                     Config.ClientId!.Value.ToString(),
-                    ClientSecret,
+                    ClientSecretOrAssertion,
+                    IsClientAssertion,
                     Scope,
                     Logger,
                     ct);

@@ -21,6 +21,7 @@ namespace MSStore.CLI.Commands
         private static readonly Option<string> SellerIdOption;
         private static readonly Option<Guid?> ClientIdOption;
         private static readonly Option<string> ClientSecretOption;
+        private static readonly Option<string> ClientAssertionOption;
         private static readonly Option<string> CertificateThumbprintOption;
         private static readonly Option<FileInfo?> CertificateFilePathOption;
         private static readonly Option<string> CertificatePasswordOption;
@@ -46,6 +47,11 @@ namespace MSStore.CLI.Commands
             ClientSecretOption = new Option<string>("--clientSecret", "-cs")
             {
                 Description = "Specify the client Secret that should be used."
+            };
+
+            ClientAssertionOption = new Option<string>("--clientAssertion", "-ca")
+            {
+                Description = "Specify the client Assertion that should be used."
             };
 
             CertificateThumbprintOption = new Option<string>("--certificateThumbprint", "-ct")
@@ -76,6 +82,7 @@ namespace MSStore.CLI.Commands
             Options.Add(SellerIdOption);
             Options.Add(ClientIdOption);
             Options.Add(ClientSecretOption);
+            Options.Add(ClientAssertionOption);
             Options.Add(CertificateThumbprintOption);
             Options.Add(CertificateFilePathOption);
             Options.Add(CertificatePasswordOption);
@@ -94,6 +101,7 @@ namespace MSStore.CLI.Commands
                 var sellerId = parseResult.GetValue(SellerIdOption);
                 var clientId = parseResult.GetValue(ClientIdOption);
                 var clientSecret = parseResult.GetValue(ClientSecretOption);
+                var clientAssertion = parseResult.GetValue(ClientAssertionOption);
                 var certificateThumbprint = parseResult.GetValue(CertificateThumbprintOption);
                 var certificateFilePath = parseResult.GetValue(CertificateFilePathOption);
                 var certificatePassword = parseResult.GetValue(CertificatePasswordOption);
@@ -103,6 +111,7 @@ namespace MSStore.CLI.Commands
                                        sellerId == null ||
                                        clientId == null ||
                                        (clientSecret == null &&
+                                        clientAssertion == null &&
                                         certificateThumbprint == null &&
                                         certificateFilePath == null);
 
@@ -116,6 +125,7 @@ namespace MSStore.CLI.Commands
                             sellerId: sellerId,
                             clientId: clientId,
                             clientSecret: clientSecret,
+                            clientAssertion: clientAssertion,
                             certificateThumbprint: certificateThumbprint,
                             certificateFilePath: certificateFilePath?.FullName,
                             certificatePassword: certificatePassword,

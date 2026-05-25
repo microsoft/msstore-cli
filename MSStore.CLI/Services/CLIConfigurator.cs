@@ -38,7 +38,7 @@ namespace MSStore.CLI.Services
         private readonly ITokenManager _tokenManager = tokenManager ?? throw new ArgumentNullException(nameof(tokenManager));
         private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-        public async Task<bool> ConfigureAsync(IAnsiConsole ansiConsole, bool askConfirmation, Guid? tenantId = null, string? sellerId = null, Guid? clientId = null, string? clientSecret = null, string? certificateThumbprint = null, string? certificateFilePath = null, string? certificatePassword = null, CancellationToken ct = default)
+        public async Task<bool> ConfigureAsync(IAnsiConsole ansiConsole, bool askConfirmation, Guid? tenantId = null, string? sellerId = null, Guid? clientId = null, string? clientSecret = null, string? clientAssertion = null, string? certificateThumbprint = null, string? certificateFilePath = null, string? certificatePassword = null, CancellationToken ct = default)
         {
             if (askConfirmation &&
                 !await _consoleReader.YesNoConfirmationAsync(
@@ -90,7 +90,13 @@ namespace MSStore.CLI.Services
                 config.CertificateFilePath = certificateFilePath;
             }
 
+            if (clientAssertion != null)
+            {
+                config.ClientAssertion = clientAssertion;
+            }
+
             if (config.ClientId == null || (clientSecret == null &&
+                                        clientAssertion == null &&
                                         config.CertificateThumbprint == null &&
                                         config.CertificateFilePath == null))
             {

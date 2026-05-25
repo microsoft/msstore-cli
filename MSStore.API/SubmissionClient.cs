@@ -121,7 +121,8 @@ namespace MSStore.API
         /// <param name="tenantId">The tenantId used to get the access token, specific to your
         /// Azure Active Directory app. Example: "d454d300-128e-2d81-334a-27d9b2baf002"</param>
         /// <param name="clientId">Client Id of your Azure Active Directory app. Example: "ba3c223b-03ab-4a44-aa32-38aa10c27e32"</param>
-        /// <param name="clientSecret">Client secret of your Azure Active Directory app</param>
+        /// <param name="clientSecretOrAssertion">Client secret or client assertion of your Azure Active Directory app</param>
+        /// <param name="isClientAssertion">Whether the <paramref name="clientSecretOrAssertion"/> parameter is the client assertion</param>
         /// <param name="scope">Scope. If not provided, default one is used for the production API endpoint.</param>
         /// <param name="logger">ILogger for logs.</param>
         /// <param name="ct">Cancelation token.</param>
@@ -130,12 +131,24 @@ namespace MSStore.API
         public static Task<AuthenticationResult> GetClientCredentialAccessTokenAsync(
             string tenantId,
             string clientId,
-            string clientSecret,
+            string clientSecretOrAssertion,
+            bool isClientAssertion,
             string scope,
             ILogger? logger = null,
             CancellationToken ct = default)
         {
-            return GetClientCredentialAccessTokenAsync(tenantId, clientId, (builder) => builder.WithClientSecret(clientSecret), scope, logger, ct);
+            return GetClientCredentialAccessTokenAsync(
+                tenantId,
+                clientId,
+                (builder) =>
+                {
+                    return isClientAssertion
+                        ? builder.WithClientAssertion(() => clientSecretOrAssertion)
+                        : builder.WithClientSecret(clientSecretOrAssertion);
+                },
+                scope,
+                logger,
+                ct);
         }
 
         /// <summary>
