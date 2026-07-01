@@ -26,27 +26,27 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Azure.Storage.Blobs" Version="12.27.0" />
-    <PackageReference Include="Microsoft.ApplicationInsights" Version="3.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.3" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.3" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="10.0.3" />
-    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.3" />
-    <PackageReference Include="Microsoft.Identity.Client" Version="4.82.1" />
-    <PackageReference Include="Microsoft.Identity.Client.Broker" Version="4.82.1" />
-    <PackageReference Include="Microsoft.Identity.Client.Extensions.Msal" Version="4.82.1" />
-    <PackageReference Include="SkiaSharp" Version="3.119.2" />
-    <PackageReference Include="System.CommandLine" Version="2.0.3" />
-    <PackageReference Include="Spectre.Console" Version="0.54.0" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.29.1" />
+    <PackageReference Include="Microsoft.ApplicationInsights" Version="3.1.2" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Identity.Client" Version="4.85.2" />
+    <PackageReference Include="Microsoft.Identity.Client.Broker" Version="4.85.2" />
+    <PackageReference Include="Microsoft.Identity.Client.Extensions.Msal" Version="4.85.2" />
+    <PackageReference Include="SkiaSharp" Version="4.148.0" />
+    <PackageReference Include="System.CommandLine" Version="2.0.9" />
+    <PackageReference Include="Spectre.Console" Version="0.57.1" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows10.0.17763.0'">
-    <PackageReference Include="Meziantou.Framework.Win32.CredentialManager" Version="1.7.17" />
+    <PackageReference Include="Meziantou.Framework.Win32.CredentialManager" Version="2.0.2" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
-    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.2" />
-    <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="3.119.2" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="4.148.0" />
+    <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="4.148.0" />
   </ItemGroup>
 
   <ItemGroup>
