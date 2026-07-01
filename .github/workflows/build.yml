@@ -20,7 +20,7 @@ jobs:
     permissions:
       checks: write
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
       with:
         fetch-depth: 0
     - name: Setup .NET
@@ -96,7 +96,7 @@ jobs:
     name: Build CLI - ${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }}
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
       with:
         fetch-depth: 0
     - name: Setup .NET
