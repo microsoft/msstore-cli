@@ -29,7 +29,7 @@ namespace MSStore.CLI.Services
                 throw new InvalidOperationException("Configuration Client Id is empty.");
             }
 
-            var secret = _credentialManager.ReadCredential(config.ClientId.Value.ToString());
+            var secret = config.ClientAssertion ?? _credentialManager.ReadCredential(config.ClientId.Value.ToString());
             X509Certificate2? cert = LoadCertificate(config, secret);
 
             StoreAPI? storeAPI;
@@ -47,6 +47,7 @@ namespace MSStore.CLI.Services
                 storeAPI = new StoreAPI(
                     config.GetStoreConfigurations(),
                     secret,
+                    config.ClientAssertion != null,
                     config.StoreApiServiceUrl,
                     config.StoreApiScope,
                     _logger);
@@ -70,7 +71,7 @@ namespace MSStore.CLI.Services
                 throw new InvalidOperationException("Configuration Client Id is empty.");
             }
 
-            var secret = _credentialManager.ReadCredential(config.ClientId.Value.ToString());
+            var secret = config.ClientAssertion ?? _credentialManager.ReadCredential(config.ClientId.Value.ToString());
             X509Certificate2? cert = LoadCertificate(config, secret);
 
             StorePackagedAPI? storePackagedAPI;
@@ -88,6 +89,7 @@ namespace MSStore.CLI.Services
                 storePackagedAPI = new StorePackagedAPI(
                     config.GetStoreConfigurations(),
                     secret,
+                    config.ClientAssertion != null,
                     config.DevCenterServiceUrl,
                     config.DevCenterScope,
                     _logger);

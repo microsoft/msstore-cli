@@ -51,19 +51,22 @@ namespace MSStore.API.Packaged
         /// Initializes a new instance of the <see cref="StorePackagedAPI"/> class.
         /// </summary>
         /// <param name="configurations">An instance of ClientConfiguration that contains all parameters populated</param>
-        /// <param name="clientSecret">The client secret of the Microsoft Entra Application that is registered to call Store APIs</param>
+        /// <param name="clientSecretOrAssertion">The client secret or client assertion of the Microsoft Entra Application that is registered to call Store APIs</param>
+        /// <param name="isClientAssertion">Whether the <paramref name="clientSecretOrAssertion"/> parameter is the client assertion</param>
         /// <param name="devCenterUrl">The DevCenter URL used to make the API calls.</param>
         /// <param name="devCenterScope">The Scope from DevCenter that will be used to request the access token.</param>
         /// <param name="logger">ILogger for logs.</param>
         public StorePackagedAPI(
             StoreConfigurations configurations,
-            string clientSecret,
+            string clientSecretOrAssertion,
+            bool isClientAssertion,
             string? devCenterUrl,
             string? devCenterScope,
             ILogger? logger = null)
             : this(configurations, devCenterUrl, devCenterScope, logger)
         {
-            ClientSecret = clientSecret;
+            ClientSecretOrAssertion = clientSecretOrAssertion;
+            IsClientAssertion = isClientAssertion;
             Certificate = null;
         }
 
@@ -83,7 +86,7 @@ namespace MSStore.API.Packaged
             ILogger? logger = null)
             : this(configurations, devCenterUrl, devCenterScope, logger)
         {
-            ClientSecret = null;
+            ClientSecretOrAssertion = null;
             Certificate = certificate;
         }
 
@@ -118,7 +121,8 @@ namespace MSStore.API.Packaged
 
         private ILogger? Logger { get; }
 
-        public string? ClientSecret { get; }
+        public string? ClientSecretOrAssertion { get; }
+        public bool IsClientAssertion { get; }
         public X509Certificate2? Certificate { get; }
         public string DevCenterUrl { get; set; }
         public string DevCenterScope { get; set; }
@@ -155,12 +159,13 @@ namespace MSStore.API.Packaged
                     Logger,
                     ct);
             }
-            else if (ClientSecret != null)
+            else if (ClientSecretOrAssertion != null)
             {
                 devCenterAccessToken = await SubmissionClient.GetClientCredentialAccessTokenAsync(
                     Config.TenantId!.Value.ToString(),
                     Config.ClientId!.Value.ToString(),
-                    ClientSecret,
+                    ClientSecretOrAssertion,
+                    IsClientAssertion,
                     DevCenterScope,
                     Logger,
                     ct);
