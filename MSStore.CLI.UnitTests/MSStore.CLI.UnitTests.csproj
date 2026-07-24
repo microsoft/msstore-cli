@@ -1,4 +1,4 @@
-﻿<Project Sdk="MSTest.Sdk/4.2.3">
+﻿<Project Sdk="MSTest.Sdk/4.3.2">
 
   <PropertyGroup>
     <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">net10.0;net10.0-windows10.0.17763.0</TargetFrameworks>
@@ -11,7 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="FluentAssertions" Version="7.2.0" />
+    <PackageReference Include="AwesomeAssertions" Version="9.5.0" />
     <PackageReference Include="Moq" Version="4.20.72" />
   </ItemGroup>
 
@@ -36,30 +36,30 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+    <PackageReference Update="Microsoft.NET.Test.Sdk" Version="18.8.1" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="Microsoft.Testing.Extensions.CodeCoverage" Version="18.8.0" />
+    <PackageReference Update="Microsoft.Testing.Extensions.CodeCoverage" Version="18.9.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="Microsoft.Testing.Extensions.TrxReport" Version="2.2.3" />
+    <PackageReference Update="Microsoft.Testing.Extensions.TrxReport" Version="2.3.2" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="MSTest.Analyzers" Version="4.1.0">
+    <PackageReference Update="MSTest.Analyzers" Version="4.3.2">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="MSTest.TestAdapter" Version="4.2.3" />
+    <PackageReference Update="MSTest.TestAdapter" Version="4.3.2" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="MSTest.TestFramework" Version="4.2.3" />
+    <PackageReference Update="MSTest.TestFramework" Version="4.3.2" />
   </ItemGroup>
 
 </Project>
