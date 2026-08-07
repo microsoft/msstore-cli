@@ -9,22 +9,19 @@ using Azure.Core;
 using Azure.Core.Pipeline;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
-using Microsoft.ApplicationInsights;
 using MSStore.API;
 
 namespace MSStore.CLI.Services
 {
-    internal class AzureBlobManager(TelemetryClient telemetryClient) : IAzureBlobManager
+    internal class AzureBlobManager() : IAzureBlobManager
     {
-        private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
-
         public async Task<string> UploadFileAsync(string blobUri, string localFilePath, IProgress<double> progress, long uploadTimeout, CancellationToken ct)
         {
             using var fileStream = new FileStream(localFilePath, FileMode.Open, FileAccess.Read);
 
             var blobClientOptions = new BlobClientOptions();
             blobClientOptions.Retry.NetworkTimeout = TimeSpan.FromSeconds(uploadTimeout);
-            blobClientOptions.AddPolicy(new AddCorrelationIdHeaderPolicy(_telemetryClient), HttpPipelinePosition.PerCall);
+            blobClientOptions.AddPolicy(new AddCorrelationIdHeaderPolicy(), HttpPipelinePosition.PerCall);
             var blobClient = new BlobClient(new Uri(blobUri.Replace("+", "%2B")), blobClientOptions);
             var blobUploadOptions = new BlobUploadOptions
             {
@@ -49,11 +46,11 @@ namespace MSStore.CLI.Services
             }
         }
 
-        public class AddCorrelationIdHeaderPolicy(TelemetryClient telemetryClient) : HttpPipelineSynchronousPolicy
+        public class AddCorrelationIdHeaderPolicy() : HttpPipelineSynchronousPolicy
         {
             public override void OnSendingRequest(HttpMessage message)
             {
-                message.Request.Headers.Add("ms-correlationid", telemetryClient.Context.Session.Id);
+                message.Request.Headers.Add("ms-correlationid", Program.SessionId);
                 base.OnSendingRequest(message);
             }
         }

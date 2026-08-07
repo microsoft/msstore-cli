@@ -246,7 +246,10 @@ namespace MSStore.CLI.UnitTests
                         .AddSingleton<IAnsiConsole>((sp) => ErrorAnsiConsole)
                         .AddSingleton(ExternalCommandExecutor.Object)
                         .AddSingleton<IProjectConfiguratorFactory, ProjectConfiguratorFactory>()
-                        .AddSingleton(new TelemetryClient(new TelemetryConfiguration()))
+                        .AddSingleton(new TelemetryClient(new TelemetryConfiguration
+                        {
+                            ConnectionString = "InstrumentationKey=00000000-0000-0000-0000-000000000000"
+                        }))
                         .AddScoped<IProjectConfigurator, FlutterProjectConfigurator>()
                         .AddScoped<IProjectConfigurator, UWPProjectConfigurator>()
                         .AddScoped<IProjectConfigurator, WinUIProjectConfigurator>()

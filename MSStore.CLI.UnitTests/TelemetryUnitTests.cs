@@ -13,7 +13,7 @@ namespace MSStore.CLI.UnitTests
         [TestMethod]
         public async Task TelemetryConfigurationLoadsAsync()
         {
-            var telemetryConnectionStringProvider = await TelemetryConnectionStringProvider.LoadAsync(default, TestContext.CancellationTokenSource.Token);
+            var telemetryConnectionStringProvider = await TelemetryConnectionStringProvider.LoadAsync(default, TestContext.CancellationToken);
 
             telemetryConnectionStringProvider.Should().NotBeNull();
 

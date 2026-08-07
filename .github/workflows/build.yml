@@ -10,8 +10,8 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build-nuget-and-tests:
-    name: Build Nuget and Run Tests
+  build-and-test:
+    name: Build and Run Tests
     strategy:
       fail-fast: false
       matrix:
@@ -26,7 +26,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v6
       with:
-        dotnet-version: 9.0.x
+        dotnet-version: 10.0.x
     - name: Install and Configure Keyring
       if: ${{ matrix.os == 'ubuntu-latest' }}
       run: |
@@ -43,11 +43,11 @@ jobs:
       run: dotnet restore MSStore.CLI.sln /p:Configuration=Release
     - name: Build
       run: dotnet build MSStore.CLI.sln --no-restore /p:Configuration=Release
-    - name: Test net9.0
-      run: dotnet run --project MSStore.CLI.UnitTests -f net9.0 --no-build -c Release --coverage --coverage-output-format cobertura --report-trx --results-directory ./TestResults
-    - name: Test net9.0-windows10.0.17763.0
+    - name: Test net10.0
+      run: dotnet run --project MSStore.CLI.UnitTests -f net10.0 --no-build -c Release --coverage --coverage-output-format cobertura --report-trx --results-directory ./TestResults
+    - name: Test net10.0-windows10.0.17763.0
       if: ${{ matrix.os == 'windows-latest' }}
-      run: dotnet run --project MSStore.CLI.UnitTests -f net9.0-windows10.0.17763.0 --no-build -c Release --coverage --coverage-output-format cobertura --report-trx --results-directory ./TestResults
+      run: dotnet run --project MSStore.CLI.UnitTests -f net10.0-windows10.0.17763.0 --no-build -c Release --coverage --coverage-output-format cobertura --report-trx --results-directory ./TestResults
     - name: Publish test results
       if: ${{ !cancelled() }}
       uses: actions/upload-artifact@v7
@@ -55,7 +55,7 @@ jobs:
         name: test-results-${{ matrix.os }}
         path: TestResults/*.trx
     - name: Install ReportGenerator
-      run: dotnet tool install --global dotnet-reportgenerator-globaltool --version 5.4.11
+      run: dotnet tool install --global dotnet-reportgenerator-globaltool --version 5.5.1
     - name: Merge code coverage files
       run: reportgenerator "-reports:${{ github.workspace }}/**/*.cobertura.xml" "-targetdir:${{ github.workspace }}/report" "-reporttypes:Cobertura" "-filefilters:-*GenerationContext*.g.cs"
     - name: Publish code coverage results
@@ -64,15 +64,6 @@ jobs:
         name: Cobertura-${{ matrix.os }}
         path: ${{ github.workspace }}/report/Cobertura.xml
     # TODO: Publish github comment with code coverage
-    - name: Pack NuGet
-      if: ${{ matrix.os == 'ubuntu-latest' }}
-      run: dotnet pack MSStore.API --no-build -c Release
-    - name: Upload Artifact - NuGet
-      if: ${{ matrix.os == 'ubuntu-latest' }}
-      uses: actions/upload-artifact@v7
-      with:
-        name: NuGet
-        path: MSStore.API/bin/Release/*.nupkg
   
   build-cli:
     strategy:
@@ -84,13 +75,13 @@ jobs:
         include:
           - os: windows-latest
             dotnet-os: win
-            dotnet-framework: net9.0-windows10.0.17763.0
+            dotnet-framework: net10.0-windows10.0.17763.0
           - os: ubuntu-latest
             dotnet-os: linux
-            dotnet-framework: net9.0
+            dotnet-framework: net10.0
           - os: macos-latest
             dotnet-os: osx
-            dotnet-framework: net9.0
+            dotnet-framework: net10.0
     runs-on: ${{ matrix.os }}
 
     name: Build CLI - ${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }}
@@ -102,7 +93,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v6
       with:
-        dotnet-version: 9.0.x
+        dotnet-version: 10.0.x
     - name: Add msbuild to PATH
       if: ${{ matrix.os == 'windows-latest' }}
       uses: microsoft/setup-msbuild@v3
@@ -110,12 +101,17 @@ jobs:
       run: dotnet tool install --tool-path . nbgv
     - name: Set Version
       run: ./nbgv cloud
-    - name: Restore CLI
-      run: dotnet restore MSStore.CLI -r ${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }} /p:Configuration=Release /p:PublishReadyToRun=true
-    - name: Build CLI
-      run: dotnet build MSStore.CLI --no-restore --no-self-contained -r ${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }} -f ${{ matrix.dotnet-framework }} /p:Configuration=Release
+    - name: Install linux-arm64 NativeAOT toolchain
+      if: ${{ matrix.os == 'ubuntu-latest' && matrix.dotnet-arch == 'arm64' }}
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          clang llvm lld \
+          binutils-aarch64-linux-gnu \
+          gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
+          libc6-dev-arm64-cross
     - name: Publish SelfContained CLI
-      run: dotnet publish MSStore.CLI --no-build --no-self-contained -r ${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }} -f ${{ matrix.dotnet-framework }} /p:Configuration=Release /p:PublishProfile=${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }}
+      run: dotnet publish MSStore.CLI --self-contained -r ${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }} -f ${{ matrix.dotnet-framework }} /p:Configuration=Release /p:PublishProfile=${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }}
     - run: |
          New-Item -ItemType File -Path ".\MSStore.CLI.MSIX\obj\${{ matrix.dotnet-arch }}\appxmanifest.xml" -Force
          Copy-Item ".\MSStore.CLI.MSIX\Package.appxmanifest" -Destination ".\MSStore.CLI.MSIX\obj\${{ matrix.dotnet-arch }}\appxmanifest.xml" -Force

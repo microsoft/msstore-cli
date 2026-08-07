@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Collections.Generic;
 using System.CommandLine.Invocation;
 using System.Diagnostics;
 using System.IO;
@@ -14,7 +15,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Extensibility;
-using Microsoft.ApplicationInsights.Extensibility.Implementation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -30,6 +30,10 @@ using MSStore.CLI.Services.PartnerCenter;
 using MSStore.CLI.Services.PWABuilder;
 using MSStore.CLI.Services.Telemetry;
 using MSStore.CLI.Services.TokenManager;
+using OpenTelemetry;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using Spectre.Console;
 
 namespace MSStore.CLI
@@ -169,12 +173,12 @@ namespace MSStore.CLI
                     {
                         defaultRequestHeaders.Add("Platform-Identifier", "MSStoreCLI");
                         defaultRequestHeaders.Add("Platform-Identifier-Version", typeof(PWABuilderClient).Assembly.GetName().Version?.ToString());
-                        defaultRequestHeaders.Add("Correlation-Id", telemetryClient.Context.Session.Id);
+                        defaultRequestHeaders.Add("Correlation-Id", Program.SessionId);
                     }
 
                     void AddMSCorrelationId(HttpRequestHeaders defaultRequestHeaders)
                     {
-                        defaultRequestHeaders.Add("ms-correlationid", telemetryClient.Context.Session.Id);
+                        defaultRequestHeaders.Add("ms-correlationid", Program.SessionId);
                     }
 
                     services
@@ -272,6 +276,8 @@ namespace MSStore.CLI
             return result;
         }
 
+        internal static string SessionId { get; } = Guid.NewGuid().ToString();
+
         private static async Task<TelemetryClient> CreateTelemetryClientAsync(ConfigurationManager<TelemetryConfigurations> telemetryConfigurationManager, TelemetryConfigurations telemetryConfigurations)
         {
             var changed = false;
@@ -307,19 +313,35 @@ namespace MSStore.CLI
                 }
             }
 
+            if (string.IsNullOrEmpty(telemetryConfiguration.ConnectionString))
+            {
+                telemetryConfiguration.ConnectionString = "InstrumentationKey=00000000-0000-0000-0000-000000000000";
+            }
+
             if (telemetryConfigurations.TelemetryEnabled != true)
             {
                 telemetryConfiguration.DisableTelemetry = true;
             }
 
+            telemetryConfiguration.ConfigureOpenTelemetryBuilder(openTelemetryBuilder =>
+            {
+                openTelemetryBuilder.WithLogging();
+                openTelemetryBuilder.ConfigureResource(resource =>
+                {
+                    resource.AddService(
+                            serviceName: "MSStoreCLI",
+                            serviceVersion: typeof(Program).Assembly.GetCustomAttributes<AssemblyInformationalVersionAttribute>().First().InformationalVersion,
+                            serviceInstanceId: SessionId)
+                        .AddAttributes(new Dictionary<string, object>
+                    {
+                        ["runtime.identifier"] = RuntimeInformation.RuntimeIdentifier,
+                    });
+                });
+            });
+
             var telemetryClient = new TelemetryClient(telemetryConfiguration);
 
             telemetryClient.Context.User.Id = telemetryConfigurations.TelemetryGuid;
-            telemetryClient.Context.Session.Id = Guid.NewGuid().ToString();
-            telemetryClient.Context.Component.Version = typeof(Program).Assembly.GetCustomAttributes<AssemblyInformationalVersionAttribute>().First().InformationalVersion;
-            telemetryClient.Context.Device.OperatingSystem = RuntimeInformation.RuntimeIdentifier;
-            telemetryClient.Context.Cloud.RoleInstance = "-";
-            telemetryClient.Context.GetInternalContext().NodeName = "-";
 
             return telemetryClient;
         }

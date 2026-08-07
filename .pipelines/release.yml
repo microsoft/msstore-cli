@@ -40,17 +40,17 @@ parameters:
       image: windows-latest
       os: windows
       dotnet_runtime: win
-      dotnet_framework: net9.0-windows10.0.17763.0
+      dotnet_framework: net10.0-windows10.0.17763.0
     - name: Azure-Pipelines-1ESPT-ExDShared
       image: ubuntu-latest
       os: linux
       dotnet_runtime: linux
-      dotnet_framework: net9.0
+      dotnet_framework: net10.0
     - name: Azure Pipelines
       image: macos-latest
       os: macOS
       dotnet_runtime: osx
-      dotnet_framework: net9.0
+      dotnet_framework: net10.0
 
 name: 0.0.$(Date:yyMM).$(Date:dd)$(Rev:rr)
 
@@ -69,14 +69,14 @@ extends:
       credscan:
         suppressionsFile: '$(System.DefaultWorkingDirectory)/.pipelines/CredScanSuppressions.json'
       binSkim:
-        AnalyzeTargetGlob: '$(System.DefaultWorkingDirectory)\MSStore.API\bin\**\net9.0\MSStore.API.dll'
+        AnalyzeTargetGlob: '$(System.DefaultWorkingDirectory)\MSStore.API\bin\**\net10.0\MSStore.API.dll'
     stages:
-      - stage: NuGet
+      - stage: Build_And_Tests
         jobs:
         - ${{ each pool in parameters.pools }}:
           - ${{ each dotnet_config in parameters.dotnet_configurations }}:
-            - job: Build_Nuget_And_Tests_${{ pool.os }}_${{ dotnet_config }}
-              displayName: Build Nuget and Run Tests (${{ pool.os }}_${{ dotnet_config }})
+            - job: Build_And_Tests_${{ pool.os }}_${{ dotnet_config }}
+              displayName: Build and Run Tests (${{ pool.os }}_${{ dotnet_config }})
               pool:
                 name: ${{ pool.name }}
                 image: ${{ pool.image }}
@@ -84,36 +84,21 @@ extends:
               steps:
               - checkout: self
               - task: UseDotNet@2
-                displayName: Setup .NET 9
+                displayName: Setup .NET 10
                 inputs:
-                  version: 9.0.x
-              - ${{ if eq(parameters.DoEsrp, 'true') }}:
-                - task: UseDotNet@2
-                  displayName: Setup .NET 6.0 (For ESRP Task)
-                  condition: startsWith(variables['Agent.OS'], 'Linux')
-                  inputs:
-                    packageType: runtime
-                    version: 6.0.x
+                  version: 10.0.x
               - script: mv -f $(Build.SourcesDirectory)/.pipelines/release-nuget.config ./nuget.config
                 displayName: Add release package source
               - task: NuGetAuthenticate@1
               - script: dotnet restore MSStore.CLI.sln /p:Configuration=${{ dotnet_config }}
                 displayName: Restore dependencies
-              - template: ./.pipelines/templates/build-nuget.yaml@self
+              - template: ./.pipelines/templates/build-and-tests.yaml@self
                 parameters:
                   dotnet_configuration: ${{ dotnet_config }}
                   AgentOS: $(Agent.OS)
-                  DoEsrp: ${{ parameters.DoEsrp }}
-                  signingIdentity: ${{ parameters.signingIdentity }}
-              - template: ./.pipelines/templates/pack-nuget.yaml@self
-                parameters:
-                  dotnet_configuration: ${{ dotnet_config }}
-                  AgentOS: $(Agent.OS)
-                  DoEsrp: ${{ parameters.DoEsrp }}
-                  signingIdentity: ${{ parameters.signingIdentity }}
 
       - stage: CLI
-        dependsOn: NuGet
+        dependsOn: Build_And_Tests
         jobs:
         - ${{ each pool in parameters.pools }}:
           - ${{ each dotnet_config in parameters.dotnet_configurations }}:
@@ -128,9 +113,9 @@ extends:
                 - checkout: self
                   persistCredentials: true
                 - task: UseDotNet@2
-                  displayName: Setup .NET 9
+                  displayName: Setup .NET 10
                   inputs:
-                    version: 9.0.x
+                    version: 10.0.x
                 - ${{ if eq(parameters.DoEsrp, 'true') }}:
                   - task: UseDotNet@2
                     displayName: Setup .NET 6.0 (For ESRP Task)
@@ -150,7 +135,7 @@ extends:
                     xmlTargetFiles: ''
                     xmlTransformationRules: ''
                 - task: NuGetAuthenticate@1
-                - script: dotnet restore MSStore.CLI -r ${{ pool.dotnet_runtime }}-${{ platform }} /p:Configuration=${{ dotnet_config }} /p:PublishReadyToRun=true
+                - script: dotnet restore MSStore.CLI -r ${{ pool.dotnet_runtime }}-${{ platform }} /p:Configuration=${{ dotnet_config }}
                   displayName: Restore CLI
                 - template: ./.pipelines/templates/build-cli.yaml@self
                   parameters:

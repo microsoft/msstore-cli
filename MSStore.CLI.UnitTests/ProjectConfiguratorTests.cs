@@ -75,7 +75,7 @@ namespace MSStore.CLI.UnitTests
             result.Error.Should().Contain("This seems to be a Flutter project.");
             result.Error.Should().Contain("is now configured to build to the Microsoft Store!");
 
-            var pubspecYamlFileContents = await File.ReadAllTextAsync(Path.Combine(path, "pubspec.yaml"), TestContext.CancellationTokenSource.Token);
+            var pubspecYamlFileContents = await File.ReadAllTextAsync(Path.Combine(path, "pubspec.yaml"), TestContext.CancellationToken);
 
             pubspecYamlFileContents.Should().Contain("msix");
         }
@@ -140,7 +140,7 @@ namespace MSStore.CLI.UnitTests
             result.Error.Should().Contain("This seems to be a Flutter project.");
             result.Error.Should().Contain("is now configured to build to the Microsoft Store!");
 
-            var pubspecYamlFileContents = await File.ReadAllTextAsync(Path.Combine(path, "pubspec.yaml"), TestContext.CancellationTokenSource.Token);
+            var pubspecYamlFileContents = await File.ReadAllTextAsync(Path.Combine(path, "pubspec.yaml"), TestContext.CancellationToken);
 
             pubspecYamlFileContents.Should().Contain("msix");
         }
@@ -196,7 +196,7 @@ namespace MSStore.CLI.UnitTests
             result.Error.Should().Contain("This seems to be a Electron project.");
             result.Error.Should().Contain("is now configured to build to the Microsoft Store!");
 
-            var packageJsonFileContents = await File.ReadAllTextAsync(Path.Combine(path, "package.json"), TestContext.CancellationTokenSource.Token);
+            var packageJsonFileContents = await File.ReadAllTextAsync(Path.Combine(path, "package.json"), TestContext.CancellationToken);
 
             packageJsonFileContents.Should().Contain("appx");
         }
@@ -239,7 +239,7 @@ namespace MSStore.CLI.UnitTests
             result.Error.Should().Contain("This seems to be a Electron project.");
             result.Error.Should().Contain("is now configured to build to the Microsoft Store!");
 
-            var packageJsonFileContents = await File.ReadAllTextAsync(Path.Combine(path, "package.json"), TestContext.CancellationTokenSource.Token);
+            var packageJsonFileContents = await File.ReadAllTextAsync(Path.Combine(path, "package.json"), TestContext.CancellationToken);
 
             packageJsonFileContents.Should().Contain("appx");
         }
@@ -295,7 +295,7 @@ namespace MSStore.CLI.UnitTests
             result.Error.Should().Contain("This seems to be a Electron project.");
             result.Error.Should().Contain("is now configured to build to the Microsoft Store!");
 
-            var packageJsonFileContents = await File.ReadAllTextAsync(Path.Combine(path, "package.json"), TestContext.CancellationTokenSource.Token);
+            var packageJsonFileContents = await File.ReadAllTextAsync(Path.Combine(path, "package.json"), TestContext.CancellationToken);
 
             packageJsonFileContents.Should().Contain("appx");
         }
@@ -338,7 +338,7 @@ namespace MSStore.CLI.UnitTests
             result.Error.Should().Contain("This seems to be a Electron project.");
             result.Error.Should().Contain("is now configured to build to the Microsoft Store!");
 
-            var packageJsonFileContents = await File.ReadAllTextAsync(Path.Combine(path, "package.json"), TestContext.CancellationTokenSource.Token);
+            var packageJsonFileContents = await File.ReadAllTextAsync(Path.Combine(path, "package.json"), TestContext.CancellationToken);
 
             packageJsonFileContents.Should().Contain("appx");
         }
@@ -460,7 +460,7 @@ namespace MSStore.CLI.UnitTests
             var dir = new DirectoryInfo(Path.Combine(path, "windows"));
             dir.GetDirectories().Should().HaveCount(1);
             var projectDir = dir.GetDirectories()[0];
-            var appxManifestFileContents = await File.ReadAllTextAsync(Path.Combine(projectDir.FullName, "Package.appxmanifest"), TestContext.CancellationTokenSource.Token);
+            var appxManifestFileContents = await File.ReadAllTextAsync(Path.Combine(projectDir.FullName, "Package.appxmanifest"), TestContext.CancellationToken);
 
             appxManifestFileContents.Should().Contain(FakeApps[0].Id);
             appxManifestFileContents.Should().Contain(FakeApps[0].PrimaryName);
@@ -485,7 +485,7 @@ namespace MSStore.CLI.UnitTests
 
             result.Error.Should().Contain("This seems to be a UWP project.");
 
-            var appxManifestFileContents = await File.ReadAllTextAsync(Path.Combine(path, "Package.appxmanifest"), TestContext.CancellationTokenSource.Token);
+            var appxManifestFileContents = await File.ReadAllTextAsync(Path.Combine(path, "Package.appxmanifest"), TestContext.CancellationToken);
 
             appxManifestFileContents.Should().Contain("Fake App");
         }
@@ -513,7 +513,7 @@ namespace MSStore.CLI.UnitTests
 
             result.Error.Should().Contain("This seems to be a Windows App SDK/WinUI project.");
 
-            var appxManifestFileContents = await File.ReadAllTextAsync(Path.Combine(path, "Package.appxmanifest"), TestContext.CancellationTokenSource.Token);
+            var appxManifestFileContents = await File.ReadAllTextAsync(Path.Combine(path, "Package.appxmanifest"), TestContext.CancellationToken);
 
             appxManifestFileContents.Should().Contain("Fake App");
         }
@@ -541,11 +541,11 @@ namespace MSStore.CLI.UnitTests
 
             result.Error.Should().Contain("This seems to be a Maui project.");
 
-            var appxManifestFileContents = await File.ReadAllTextAsync(Path.Combine(path, "Platforms", "Windows", "Package.appxmanifest"), TestContext.CancellationTokenSource.Token);
+            var appxManifestFileContents = await File.ReadAllTextAsync(Path.Combine(path, "Platforms", "Windows", "Package.appxmanifest"), TestContext.CancellationToken);
 
             appxManifestFileContents.Should().Contain("9PN3ABCDEFGA");
 
-            var csprojFileContents = await File.ReadAllTextAsync(Path.Combine(path, "MauiApp.csproj"), TestContext.CancellationTokenSource.Token);
+            var csprojFileContents = await File.ReadAllTextAsync(Path.Combine(path, "MauiApp.csproj"), TestContext.CancellationToken);
 
             csprojFileContents.Should().Contain("Fake App");
         }
