@@ -28,6 +28,16 @@ steps:
 - script: nbgv cloud
   condition: not(startsWith(variables.AgentOS, 'Darwin'))
   displayName: Set Version
+- ${{ if eq(parameters.dotnet_arch, 'arm64') }}:
+  - bash: |
+      sudo apt-get update
+      sudo apt-get install -y \
+        clang llvm lld \
+        binutils-aarch64-linux-gnu \
+        gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
+        libc6-dev-arm64-cross
+    condition: startsWith(variables.AgentOS, 'Linux')
+    displayName: Install linux-arm64 NativeAOT toolchain
 - script: dotnet publish MSStore.CLI --self-contained -r ${{ parameters.dotnet_runtime }}-${{ parameters.dotnet_arch }} -f ${{ parameters.dotnet_framework }} /p:Configuration=${{ parameters.dotnet_configuration }} /p:PublishProfile=${{ parameters.dotnet_runtime }}-${{ parameters.dotnet_arch }}
   displayName: Publish CLI
 - ${{ if eq(parameters['DoEsrp'], 'true') }}:
