@@ -19,6 +19,11 @@ namespace MSStore.CLI.Services
         {
             using var fileStream = new FileStream(localFilePath, FileMode.Open, FileAccess.Read);
 
+            // Capture the length up front. Progress<T> dispatches its handlers on the thread pool, so a
+            // callback can still run after this method has returned (or thrown) and fileStream has been
+            // disposed. The callback must therefore never touch fileStream.
+            var totalBytes = fileStream.Length;
+
             var blobClientOptions = new BlobClientOptions();
             blobClientOptions.Retry.NetworkTimeout = TimeSpan.FromSeconds(uploadTimeout);
             blobClientOptions.AddPolicy(new AddCorrelationIdHeaderPolicy(), HttpPipelinePosition.PerCall);
@@ -29,10 +34,7 @@ namespace MSStore.CLI.Services
                 {
                     ContentType = "application/zip"
                 },
-                ProgressHandler = new Progress<long>(bytesTransferred =>
-                {
-                    progress.Report((double)bytesTransferred * 100 / fileStream.Length);
-                }),
+                ProgressHandler = new Progress<long>(CreateProgressCallback(totalBytes, progress)),
             };
 
             var response = await blobClient.UploadAsync(fileStream, blobUploadOptions, ct);
@@ -44,6 +46,25 @@ namespace MSStore.CLI.Services
             {
                 throw new MSStoreException(response.GetRawResponse().ReasonPhrase);
             }
+        }
+
+        internal static Action<long> CreateProgressCallback(long totalBytes, IProgress<double> progress)
+        {
+            return bytesTransferred =>
+            {
+                try
+                {
+                    if (totalBytes > 0)
+                    {
+                        progress.Report((double)bytesTransferred * 100 / totalBytes);
+                    }
+                }
+                catch (Exception)
+                {
+                    // Progress reporting is best-effort. This runs on a thread-pool thread, outside the
+                    // caller's try/catch, so anything that escapes here would terminate the process.
+                }
+            };
         }
 
         public class AddCorrelationIdHeaderPolicy() : HttpPipelineSynchronousPolicy
