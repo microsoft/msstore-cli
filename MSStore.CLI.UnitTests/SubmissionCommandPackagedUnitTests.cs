@@ -110,6 +110,214 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
+        public async Task PackagedSubmissionUpdateCommandWithPayloadOption()
+        {
+            var payloadFilePath = CreateTemporaryPayloadFile(
+                @"
+{
+""ApplicationPackages"":
+    [
+        {
+            ""FileName"":""C:\\temp\\installer.msix""
+        }
+    ]
+}");
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "submission",
+                    "update",
+                    FakeApps[0].Id!,
+                    "--payload",
+                    payloadFilePath
+                ]);
+
+            result.Error.Should().Contain("Updating submission product");
+            result.Output.Should().Contain("\"FileUploadUrl\": \"https://azureblob.com/fileupload\"");
+        }
+
+        [TestMethod]
+        public async Task PackagedSubmissionUpdateCommandWithFilePathArgument()
+        {
+            var payloadFilePath = CreateTemporaryPayloadFile(
+                @"
+{
+""ApplicationPackages"":
+    [
+        {
+            ""FileName"":""C:\\temp\\installer.msix""
+        }
+    ]
+}");
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "submission",
+                    "update",
+                    FakeApps[0].Id!,
+                    payloadFilePath
+                ]);
+
+            result.Error.Should().Contain("Updating submission product");
+            result.Output.Should().Contain("\"FileUploadUrl\": \"https://azureblob.com/fileupload\"");
+        }
+
+        [TestMethod]
+        public async Task PackagedSubmissionUpdateCommandWithStandardInputArgument()
+        {
+            FakeConsole
+                .Setup(x => x.ReadAllStandardInputAsync(null, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(
+                    @"
+{
+""ApplicationPackages"":
+    [
+        {
+            ""FileName"":""C:\\temp\\installer.msix""
+        }
+    ]
+}");
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "submission",
+                    "update",
+                    FakeApps[0].Id!,
+                    "-"
+                ]);
+
+            result.Error.Should().Contain("Updating submission product");
+            result.Output.Should().Contain("\"FileUploadUrl\": \"https://azureblob.com/fileupload\"");
+        }
+
+        [TestMethod]
+        public async Task PackagedSubmissionUpdateCommandWithRedirectedStandardInput()
+        {
+            FakeConsole
+                .Setup(x => x.IsInputRedirected)
+                .Returns(true);
+            FakeConsole
+                .Setup(x => x.ReadAllStandardInputAsync(It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(
+                    @"
+{
+""ApplicationPackages"":
+    [
+        {
+            ""FileName"":""C:\\temp\\installer.msix""
+        }
+    ]
+}");
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "submission",
+                    "update",
+                    FakeApps[0].Id!
+                ]);
+
+            result.Error.Should().Contain("Updating submission product");
+            result.Output.Should().Contain("\"FileUploadUrl\": \"https://azureblob.com/fileupload\"");
+        }
+
+        [TestMethod]
+        public async Task PackagedSubmissionUpdateCommandWithNoPayload()
+        {
+            var result = await ParseAndInvokeAsync(
+                [
+                    "submission",
+                    "update",
+                    FakeApps[0].Id!
+                ], 1);
+
+            result.Error.Should().Contain("No 'product' was provided.");
+        }
+
+        [TestMethod]
+        public async Task PackagedSubmissionUpdateCommandWithUnknownFilePath()
+        {
+            var result = await ParseAndInvokeAsync(
+                [
+                    "submission",
+                    "update",
+                    FakeApps[0].Id!,
+                    "this-file-does-not-exist.json"
+                ], 1);
+
+            result.Error.Should().Contain("is neither a JSON payload nor a path to an existing file");
+        }
+
+        [TestMethod]
+        public async Task PackagedSubmissionUpdateCommandWithBothInlineJsonAndPayloadOption()
+        {
+            var payloadFilePath = CreateTemporaryPayloadFile(
+                @"
+{
+""ApplicationPackages"":
+    [
+        {
+            ""FileName"":""C:\\temp\\installer.msix""
+        }
+    ]
+}");
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "submission",
+                    "update",
+                    FakeApps[0].Id!,
+                    @"{ ""ApplicationPackages"": [] }",
+                    "--payload",
+                    payloadFilePath
+                ], 1);
+
+            result.Error.Should().Contain("Use only one of them.");
+        }
+
+        [TestMethod]
+        public async Task PackagedSubmissionUpdateCommandWithPayloadBiggerThanTheCommandLineLimit()
+        {
+            // The maximum command line length on Windows is 32,767 characters, so a payload this
+            // big can only be provided through a file or through the standard input stream.
+            var description = new string('a', 40000);
+
+            var payloadFilePath = CreateTemporaryPayloadFile(
+                @"
+{
+""Listings"":
+    {
+        ""en-us"":
+        {
+            ""BaseListing"":
+            {
+                ""Description"": """ + description + @"""
+            }
+        }
+    }
+}");
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "submission",
+                    "update",
+                    FakeApps[0].Id!,
+                    "--payload",
+                    payloadFilePath
+                ]);
+
+            FakeStorePackagedAPI.Verify(
+                x => x.UpdateSubmissionAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.Is<DevCenterSubmission>(s => s.Listings!["en-us"].BaseListing!.Description == description),
+                    It.IsAny<CancellationToken>()),
+                Times.Once);
+
+            result.Error.Should().Contain("Updating submission product");
+            result.Output.Should().Contain("\"FileUploadUrl\": \"https://azureblob.com/fileupload\"");
+        }
+
+        [TestMethod]
         public async Task PackagedSubmissionUpdateMetadataCommand()
         {
             var result = await ParseAndInvokeAsync(
@@ -130,6 +338,37 @@ namespace MSStore.CLI.UnitTests
         }
     }
 }"
+                ]);
+
+            result.Error.Should().Contain("Updating submission product");
+            result.Output.Should().Contain("\"FileUploadUrl\": \"https://azureblob.com/fileupload\"");
+        }
+
+        [TestMethod]
+        public async Task PackagedSubmissionUpdateMetadataCommandWithPayloadOption()
+        {
+            var payloadFilePath = CreateTemporaryPayloadFile(
+                @"
+{
+""Listings"":
+    {
+        ""en-us"":
+        {
+            ""BaseListing"":
+            {
+                ""Description"": ""New description""
+            }
+        }
+    }
+}");
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "submission",
+                    "updateMetadata",
+                    FakeApps[0].Id!,
+                    "-p",
+                    payloadFilePath
                 ]);
 
             result.Error.Should().Contain("Updating submission product");

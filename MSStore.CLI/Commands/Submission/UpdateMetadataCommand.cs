@@ -25,7 +25,8 @@ namespace MSStore.CLI.Commands.Submission
         {
             MetadataArgument = new Argument<string>("metadata")
             {
-                Description = "The updated JSON metadata representation."
+                Arity = ArgumentArity.ZeroOrOne,
+                Description = "The updated JSON metadata representation. It can also be the path to a file that contains the JSON, or '-' to read it from the standard input stream."
             };
         }
 
@@ -34,20 +35,22 @@ namespace MSStore.CLI.Commands.Submission
         {
             Arguments.Add(SubmissionCommand.ProductIdArgument);
             Arguments.Add(MetadataArgument);
+            Options.Add(SubmissionCommand.PayloadOption);
             Options.Add(SubmissionCommand.SkipInitialPolling);
         }
 
-        public class Handler(ILogger<UpdateMetadataCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : AsynchronousCommandLineAction
+        public class Handler(ILogger<UpdateMetadataCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IConsoleReader consoleReader, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : AsynchronousCommandLineAction
         {
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
+            private readonly IConsoleReader _consoleReader = consoleReader ?? throw new ArgumentNullException(nameof(consoleReader));
             private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
             public override async Task<int> InvokeAsync(ParseResult parseResult, CancellationToken ct = default)
             {
                 var productId = parseResult.GetRequiredValue(SubmissionCommand.ProductIdArgument);
-                var metadata = parseResult.GetRequiredValue(MetadataArgument);
+                var metadata = await PayloadResolver.ResolveAsync(_consoleReader, parseResult.GetValue(MetadataArgument), parseResult.GetValue(SubmissionCommand.PayloadOption), MetadataArgument.Name, ct);
                 var skipInitialPolling = parseResult.GetRequiredValue(SubmissionCommand.SkipInitialPolling);
 
                 object? updateSubmissionData = null;

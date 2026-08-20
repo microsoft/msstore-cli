@@ -4,8 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.CommandLine.Invocation;
-using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -223,28 +221,6 @@ namespace MSStore.CLI
             IHost host = hostBuilder.Start();
 
             IHostApplicationLifetime lifetime = host.Services.GetRequiredService<IHostApplicationLifetime>();
-
-            var argList = args.ToList();
-
-            if (Console.IsInputRedirected && !Debugger.IsAttached)
-            {
-                try
-                {
-                    using var stream = Console.OpenStandardInput();
-                    using StreamReader reader = new StreamReader(stream);
-                    var x = await reader.ReadToEndAsync().WaitAsync(new CancellationTokenSource(1000).Token);
-                    if (!string.IsNullOrWhiteSpace(x))
-                    {
-                        argList.Add(x);
-                    }
-                }
-                catch (TaskCanceledException)
-                {
-                    // If there is no input, we don't want to wait forever
-                }
-            }
-
-            args = [.. argList];
 
             var storeCLI = host.Services.GetRequiredService<MicrosoftStoreCLI>();
             var parseResult = storeCLI.Parse(args);

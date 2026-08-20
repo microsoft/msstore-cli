@@ -141,6 +141,42 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
+        public async Task UnpackagedSubmissionUpdateCommandWithPayloadOption()
+        {
+            FakeStoreAPI
+                .Setup(x => x.UpdateProductPackagesAsync(It.IsAny<string>(), It.IsAny<UpdatePackagesRequest>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new UpdateMetadataResponse
+                {
+                    OngoingSubmissionId = "12345",
+                    PollingUrl = "https://www.example.com/polling"
+                });
+
+            var payloadFilePath = CreateTemporaryPayloadFile(
+                @"
+{
+""Packages"":
+    [
+        {
+            ""PackageUrl"":""https://www.example.com/installer.exe""
+        }
+    ]
+}");
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "submission",
+                    "update",
+                    Guid.Empty.ToString(),
+                    "--payload",
+                    payloadFilePath
+                ]);
+
+            result.Error.Should().Contain("Updating submission product");
+            result.Output.Should().Contain("\"PollingUrl\": \"https://www.example.com/polling\"");
+            result.Output.Should().Contain("\"OngoingSubmissionId\": \"12345\"");
+        }
+
+        [TestMethod]
         public async Task UnpackagedSubmissionUpdateMetadataCommand()
         {
             FakeStoreAPI
@@ -163,6 +199,41 @@ namespace MSStore.CLI.UnitTests
         ""Pricing"":""1""
     }
 }"
+                ]);
+
+            result.Error.Should().Contain("Updating submission metadata");
+            result.Output.Should().Contain("\"PollingUrl\": \"https://www.example.com/polling\"");
+            result.Output.Should().Contain("\"OngoingSubmissionId\": \"12345\"");
+        }
+
+        [TestMethod]
+        public async Task UnpackagedSubmissionUpdateMetadataCommandWithStandardInput()
+        {
+            FakeStoreAPI
+                .Setup(x => x.UpdateSubmissionMetadataAsync(It.IsAny<string>(), It.IsAny<UpdateMetadataRequest>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new UpdateMetadataResponse
+                {
+                    OngoingSubmissionId = "12345",
+                    PollingUrl = "https://www.example.com/polling"
+                });
+
+            FakeConsole
+                .Setup(x => x.ReadAllStandardInputAsync(null, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(
+                    @"
+{
+""Availability"":
+    {
+        ""Pricing"":""1""
+    }
+}");
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "submission",
+                    "updateMetadata",
+                    Guid.Empty.ToString(),
+                    "-"
                 ]);
 
             result.Error.Should().Contain("Updating submission metadata");

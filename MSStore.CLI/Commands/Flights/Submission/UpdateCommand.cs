@@ -26,7 +26,8 @@ namespace MSStore.CLI.Commands.Flights.Submission
         {
             ProductArgument = new Argument<string>("product")
             {
-                Description = "The updated JSON product representation."
+                Arity = ArgumentArity.ZeroOrOne,
+                Description = "The updated JSON product representation. It can also be the path to a file that contains the JSON, or '-' to read it from the standard input stream."
             };
         }
 
@@ -36,12 +37,14 @@ namespace MSStore.CLI.Commands.Flights.Submission
             Arguments.Add(SubmissionCommand.ProductIdArgument);
             Arguments.Add(Flights.GetCommand.FlightIdArgument);
             Arguments.Add(ProductArgument);
+            Options.Add(SubmissionCommand.PayloadOption);
         }
 
-        public class Handler(ILogger<UpdateCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : AsynchronousCommandLineAction
+        public class Handler(ILogger<UpdateCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IConsoleReader consoleReader, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : AsynchronousCommandLineAction
         {
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
+            private readonly IConsoleReader _consoleReader = consoleReader ?? throw new ArgumentNullException(nameof(consoleReader));
             private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
@@ -49,13 +52,14 @@ namespace MSStore.CLI.Commands.Flights.Submission
             {
                 var productId = parseResult.GetRequiredValue(SubmissionCommand.ProductIdArgument);
                 var flightId = parseResult.GetRequiredValue(Flights.GetCommand.FlightIdArgument);
-                var product = parseResult.GetRequiredValue(ProductArgument);
 
                 if (ProductTypeHelper.Solve(productId) == ProductType.Unpackaged)
                 {
                     _ansiConsole.WriteLine("This command is not supported for unpackaged applications.");
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, -1, ct);
                 }
+
+                var product = await PayloadResolver.ResolveAsync(_consoleReader, parseResult.GetValue(ProductArgument), parseResult.GetValue(SubmissionCommand.PayloadOption), ProductArgument.Name, ct);
 
                 var updateFlightSubmission = JsonSerializer.Deserialize(product, SourceGenerationContext.GetCustom().DevCenterFlightSubmissionUpdate);
 

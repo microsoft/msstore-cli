@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,6 +13,52 @@ namespace MSStore.CLI.Services
 {
     internal class ConsoleReader : IConsoleReader
     {
+        public bool IsInputRedirected => Console.IsInputRedirected;
+
+        public async Task<string?> ReadAllStandardInputAsync(TimeSpan? firstByteTimeout, CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            using var stream = Console.OpenStandardInput();
+            using var reader = new StreamReader(stream);
+
+            var buffer = new char[1];
+
+            var firstCharTask = reader.ReadAsync(buffer, 0, 1);
+
+            int read;
+            if (firstByteTimeout.HasValue)
+            {
+                try
+                {
+                    using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                    timeoutSource.CancelAfter(firstByteTimeout.Value);
+
+                    read = await firstCharTask.WaitAsync(timeoutSource.Token);
+                }
+                catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+                {
+                    // Standard input is redirected, but nothing was ever written to it.
+                    return null;
+                }
+            }
+            else
+            {
+                read = await firstCharTask.WaitAsync(ct);
+            }
+
+            if (read == 0)
+            {
+                return null;
+            }
+
+            // The producer may be slow (it could be another CLI call doing network requests), so
+            // the remainder is read without any deadline to make sure nothing is truncated.
+            var rest = await reader.ReadToEndAsync(ct);
+
+            return string.Concat(buffer[0].ToString(), rest);
+        }
+
         public async Task<string?> ReadNextAsync(bool hidden, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
