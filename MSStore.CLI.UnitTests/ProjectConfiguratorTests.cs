@@ -660,6 +660,8 @@ namespace MSStore.CLI.UnitTests
                     "init",
                     "https://microsoft.com",
                     "--publish",
+                    "--appId",
+                    FakeApps[0].Id!,
                     "--verbose"
                 ]);
 
@@ -723,6 +725,72 @@ namespace MSStore.CLI.UnitTests
 
             result.Error.Should().Contain("You've provided a URL, so we'll use");
             result.Error.Should().Contain("Submission commit success!");
+        }
+
+        [TestMethod]
+        public async Task ProjectConfiguratorParsesPWASuccessfullyOnCIIfAppIdIsProvided()
+        {
+            SetupSuccessfullPWA(true);
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "init",
+                    "https://microsoft.com",
+                    "--publisherDisplayName",
+                    "FAKE_PUBLISHER_DISPLAY_NAME",
+                    "--publish",
+                    "-id",
+                    FakeApps[1].Id!,
+                    "--verbose"
+                ]);
+
+            result.Error.Should().Contain("You've provided a URL, so we'll use");
+            result.Error.Should().Contain($"AppId: {FakeApps[1].Id}");
+            result.Error.Should().Contain("Submission commit success!");
+
+            FakeStorePackagedAPI.Verify(x => x.GetApplicationsAsync(It.IsAny<CancellationToken>()), Times.Never);
+            FakeConsole.Verify(
+                x => x.SelectionPromptAsync(
+                    It.Is<string>(s => s == "Which application should we use to configure your project?"),
+                    It.IsAny<IEnumerable<string>>(),
+                    It.IsAny<int>(),
+                    It.IsAny<Func<string, string>>(),
+                    It.IsAny<CancellationToken>()),
+                Times.Never);
+        }
+
+        [TestMethod]
+        public async Task ProjectConfiguratorParsesPWASuccessfullyOnCIIfAccountHasASingleApp()
+        {
+            SetupSuccessfullPWA(true);
+
+            FakeStorePackagedAPI
+                .Setup(x => x.GetApplicationsAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync([FakeApps[0]]);
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "init",
+                    "https://microsoft.com",
+                    "--publisherDisplayName",
+                    "FAKE_PUBLISHER_DISPLAY_NAME",
+                    "--publish",
+                    "--verbose"
+                ]);
+
+            result = CleanResult(result);
+
+            result.Error.Should().Contain($"Using {FakeApps[0].PrimaryName} ({FakeApps[0].Id}), the only application registered in your account.");
+            result.Error.Should().Contain("Submission commit success!");
+
+            FakeConsole.Verify(
+                x => x.SelectionPromptAsync(
+                    It.Is<string>(s => s == "Which application should we use to configure your project?"),
+                    It.IsAny<IEnumerable<string>>(),
+                    It.IsAny<int>(),
+                    It.IsAny<Func<string, string>>(),
+                    It.IsAny<CancellationToken>()),
+                Times.Never);
         }
     }
 }
