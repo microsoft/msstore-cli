@@ -81,7 +81,7 @@ namespace MSStore.CLI.Commands
 
             AppIdOption = new Option<string>("--appId", "-id")
             {
-                Description = "Specifies the Application Id to configure the project with. If not provided, the application will be selected interactively, which is not possible on CI/CD environments."
+                Description = "Specifies the Application Id to configure the project with. If not provided, the application is selected interactively, which is not possible on CI/CD environments, unless the account has a single application."
             };
 
             PackageOption = new Option<bool>("--package")
