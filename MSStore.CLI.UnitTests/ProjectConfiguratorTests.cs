@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Text.RegularExpressions;
+
 using MSStore.CLI.Services.PWABuilder;
 
 namespace MSStore.CLI.UnitTests
@@ -20,12 +22,13 @@ namespace MSStore.CLI.UnitTests
 
         private static (string Output, string Error) CleanResult((string Output, string Error) result)
         {
+            static string Clean(string value) => Regex.Replace(value, @"\x1B\[[0-9;]*[A-Za-z]", string.Empty)
+                .Replace(Environment.NewLine, " ")
+                .Replace("  ", " ");
+
             return (
-                Output: result.Output
-                    .Replace(Environment.NewLine, " ")
-                    .Replace("  ", " "),
-                Error: result.Error.Replace(Environment.NewLine, " ")
-                    .Replace("  ", " "));
+                Output: Clean(result.Output),
+                Error: Clean(result.Error));
         }
 
         [TestMethod]
