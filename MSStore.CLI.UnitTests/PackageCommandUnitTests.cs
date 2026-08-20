@@ -99,7 +99,7 @@ namespace MSStore.CLI.UnitTests
                 ]);
 
             result.Error.Should().Contain("The packaged app is here:");
-            result.Output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).Should().ContainSingle(line => line.Contains(customPath));
+            result.Output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).Should().ContainSingle().Which.Should().Contain(customPath);
 
             ExternalCommandExecutor.VerifyAll();
         }
@@ -216,7 +216,7 @@ namespace MSStore.CLI.UnitTests
                 ]);
 
             result.Error.Should().Contain("The packaged app is here:");
-            result.Output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).Should().ContainSingle(line => line.Contains(customPath));
+            result.Output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).Should().ContainSingle().Which.Should().Contain(customPath);
 
             ExternalCommandExecutor.VerifyAll();
         }
@@ -295,7 +295,7 @@ namespace MSStore.CLI.UnitTests
                 ]);
 
             result.Error.Should().Contain("The packaged app is here:");
-            result.Output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).Should().ContainSingle(line => line.Contains(customPath));
+            result.Output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).Should().ContainSingle().Which.Should().Contain(customPath);
 
             ExternalCommandExecutor.VerifyAll();
         }
@@ -375,7 +375,7 @@ namespace MSStore.CLI.UnitTests
                 ]);
 
             result.Error.Should().Contain("The packaged app is here:");
-            result.Output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).Should().ContainSingle(line => line.Contains(path));
+            result.Output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).Should().ContainSingle().Which.Should().Contain(path);
         }
 
         [TestMethod]
@@ -426,7 +426,7 @@ namespace MSStore.CLI.UnitTests
                 ]);
 
             result.Error.Should().Contain("The packaged app is here:");
-            result.Output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).Should().ContainSingle(line => line.Contains(customPath));
+            result.Output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).Should().ContainSingle().Which.Should().Contain(customPath);
         }
 
         private void SetupPubGet(DirectoryInfo dirInfo)
@@ -478,7 +478,7 @@ namespace MSStore.CLI.UnitTests
                 ]);
 
             result.Error.Should().Contain("The packaged app is here:");
-            result.Output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).Should().ContainSingle(line => line.Contains(path));
+            result.Output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).Should().ContainSingle().Which.Should().Contain(path);
         }
 
         [TestMethod]
@@ -514,7 +514,7 @@ namespace MSStore.CLI.UnitTests
                 ]);
 
             result.Error.Should().Contain("The packaged app is here:");
-            result.Output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).Should().ContainSingle(line => line.Contains(path));
+            result.Output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).Should().ContainSingle().Which.Should().Contain(path);
         }
 
         [TestMethod]
@@ -566,7 +566,7 @@ namespace MSStore.CLI.UnitTests
                 ]);
 
             result.Error.Should().Contain("The packaged app is here:");
-            result.Output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).Should().ContainSingle(line => line.Contains(path));
+            result.Output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).Should().ContainSingle().Which.Should().Contain(path);
         }
     }
 }

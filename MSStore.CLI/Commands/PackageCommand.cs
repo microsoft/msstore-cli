@@ -100,7 +100,7 @@ namespace MSStore.CLI.Commands
                 if (returnCode == 0 && outputDirectory != null)
                 {
                     _ansiConsole.WriteLine($"The packaged app is here:");
-                    StandardOutput.WriteLine(outputDirectory.ToString());
+                    StandardOutput.WriteLine(outputDirectory.FullName);
                 }
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(returnCode, props, ct);
