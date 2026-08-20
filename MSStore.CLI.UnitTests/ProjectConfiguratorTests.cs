@@ -747,6 +747,8 @@ namespace MSStore.CLI.UnitTests
                     "--verbose"
                 ]);
 
+            result = CleanResult(result);
+
             result.Error.Should().Contain("You've provided a URL, so we'll use");
             result.Error.Should().Contain($"AppId: {FakeApps[1].Id}");
             result.Error.Should().Contain("Submission commit success!");
