@@ -101,7 +101,7 @@ namespace MSStore.CLI.Commands.Flights.Submission.Rollout
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, -1, ct);
                 }
 
-                AnsiConsole.WriteLine(JsonSerializer.Serialize(flightSubmissionRollout, SourceGenerationContext.GetCustom(true).PackageRollout));
+                StandardOutput.WriteLine(JsonSerializer.Serialize(flightSubmissionRollout, SourceGenerationContext.GetCustom(true).PackageRollout));
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, 0, ct);
             }

@@ -115,7 +115,7 @@ namespace MSStore.CLI.Commands.Submission
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, -1, ct);
                 }
 
-                AnsiConsole.WriteLine(JsonSerializer.Serialize(submission, submission.GetType(), SourceGenerationContext.GetCustom(true)));
+                StandardOutput.WriteLine(JsonSerializer.Serialize(submission, submission.GetType(), SourceGenerationContext.GetCustom(true)));
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, 0, ct);
             }

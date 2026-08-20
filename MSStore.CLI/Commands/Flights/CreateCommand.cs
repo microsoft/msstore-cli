@@ -111,7 +111,7 @@ namespace MSStore.CLI.Commands.Flights
 
                 if (flight != null)
                 {
-                    AnsiConsole.WriteLine(JsonSerializer.Serialize(flight, SourceGenerationContext.GetCustom(true).DevCenterFlight));
+                    StandardOutput.WriteLine(JsonSerializer.Serialize(flight, SourceGenerationContext.GetCustom(true).DevCenterFlight));
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(0, ct);
                 }
 

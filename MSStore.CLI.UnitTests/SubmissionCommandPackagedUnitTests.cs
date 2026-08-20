@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Text.Json;
 using MSStore.API.Packaged.Models;
 
 namespace MSStore.CLI.UnitTests
@@ -66,6 +67,40 @@ namespace MSStore.CLI.UnitTests
 
             result.Output.Should().Contain("\"Id\": \"123456789\"");
             result.Output.Should().Contain("\"FileUploadUrl\": \"https://azureblob.com/fileupload\"");
+        }
+
+        [TestMethod]
+        public async Task PackagedSubmissionGetCommandShouldNotWrapJsonOutput()
+        {
+            // Longer than the width the test console renders at, and sprinkled with characters
+            // that the serializer escapes as \uXXXX, so a wrap would both break the JSON and
+            // corrupt the description.
+            var longDescription = string.Concat(
+                Enumerable.Repeat("Sync your mail & calendar across every device without a fuss. ", 12));
+
+            AddDefaultFakeSubmission(longDescription);
+
+            FakeApps[0].LastPublishedApplicationSubmission = new ApplicationSubmissionInfo
+            {
+                Id = "123456789"
+            };
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "submission",
+                    "get",
+                    FakeApps[0].Id!
+                ]);
+
+            using var json = JsonDocument.Parse(result.Output);
+
+            json.RootElement
+                .GetProperty("Listings")
+                .GetProperty("en-us")
+                .GetProperty("BaseListing")
+                .GetProperty("Description")
+                .GetString()
+                .Should().Be(longDescription);
         }
 
         [TestMethod]
