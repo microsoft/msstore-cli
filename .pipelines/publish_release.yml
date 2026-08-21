@@ -173,9 +173,6 @@ extends:
     - stage: HomeBrew
       displayName: MacOS HomeBrew Deployment
       dependsOn: GitHub_Release_And_MSStore
-      variables:
-      - name: GitHubPAT
-        value: $(GitHubPAT)
       jobs:
       - job: PreDeploymentApprovalJob
         displayName: Pre-Deployment Approval
@@ -195,8 +192,10 @@ extends:
         steps:
         - task: CmdLine@2
           displayName: Checkout HomeBrew Repo
+          env:
+            GITHUB_PAT: $(GitHubPAT)
           inputs:
-            script: git clone https://oauth2:$(GitHubPAT)@github.com/microsoft/homebrew-msstore-cli.git $(Pipeline.Workspace)\homebrew-msstore-cli
+            script: git clone https://oauth2:%GITHUB_PAT%@github.com/microsoft/homebrew-msstore-cli.git $(Pipeline.Workspace)\homebrew-msstore-cli
         - task: DownloadGitHubRelease@0
           displayName: Download GitHub Release
           inputs:
