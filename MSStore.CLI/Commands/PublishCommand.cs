@@ -21,6 +21,11 @@ namespace MSStore.CLI.Commands
 {
     internal class PublishCommand : Command
     {
+        internal const long DefaultUploadTimeoutSeconds = 100;
+
+        private const long MinUploadTimeoutSeconds = 100;
+        private const long MaxUploadTimeoutSeconds = 100000;
+
         internal static readonly Option<string> FlightIdOption;
         internal static readonly Option<float?> PackageRolloutPercentageOption;
         internal static readonly Option<long> UploadTimeoutOption;
@@ -99,23 +104,29 @@ namespace MSStore.CLI.Commands
             UploadTimeoutOption = new Option<long>("--uploadTimeout", "-ut")
             {
                 Description = "Specifies timeout in seconds for package upload to blob storage. Valid only for MSIX and PWA packages.",
+
+                // CustomParser only runs when the option is present on the command line. Without a
+                // DefaultValueFactory, omitting the option entirely yields default(long) - zero -
+                // which reaches BlobClientOptions.Retry.NetworkTimeout and cancels every request
+                // the moment it starts.
+                DefaultValueFactory = _ => DefaultUploadTimeoutSeconds,
                 CustomParser = result =>
                 {
                     if (result.Tokens.Count == 0)
                     {
-                        return 100;
+                        return DefaultUploadTimeoutSeconds;
                     }
 
                     string? seconds = result.Tokens.Single().Value;
                     if (!long.TryParse(seconds, out long parsedSeconds))
                     {
-                        result.AddError("Invalid seconds value. The value must be between 100 and 100000.");
-                        return 100;
+                        result.AddError($"Invalid seconds value. The value must be between {MinUploadTimeoutSeconds} and {MaxUploadTimeoutSeconds}.");
+                        return DefaultUploadTimeoutSeconds;
                     }
-                    else if (parsedSeconds < 100 || parsedSeconds > 100000)
+                    else if (parsedSeconds < MinUploadTimeoutSeconds || parsedSeconds > MaxUploadTimeoutSeconds)
                     {
-                        result.AddError("Invalid seconds value. The value must be between 100 and 100000.");
-                        return 100;
+                        result.AddError($"Invalid seconds value. The value must be between {MinUploadTimeoutSeconds} and {MaxUploadTimeoutSeconds}.");
+                        return DefaultUploadTimeoutSeconds;
                     }
                     else
                     {

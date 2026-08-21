@@ -1,6 +1,9 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+using System.CommandLine;
+using System.Globalization;
+using MSStore.CLI.Commands;
 using MSStore.CLI.ProjectConfigurators;
 
 namespace MSStore.CLI.UnitTests
@@ -304,6 +307,57 @@ namespace MSStore.CLI.UnitTests
 
             result.Error.Should().Contain("Submission commit success! Here is some data:");
             result.Error.Should().Contain("test.msix");
+        }
+        private static ParseResult ParsePublish(params string[] args) =>
+            new PublishCommand().Parse(args);
+
+        [TestMethod]
+        public void PublishCommandUploadTimeoutShouldDefaultWhenOptionIsOmitted()
+        {
+            // Regression: without a DefaultValueFactory this returned default(long) - zero - which
+            // reaches BlobClientOptions.Retry.NetworkTimeout and cancels every upload immediately.
+            var parseResult = ParsePublish("publish", ".");
+
+            parseResult
+                .GetValue(PublishCommand.UploadTimeoutOption)
+                .Should()
+                .Be(PublishCommand.DefaultUploadTimeoutSeconds);
+        }
+
+        [TestMethod]
+        public void PublishCommandUploadTimeoutShouldRequireAValueWhenTheOptionIsPresent()
+        {
+            // The option takes exactly one argument, so the CustomParser's "no tokens" branch is
+            // unreachable from the command line - which is why its 100 was never the default that
+            // applied when the option was left out altogether.
+            var parseResult = ParsePublish("publish", ".", "--uploadTimeout");
+
+            parseResult.Errors.Should().NotBeEmpty();
+        }
+
+        [TestMethod]
+        [DataRow(100)]
+        [DataRow(300)]
+        [DataRow(100000)]
+        public void PublishCommandUploadTimeoutShouldUseTheProvidedValue(int seconds)
+        {
+            var parseResult = ParsePublish("publish", ".", "--uploadTimeout", seconds.ToString(CultureInfo.InvariantCulture));
+
+            parseResult
+                .GetValue(PublishCommand.UploadTimeoutOption)
+                .Should()
+                .Be(seconds);
+        }
+
+        [TestMethod]
+        [DataRow("99")]
+        [DataRow("100001")]
+        [DataRow("not-a-number")]
+        public void PublishCommandUploadTimeoutShouldRejectValuesOutsideTheAllowedRange(string seconds)
+        {
+            var parseResult = ParsePublish("publish", ".", "--uploadTimeout", seconds);
+
+            parseResult.Errors.Should().NotBeEmpty();
         }
     }
 }
