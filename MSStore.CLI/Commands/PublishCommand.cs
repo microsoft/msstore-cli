@@ -23,8 +23,8 @@ namespace MSStore.CLI.Commands
     {
         internal const long DefaultUploadTimeoutSeconds = 100;
 
-        private const long MinUploadTimeoutSeconds = 100;
-        private const long MaxUploadTimeoutSeconds = 100000;
+        internal const long MinUploadTimeoutSeconds = 100;
+        internal const long MaxUploadTimeoutSeconds = 100000;
 
         internal static readonly Option<string> FlightIdOption;
         internal static readonly Option<float?> PackageRolloutPercentageOption;
@@ -105,18 +105,16 @@ namespace MSStore.CLI.Commands
             {
                 Description = "Specifies timeout in seconds for package upload to blob storage. Valid only for MSIX and PWA packages.",
 
-                // CustomParser only runs when the option is present on the command line. Without a
-                // DefaultValueFactory, omitting the option entirely yields default(long) - zero -
+                // CustomParser never sees an empty token list: the option's arity is ExactlyOne, so
+                // "--uploadTimeout" without a value fails to parse before the parser runs, and an
+                // omitted option is served by DefaultValueFactory below without reaching the parser
+                // at all. Without that factory, omitting the option yielded default(long) - zero -
                 // which reaches BlobClientOptions.Retry.NetworkTimeout and cancels every request
-                // the moment it starts.
+                // the moment it starts. If the arity is ever relaxed to ZeroOrOne, a "no tokens"
+                // branch has to come back here.
                 DefaultValueFactory = _ => DefaultUploadTimeoutSeconds,
                 CustomParser = result =>
                 {
-                    if (result.Tokens.Count == 0)
-                    {
-                        return DefaultUploadTimeoutSeconds;
-                    }
-
                     string? seconds = result.Tokens.Single().Value;
                     if (!long.TryParse(seconds, out long parsedSeconds))
                     {

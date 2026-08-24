@@ -327,12 +327,24 @@ namespace MSStore.CLI.UnitTests
         [TestMethod]
         public void PublishCommandUploadTimeoutShouldRequireAValueWhenTheOptionIsPresent()
         {
-            // The option takes exactly one argument, so the CustomParser's "no tokens" branch is
-            // unreachable from the command line - which is why its 100 was never the default that
-            // applied when the option was left out altogether.
+            // The option's arity is ExactlyOne, so a value-less "--uploadTimeout" is rejected by the
+            // parser itself rather than reaching the CustomParser with an empty token list. That is
+            // why the CustomParser carries no "no tokens" branch: omitting the option is served by
+            // DefaultValueFactory, and this is the only other way it could have been entered.
             var parseResult = ParsePublish("publish", ".", "--uploadTimeout");
 
-            parseResult.Errors.Should().NotBeEmpty();
+            // The wording comes from System.CommandLine and is localized, so only the option name is
+            // asserted; what matters is that the error is the parser's own, not the CustomParser's.
+            parseResult
+                .Errors
+                .Should()
+                .ContainSingle()
+                .Which
+                .Message
+                .Should()
+                .Contain("--uploadTimeout")
+                .And
+                .NotContain("The value must be between");
         }
 
         [TestMethod]
@@ -357,7 +369,14 @@ namespace MSStore.CLI.UnitTests
         {
             var parseResult = ParsePublish("publish", ".", "--uploadTimeout", seconds);
 
-            parseResult.Errors.Should().NotBeEmpty();
+            parseResult
+                .Errors
+                .Should()
+                .ContainSingle()
+                .Which
+                .Message
+                .Should()
+                .Be($"Invalid seconds value. The value must be between {PublishCommand.MinUploadTimeoutSeconds} and {PublishCommand.MaxUploadTimeoutSeconds}.");
         }
     }
 }
