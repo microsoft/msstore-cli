@@ -104,5 +104,41 @@ namespace MSStore.CLI.UnitTests
                     It.IsAny<CancellationToken>()),
                 Times.Never);
         }
+
+        [TestMethod]
+        public async Task InitCommandShouldFailIfNotOnCIAndPromptIsNotSupported()
+        {
+            AddDefaultFakeAccount();
+            AddFakeApps();
+
+            FakeConsole
+                .Setup(x => x.SelectionPromptAsync(
+                    It.Is<string>(s => s == "Which application should we use to configure your project?"),
+                    It.IsAny<IEnumerable<string>>(),
+                    It.IsAny<int>(),
+                    It.IsAny<Func<string, string>>(),
+                    It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new NotSupportedException("Cannot show selection prompt since the current terminal isn't interactive."));
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "init",
+                    "https://www.microsoft.com/",
+                    "--publish",
+                    "--verbose"
+                ], -1);
+
+            result.Error.Should().Contain("Could not select an application because the current environment is not interactive.");
+            result.Error.Should().Contain("--appId");
+
+            FakeConsole.Verify(
+                x => x.SelectionPromptAsync(
+                    It.Is<string>(s => s == "Which application should we use to configure your project?"),
+                    It.IsAny<IEnumerable<string>>(),
+                    It.IsAny<int>(),
+                    It.IsAny<Func<string, string>>(),
+                    It.IsAny<CancellationToken>()),
+                Times.Once);
+        }
     }
 }
