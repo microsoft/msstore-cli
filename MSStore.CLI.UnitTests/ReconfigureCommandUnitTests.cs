@@ -217,5 +217,28 @@ namespace MSStore.CLI.UnitTests
 
             result.Error.Should().Contain("Awesome! It seems to be working!");
         }
+
+        [TestMethod]
+        public async Task ReconfigureCommandWithAllInfoAndClientAssertionShouldReturnZero()
+        {
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reconfigure",
+                    "--tenantId",
+                    DefaultOrganization.Id!.Value.ToString(),
+                    "--sellerId",
+                    "12345",
+                    "--clientId",
+                    "3F0BCAEF-6334-48CF-837F-81CB0F1F2C45",
+                    "--clientAssertion"
+                ]);
+
+            TokenManager
+                .Verify(x => x.SelectAccountAsync(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
+            TokenManager
+                .Verify(x => x.GetTokenAsync(It.IsAny<string[]>(), It.IsAny<CancellationToken>()), Times.Never);
+
+            result.Error.Should().Contain("Awesome! It seems to be working!");
+        }
     }
 }
