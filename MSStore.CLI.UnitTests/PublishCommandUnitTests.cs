@@ -1,6 +1,9 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+using System.CommandLine;
+using System.Globalization;
+using MSStore.CLI.Commands;
 using MSStore.CLI.ProjectConfigurators;
 
 namespace MSStore.CLI.UnitTests
@@ -304,6 +307,76 @@ namespace MSStore.CLI.UnitTests
 
             result.Error.Should().Contain("Submission commit success! Here is some data:");
             result.Error.Should().Contain("test.msix");
+        }
+        private static ParseResult ParsePublish(params string[] args) =>
+            new PublishCommand().Parse(args);
+
+        [TestMethod]
+        public void PublishCommandUploadTimeoutShouldDefaultWhenOptionIsOmitted()
+        {
+            // Regression: without a DefaultValueFactory this returned default(long) - zero - which
+            // reaches BlobClientOptions.Retry.NetworkTimeout and cancels every upload immediately.
+            var parseResult = ParsePublish("publish", ".");
+
+            parseResult
+                .GetValue(PublishCommand.UploadTimeoutOption)
+                .Should()
+                .Be(PublishCommand.DefaultUploadTimeoutSeconds);
+        }
+
+        [TestMethod]
+        public void PublishCommandUploadTimeoutShouldRequireAValueWhenTheOptionIsPresent()
+        {
+            // The option's arity is ExactlyOne, so a value-less "--uploadTimeout" is rejected by the
+            // parser itself rather than reaching the CustomParser with an empty token list. That is
+            // why the CustomParser carries no "no tokens" branch: omitting the option is served by
+            // DefaultValueFactory, and this is the only other way it could have been entered.
+            var parseResult = ParsePublish("publish", ".", "--uploadTimeout");
+
+            // The wording comes from System.CommandLine and is localized, so only the option name is
+            // asserted; what matters is that the error is the parser's own, not the CustomParser's.
+            parseResult
+                .Errors
+                .Should()
+                .ContainSingle()
+                .Which
+                .Message
+                .Should()
+                .Contain("--uploadTimeout")
+                .And
+                .NotContain("The value must be between");
+        }
+
+        [TestMethod]
+        [DataRow(100)]
+        [DataRow(300)]
+        [DataRow(100000)]
+        public void PublishCommandUploadTimeoutShouldUseTheProvidedValue(int seconds)
+        {
+            var parseResult = ParsePublish("publish", ".", "--uploadTimeout", seconds.ToString(CultureInfo.InvariantCulture));
+
+            parseResult
+                .GetValue(PublishCommand.UploadTimeoutOption)
+                .Should()
+                .Be(seconds);
+        }
+
+        [TestMethod]
+        [DataRow("99")]
+        [DataRow("100001")]
+        [DataRow("not-a-number")]
+        public void PublishCommandUploadTimeoutShouldRejectValuesOutsideTheAllowedRange(string seconds)
+        {
+            var parseResult = ParsePublish("publish", ".", "--uploadTimeout", seconds);
+
+            parseResult
+                .Errors
+                .Should()
+                .ContainSingle()
+                .Which
+                .Message
+                .Should()
+                .Be($"Invalid seconds value. The value must be between {PublishCommand.MinUploadTimeoutSeconds} and {PublishCommand.MaxUploadTimeoutSeconds}.");
         }
     }
 }
