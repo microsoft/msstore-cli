@@ -380,6 +380,10 @@ namespace MSStore.CLI.Commands
                         ctx.SuccessStatus(_ansiConsole, "Ok! Found the app!");
                         return app;
                     }
+                    catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                    {
+                        throw;
+                    }
                     catch (Exception err)
                     {
                         ctx.ErrorStatus(_ansiConsole, "Could not retrieve your application. Please make sure you have the correct AppId.");
