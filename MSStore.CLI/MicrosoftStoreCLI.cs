@@ -128,6 +128,11 @@ namespace MSStore.CLI
                 return false;
             }
 
+            if (config.ClientAssertion)
+            {
+                return true;
+            }
+
             var secret = credentialManager.ReadCredential(config.ClientId.Value.ToString());
             if (string.IsNullOrEmpty(config.CertificateFilePath)
                 && string.IsNullOrEmpty(config.CertificateThumbprint)

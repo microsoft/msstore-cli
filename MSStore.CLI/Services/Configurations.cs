@@ -29,6 +29,9 @@ namespace MSStore.CLI.Services
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? PublisherDisplayName { get; set; }
 
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public bool ClientAssertion { get; set; }
+
         public StoreConfigurations GetStoreConfigurations() => new()
         {
             SellerId = SellerId,

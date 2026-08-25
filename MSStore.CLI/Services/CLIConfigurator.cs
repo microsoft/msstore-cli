@@ -38,7 +38,7 @@ namespace MSStore.CLI.Services
         private readonly ITokenManager _tokenManager = tokenManager ?? throw new ArgumentNullException(nameof(tokenManager));
         private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-        public async Task<bool> ConfigureAsync(IAnsiConsole ansiConsole, bool askConfirmation, Guid? tenantId = null, string? sellerId = null, Guid? clientId = null, string? clientSecret = null, string? certificateThumbprint = null, string? certificateFilePath = null, string? certificatePassword = null, CancellationToken ct = default)
+        public async Task<bool> ConfigureAsync(IAnsiConsole ansiConsole, bool askConfirmation, Guid? tenantId = null, string? sellerId = null, Guid? clientId = null, string? clientSecret = null, string? certificateThumbprint = null, string? certificateFilePath = null, string? certificatePassword = null, bool clientAssertion = false, CancellationToken ct = default)
         {
             if (askConfirmation &&
                 !await _consoleReader.YesNoConfirmationAsync(
@@ -80,6 +80,11 @@ namespace MSStore.CLI.Services
                 config.ClientId = clientId;
             }
 
+            if (clientAssertion)
+            {
+                config.ClientAssertion = true;
+            }
+
             if (certificateThumbprint != null)
             {
                 config.CertificateThumbprint = certificateThumbprint;
@@ -92,7 +97,8 @@ namespace MSStore.CLI.Services
 
             if (config.ClientId == null || (clientSecret == null &&
                                         config.CertificateThumbprint == null &&
-                                        config.CertificateFilePath == null))
+                                        config.CertificateFilePath == null &&
+                                        config.ClientAssertion == false))
             {
                 string GetDisplayName(string sufix) => $"MSStoreCLIAccess - {sufix}";
                 string RandomString() => Path.GetFileNameWithoutExtension(Path.GetRandomFileName());
@@ -324,6 +330,13 @@ namespace MSStore.CLI.Services
                         catch (Exception ex)
                         {
                             _logger.LogInformation(ex, "Error while creating StoreAPI.");
+
+                            if (ex is MSStoreException && config.ClientAssertion && ex.InnerException is InvalidOperationException ioe)
+                            {
+                                ctx.ErrorStatus(ansiConsole, ioe.Message);
+                                return false;
+                            }
+
                             if (i + 1 == maxRetry)
                             {
                                 break;

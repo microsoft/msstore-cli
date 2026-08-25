@@ -121,6 +121,31 @@ namespace MSStore.API
         /// <param name="tenantId">The tenantId used to get the access token, specific to your
         /// Azure Active Directory app. Example: "d454d300-128e-2d81-334a-27d9b2baf002"</param>
         /// <param name="clientId">Client Id of your Azure Active Directory app. Example: "ba3c223b-03ab-4a44-aa32-38aa10c27e32"</param>
+        /// <param name="clientAssertionAuthentication">The async delegate that, once completed, provides the client assertion authentication token.</param>
+        /// <param name="scope">Scope. If not provided, default one is used for the production API endpoint.</param>
+        /// <param name="logger">ILogger for logs.</param>
+        /// <param name="ct">Cancelation token.</param>
+        /// <returns>Autorization token. Prepend it with "Bearer: " and pass it in the request header as the
+        /// value for "Authorization: " header.</returns>
+        public static Task<AuthenticationResult> GetClientCredentialAccessTokenAsync(
+            string tenantId,
+            string clientId,
+            Task<string> clientAssertionAuthentication,
+            string scope,
+            ILogger? logger = null,
+            CancellationToken ct = default)
+        {
+            return GetClientCredentialAccessTokenAsync(tenantId, clientId, (builder) => builder.WithClientAssertion((AssertionRequestOptions _) => clientAssertionAuthentication), scope, logger, ct);
+        }
+
+        /// <summary>
+        /// Gets the authorization token for the provided client id, client secret, and the scope.
+        /// This token is usually valid for 1 hour, so if your submission takes longer than that to complete,
+        /// make sure to get a new one periodically.
+        /// </summary>
+        /// <param name="tenantId">The tenantId used to get the access token, specific to your
+        /// Azure Active Directory app. Example: "d454d300-128e-2d81-334a-27d9b2baf002"</param>
+        /// <param name="clientId">Client Id of your Azure Active Directory app. Example: "ba3c223b-03ab-4a44-aa32-38aa10c27e32"</param>
         /// <param name="clientSecret">Client secret of your Azure Active Directory app</param>
         /// <param name="scope">Scope. If not provided, default one is used for the production API endpoint.</param>
         /// <param name="logger">ILogger for logs.</param>

@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace MSStore.CLI.Services
 {
@@ -21,6 +22,12 @@ namespace MSStore.CLI.Services
                 "CLI" // Running inside the CLI
             };
 
+        // Environment variable for client assertion, used for authentication.
+        public static readonly string ClientAssertionEnvironmentVariable = "MSSTORE_CLIENT_ASSERTION";
+
+        // Environment variable for client assertion file path, used for authentication.
+        public static readonly string ClientAssertionFileEnvironmentVariable = "MSSTORE_CLIENT_ASSERTION_FILE";
+
         // Cached environment information, loaded only once
         private static readonly Lazy<string> _cachedEnvironmentInfo = new Lazy<string>(ComputeEnvironmentInfo);
 
@@ -36,6 +43,33 @@ namespace MSStore.CLI.Services
         {
             // Return a copy of the cached data to prevent external modifications
             return _cachedEnvironmentInfo.Value;
+        }
+
+        /// <summary>
+        /// Gets the client assertion from the environment variable. If the variable is not set, returns an empty string.
+        /// </summary>
+        /// <returns>The client assertion string.</returns>
+        public static async Task<string> GetClientAssertionAsync()
+        {
+            string? file = Environment.GetEnvironmentVariable(ClientAssertionFileEnvironmentVariable);
+            string? value = Environment.GetEnvironmentVariable(ClientAssertionEnvironmentVariable);
+
+            if (string.IsNullOrEmpty(file) && string.IsNullOrEmpty(value))
+            {
+                throw new InvalidOperationException($"Client assertion is configured, but neither {ClientAssertionEnvironmentVariable} nor {ClientAssertionFileEnvironmentVariable} environment variables are set.");
+            }
+
+            if (!string.IsNullOrEmpty(file) && !string.IsNullOrEmpty(value))
+            {
+                throw new InvalidOperationException($"Both {ClientAssertionEnvironmentVariable} and {ClientAssertionFileEnvironmentVariable} environment variables are set. Please specify only one");
+            }
+
+            if (!string.IsNullOrEmpty(file))
+            {
+                return await System.IO.File.ReadAllTextAsync(file);
+            }
+
+            return value!;
         }
 
         /// <summary>
