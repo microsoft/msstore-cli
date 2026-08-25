@@ -3,6 +3,7 @@
 
 using System.CommandLine;
 using System.Globalization;
+using MSStore.API.Packaged.Models;
 using MSStore.CLI.Commands;
 using MSStore.CLI.ProjectConfigurators;
 
@@ -308,6 +309,103 @@ namespace MSStore.CLI.UnitTests
             result.Error.Should().Contain("Submission commit success! Here is some data:");
             result.Error.Should().Contain("test.msix");
         }
+
+        [TestMethod]
+        public async Task PublishCommandShouldApplyPackageRolloutPercentageWhenSubmissionHasNoRolloutConfigured()
+        {
+            // Regression: the rollout was only applied when the submission already carried a
+            // PackageDeliveryOptions.PackageRollout object. A newly created submission has neither,
+            // so --packageRolloutPercentage was silently dropped and the app shipped to 100%.
+            var path = CopyFilesRecursively("MSIXProject");
+
+            var msixPath = Path.Combine(path, "test.msix");
+
+            AddDefaultFakeSuccessfulSubmission();
+
+            await ParseAndInvokeAsync(
+                [
+                    "publish",
+                    msixPath,
+                    "--appId",
+                    FakeApps[0].Id!,
+                    "--packageRolloutPercentage",
+                    "5"
+                ]);
+
+            FakeStorePackagedAPI
+                .Verify(
+                    x => x.UpdateSubmissionAsync(
+                        It.IsAny<string>(),
+                        It.IsAny<string>(),
+                        It.Is<DevCenterSubmission>(s =>
+                            s.PackageDeliveryOptions!.PackageRollout!.IsPackageRollout &&
+                            s.PackageDeliveryOptions.PackageRollout.PackageRolloutPercentage == 5),
+                        It.IsAny<CancellationToken>()),
+                    Times.Once);
+        }
+
+        [TestMethod]
+        public async Task PublishCommandShouldApplyPackageRolloutPercentageForFlights()
+        {
+            var path = CopyFilesRecursively("MSIXProject");
+
+            var msixPath = Path.Combine(path, "test.msix");
+
+            AddFakeFlights();
+            AddDefaultFakeSuccessfulFlightSubmission();
+
+            await ParseAndInvokeAsync(
+                [
+                    "publish",
+                    msixPath,
+                    "--appId",
+                    FakeApps[0].Id!,
+                    "--flightId",
+                    FakeFlights[0].FlightId!,
+                    "--packageRolloutPercentage",
+                    "5"
+                ]);
+
+            FakeStorePackagedAPI
+                .Verify(
+                    x => x.UpdateFlightSubmissionAsync(
+                        It.IsAny<string>(),
+                        It.IsAny<string>(),
+                        It.IsAny<string>(),
+                        It.Is<DevCenterFlightSubmissionUpdate>(s =>
+                            s.PackageDeliveryOptions!.PackageRollout!.IsPackageRollout &&
+                            s.PackageDeliveryOptions.PackageRollout.PackageRolloutPercentage == 5),
+                        It.IsAny<CancellationToken>()),
+                    Times.Once);
+        }
+
+        [TestMethod]
+        public async Task PublishCommandShouldNotEnableRolloutWhenPercentageIsNotProvided()
+        {
+            var path = CopyFilesRecursively("MSIXProject");
+
+            var msixPath = Path.Combine(path, "test.msix");
+
+            AddDefaultFakeSuccessfulSubmission();
+
+            await ParseAndInvokeAsync(
+                [
+                    "publish",
+                    msixPath,
+                    "--appId",
+                    FakeApps[0].Id!
+                ]);
+
+            FakeStorePackagedAPI
+                .Verify(
+                    x => x.UpdateSubmissionAsync(
+                        It.IsAny<string>(),
+                        It.IsAny<string>(),
+                        It.Is<DevCenterSubmission>(s => s.PackageDeliveryOptions == null),
+                        It.IsAny<CancellationToken>()),
+                    Times.Once);
+        }
+
         private static ParseResult ParsePublish(params string[] args) =>
             new PublishCommand().Parse(args);
 

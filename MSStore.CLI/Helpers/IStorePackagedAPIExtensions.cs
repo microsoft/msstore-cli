@@ -484,8 +484,13 @@ namespace MSStore.CLI.Helpers
                 return -1;
             }
 
-            if (submission.PackageDeliveryOptions?.PackageRollout != null && packageRolloutPercentage != null)
+            if (packageRolloutPercentage != null)
             {
+                // A freshly created submission usually comes back with no rollout configured at all,
+                // so these objects have to be materialized rather than assumed. Guarding on
+                // PackageRollout being non-null silently dropped --packageRolloutPercentage.
+                submission.PackageDeliveryOptions ??= new PackageDeliveryOptions();
+                submission.PackageDeliveryOptions.PackageRollout ??= new PackageRollout();
                 submission.PackageDeliveryOptions.PackageRollout.IsPackageRollout = true;
                 submission.PackageDeliveryOptions.PackageRollout.PackageRolloutPercentage = packageRolloutPercentage.Value;
             }
