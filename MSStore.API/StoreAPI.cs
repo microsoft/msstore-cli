@@ -45,7 +45,7 @@ namespace MSStore.API
         /// <param name="logger">ILogger for logs.</param>
         public StoreAPI(
             StoreConfigurations configurations,
-            Task<string> clientAssertionAuthentication,
+            Func<Task<string>> clientAssertionAuthentication,
             string? serviceUrl,
             string? scope,
             ILogger? logger = null)
@@ -127,7 +127,7 @@ namespace MSStore.API
 
         private ILogger? Logger { get; }
 
-        private Task<string>? ClientAssertionAuthentication { get; }
+        private Func<Task<string>>? ClientAssertionAuthentication { get; }
         public string? ClientSecret { get; }
         public X509Certificate2? Certificate { get; }
         public string ServiceUrl { get; set; }

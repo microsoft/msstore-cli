@@ -130,12 +130,12 @@ namespace MSStore.API
         public static Task<AuthenticationResult> GetClientCredentialAccessTokenAsync(
             string tenantId,
             string clientId,
-            Task<string> clientAssertionAuthentication,
+            Func<Task<string>> clientAssertionAuthentication,
             string scope,
             ILogger? logger = null,
             CancellationToken ct = default)
         {
-            return GetClientCredentialAccessTokenAsync(tenantId, clientId, (builder) => builder.WithClientAssertion((AssertionRequestOptions _) => clientAssertionAuthentication), scope, logger, ct);
+            return GetClientCredentialAccessTokenAsync(tenantId, clientId, (builder) => builder.WithClientAssertion((AssertionRequestOptions _) => clientAssertionAuthentication()), scope, logger, ct);
         }
 
         /// <summary>

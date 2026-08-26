@@ -37,7 +37,7 @@ namespace MSStore.CLI.Services
             {
                 storeAPI = new StoreAPI(
                     config.GetStoreConfigurations(),
-                    EnvironmentInfo.GetClientAssertionAsync(),
+                    () => EnvironmentInfo.GetClientAssertionAsync(),
                     config.StoreApiServiceUrl,
                     config.StoreApiScope,
                     _logger);
@@ -87,7 +87,7 @@ namespace MSStore.CLI.Services
             {
                 storePackagedAPI = new StorePackagedAPI(
                     config.GetStoreConfigurations(),
-                    EnvironmentInfo.GetClientAssertionAsync(),
+                    () => EnvironmentInfo.GetClientAssertionAsync(),
                     config.DevCenterServiceUrl,
                     config.DevCenterScope,
                     _logger);

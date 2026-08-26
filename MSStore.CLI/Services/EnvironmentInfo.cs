@@ -46,8 +46,9 @@ namespace MSStore.CLI.Services
         }
 
         /// <summary>
-        /// Gets the client assertion from the environment variable. If the variable is not set, returns an empty string.
+        /// Gets the client assertion from the environment variable.
         /// </summary>
+        /// <exception cref="InvalidOperationException">Thrown if neither the client assertion environment variable nor the client assertion file environment variable is set, or if both are set.</exception>
         /// <returns>The client assertion string.</returns>
         public static async Task<string> GetClientAssertionAsync()
         {
@@ -66,7 +67,7 @@ namespace MSStore.CLI.Services
 
             if (!string.IsNullOrEmpty(file))
             {
-                return await System.IO.File.ReadAllTextAsync(file);
+                return (await System.IO.File.ReadAllTextAsync(file)).Trim();
             }
 
             return value!;
