@@ -51,19 +51,19 @@ namespace MSStore.API.Packaged
         /// Initializes a new instance of the <see cref="StorePackagedAPI"/> class.
         /// </summary>
         /// <param name="configurations">An instance of ClientConfiguration that contains all parameters populated</param>
-        /// <param name="clientAssertationAuthentication">The async delegate that, once completed, provides the client assertion authentication token.</param>
+        /// <param name="clientAssertionAuthentication">The async delegate that, once completed, provides the client assertion authentication token.</param>
         /// <param name="devCenterUrl">The DevCenter URL used to make the API calls.</param>
         /// <param name="devCenterScope">The Scope from DevCenter that will be used to request the access token.</param>
         /// <param name="logger">ILogger for logs.</param>
         public StorePackagedAPI(
             StoreConfigurations configurations,
-            Func<Task<string>> clientAssertationAuthentication,
+            Func<Task<string>> clientAssertionAuthentication,
             string? devCenterUrl,
             string? devCenterScope,
             ILogger? logger = null)
             : this(configurations, devCenterUrl, devCenterScope, logger)
         {
-            ClientAssertationAuthentication = clientAssertationAuthentication;
+            ClientAssertionAuthentication = clientAssertionAuthentication;
             ClientSecret = null;
             Certificate = null;
         }
@@ -84,7 +84,7 @@ namespace MSStore.API.Packaged
             ILogger? logger = null)
             : this(configurations, devCenterUrl, devCenterScope, logger)
         {
-            ClientAssertationAuthentication = null;
+            ClientAssertionAuthentication = null;
             ClientSecret = clientSecret;
             Certificate = null;
         }
@@ -105,7 +105,7 @@ namespace MSStore.API.Packaged
             ILogger? logger = null)
             : this(configurations, devCenterUrl, devCenterScope, logger)
         {
-            ClientAssertationAuthentication = null;
+            ClientAssertionAuthentication = null;
             ClientSecret = null;
             Certificate = certificate;
         }
@@ -141,7 +141,7 @@ namespace MSStore.API.Packaged
 
         private ILogger? Logger { get; }
 
-        private Func<Task<string>>? ClientAssertationAuthentication { get; }
+        private Func<Task<string>>? ClientAssertionAuthentication { get; }
         public string? ClientSecret { get; }
         public X509Certificate2? Certificate { get; }
         public string DevCenterUrl { get; set; }
@@ -169,12 +169,12 @@ namespace MSStore.API.Packaged
             // Get authorization token.
             Logger?.LogInformation("Getting DevCenter authorization token");
             Microsoft.Identity.Client.AuthenticationResult? devCenterAccessToken = null;
-            if (ClientAssertationAuthentication != null)
+            if (ClientAssertionAuthentication != null)
             {
                 devCenterAccessToken = await SubmissionClient.GetClientCredentialAccessTokenAsync(
                     Config.TenantId!.Value.ToString(),
                     Config.ClientId!.Value.ToString(),
-                    ClientAssertationAuthentication,
+                    ClientAssertionAuthentication,
                     DevCenterScope,
                     Logger,
                     ct);
