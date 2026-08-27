@@ -130,7 +130,16 @@ namespace MSStore.CLI
 
             if (config.ClientAssertion)
             {
-                return true;
+                try
+                {
+                    await EnvironmentInfo.GetClientAssertionAsync();
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    logger.LogCritical(ex, "Failed to get client assertion.");
+                }
+                return false;
             }
 
             var secret = credentialManager.ReadCredential(config.ClientId.Value.ToString());

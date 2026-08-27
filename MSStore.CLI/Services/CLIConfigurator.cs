@@ -331,12 +331,6 @@ namespace MSStore.CLI.Services
                         {
                             _logger.LogInformation(ex, "Error while creating StoreAPI.");
 
-                            if (ex is MSStoreException && config.ClientAssertion && ex.InnerException is InvalidOperationException ioe)
-                            {
-                                ctx.ErrorStatus(ansiConsole, ioe.Message);
-                                return false;
-                            }
-
                             if (i + 1 == maxRetry)
                             {
                                 break;
