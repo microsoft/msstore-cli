@@ -137,6 +137,10 @@ namespace MSStore.CLI
                 }
                 catch (Exception ex)
                 {
+                    if (ex is InvalidOperationException)
+                    {
+                        ansiConsole.MarkupLine(ex.Message);
+                    }
                     logger.LogCritical(ex, "Failed to get client assertion.");
                 }
                 return false;
