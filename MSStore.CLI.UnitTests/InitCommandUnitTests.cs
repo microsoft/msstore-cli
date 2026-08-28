@@ -106,6 +106,46 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
+        public async Task InitCommandShouldAutoSelectOnCIIfAccountHasASingleApp()
+        {
+            AddDefaultFakeAccount();
+            AddFakeApps();
+
+            EnvironmentInformationService
+                .Setup(x => x.IsRunningOnCI)
+                .Returns(true);
+
+            FakeStorePackagedAPI
+                .Setup(x => x.GetApplicationsAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync([FakeApps[0]]);
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "init",
+                    "https://www.microsoft.com/",
+                    "--output",
+                    Path.GetTempPath(),
+                    "--verbose"
+                ]);
+
+            // Asserted piecewise because the app name and id are wrapped in markup,
+            // which becomes ANSI escape sequences when the console supports them.
+            result.Error.Should().Contain(FakeApps[0].PrimaryName!);
+            result.Error.Should().Contain(FakeApps[0].Id!);
+            result.Error.Should().Contain(", the only application registered in your account.");
+            result.Error.Should().NotContain("--appId");
+
+            FakeConsole.Verify(
+                x => x.SelectionPromptAsync(
+                    It.Is<string>(s => s == "Which application should we use to configure your project?"),
+                    It.IsAny<IEnumerable<string>>(),
+                    It.IsAny<int>(),
+                    It.IsAny<Func<string, string>>(),
+                    It.IsAny<CancellationToken>()),
+                Times.Never);
+        }
+
+        [TestMethod]
         public async Task InitCommandShouldFailIfNotOnCIAndPromptIsNotSupported()
         {
             AddDefaultFakeAccount();
