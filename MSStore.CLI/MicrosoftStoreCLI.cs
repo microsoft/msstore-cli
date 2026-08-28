@@ -139,7 +139,7 @@ namespace MSStore.CLI
                 {
                     if (ex is InvalidOperationException)
                     {
-                        ansiConsole.MarkupLine(ex.Message);
+                        ansiConsole.MarkupLine(ex.Message.EscapeMarkup());
                     }
                     logger.LogCritical(ex, "Failed to get client assertion.");
                 }
