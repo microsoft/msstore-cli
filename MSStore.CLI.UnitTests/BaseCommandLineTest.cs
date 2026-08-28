@@ -127,6 +127,36 @@ namespace MSStore.CLI.UnitTests
             }
         }
 
+        private readonly List<string> _temporaryPayloadFiles = [];
+
+        /// <summary>
+        /// Writes a payload to a temporary file, so that it can be provided to a command either
+        /// through the '--payload' option or as a file path argument. The file is deleted once the
+        /// test finishes.
+        /// </summary>
+        /// <returns>The path of the temporary file.</returns>
+        protected string CreateTemporaryPayloadFile(string payload, [CallerMemberName] string caller = null!)
+        {
+            var path = Path.Combine(Path.GetTempPath(), $"{caller}-{Guid.NewGuid():N}.json");
+
+            File.WriteAllText(path, payload);
+
+            _temporaryPayloadFiles.Add(path);
+
+            return path;
+        }
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            foreach (var temporaryPayloadFile in _temporaryPayloadFiles)
+            {
+                File.Delete(temporaryPayloadFile);
+            }
+
+            _temporaryPayloadFiles.Clear();
+        }
+
         [TestInitialize]
         public void Initialize()
         {

@@ -100,6 +100,65 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
+        public async Task PackagedFlightSubmissionUpdateCommandWithPayloadOption()
+        {
+            var payloadFilePath = CreateTemporaryPayloadFile(
+                @"
+{
+""FlightPackages"":
+    [
+        {
+            ""FileName"":""C:\\temp\\installer.msix""
+        }
+    ]
+}");
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "flights",
+                    "submission",
+                    "update",
+                    FakeApps[0].Id!,
+                    FakeFlights[0].FlightId!,
+                    "--payload",
+                    payloadFilePath
+                ]);
+
+            result.Error.Should().Contain("Updating flight submission product");
+            result.Output.Should().Contain("\"FileUploadUrl\": \"https://azureblob.com/fileupload\"");
+        }
+
+        [TestMethod]
+        public async Task PackagedFlightSubmissionUpdateCommandWithStandardInputArgument()
+        {
+            FakeConsole
+                .Setup(x => x.ReadAllStandardInputAsync(null, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(
+                    @"
+{
+""FlightPackages"":
+    [
+        {
+            ""FileName"":""C:\\temp\\installer.msix""
+        }
+    ]
+}");
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "flights",
+                    "submission",
+                    "update",
+                    FakeApps[0].Id!,
+                    FakeFlights[0].FlightId!,
+                    "-"
+                ]);
+
+            result.Error.Should().Contain("Updating flight submission product");
+            result.Output.Should().Contain("\"FileUploadUrl\": \"https://azureblob.com/fileupload\"");
+        }
+
+        [TestMethod]
         public async Task PackagedFlightSubmissionPublishCommand()
         {
             FakeFlights[0].PendingFlightSubmission = new ApplicationSubmissionInfo

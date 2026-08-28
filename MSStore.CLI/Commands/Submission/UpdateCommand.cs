@@ -26,7 +26,8 @@ namespace MSStore.CLI.Commands.Submission
         {
             ProductArgument = new Argument<string>("product")
             {
-                Description = "The updated JSON product representation."
+                Arity = ArgumentArity.ZeroOrOne,
+                Description = "The updated JSON product representation. It can also be the path to a file that contains the JSON, or '-' to read it from the standard input stream."
             };
         }
 
@@ -35,13 +36,15 @@ namespace MSStore.CLI.Commands.Submission
         {
             Arguments.Add(SubmissionCommand.ProductIdArgument);
             Arguments.Add(ProductArgument);
+            Options.Add(SubmissionCommand.PayloadOption);
             Options.Add(SubmissionCommand.SkipInitialPolling);
         }
 
-        public class Handler(ILogger<UpdateCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : AsynchronousCommandLineAction
+        public class Handler(ILogger<UpdateCommand.Handler> logger, IStoreAPIFactory storeAPIFactory, IConsoleReader consoleReader, IAnsiConsole ansiConsole, TelemetryClient telemetryClient) : AsynchronousCommandLineAction
         {
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
+            private readonly IConsoleReader _consoleReader = consoleReader ?? throw new ArgumentNullException(nameof(consoleReader));
             private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
@@ -125,7 +128,7 @@ namespace MSStore.CLI.Commands.Submission
             public override async Task<int> InvokeAsync(ParseResult parseResult, CancellationToken ct = default)
             {
                 var productId = parseResult.GetRequiredValue(SubmissionCommand.ProductIdArgument);
-                var product = parseResult.GetRequiredValue(ProductArgument);
+                var product = await PayloadResolver.ResolveAsync(_consoleReader, parseResult.GetValue(ProductArgument), parseResult.GetValue(SubmissionCommand.PayloadOption), ProductArgument.Name, ct);
                 var skipInitialPolling = parseResult.GetRequiredValue(SubmissionCommand.SkipInitialPolling);
 
                 object? updateSubmissionData = null;

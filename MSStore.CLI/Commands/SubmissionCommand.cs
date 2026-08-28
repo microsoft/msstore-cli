@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.CommandLine;
+using System.IO;
 using MSStore.CLI.Commands.Submission;
 
 namespace MSStore.CLI.Commands
@@ -10,6 +11,7 @@ namespace MSStore.CLI.Commands
     {
         internal static readonly Option<string> LanguageOption;
         internal static readonly Option<bool> SkipInitialPolling;
+        internal static readonly Option<FileInfo> PayloadOption;
         internal static readonly Argument<string> ProductIdArgument;
 
         static SubmissionCommand()
@@ -25,6 +27,11 @@ namespace MSStore.CLI.Commands
                 DefaultValueFactory = _ => false,
                 Description = "Skip the initial polling before executing the action."
             };
+            PayloadOption = new Option<FileInfo>("--payload", "-p")
+            {
+                Description = "The path to a file that contains the JSON payload. Use this instead of passing the JSON inline whenever the payload might exceed the maximum command line length of the operating system."
+            };
+            PayloadOption.AcceptExistingOnly();
             ProductIdArgument = new Argument<string>("productId")
             {
                 Description = "The product ID."
