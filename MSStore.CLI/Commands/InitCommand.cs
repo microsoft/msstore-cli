@@ -28,6 +28,7 @@ namespace MSStore.CLI.Commands
     {
         internal static readonly Argument<string> PathOrUrlArgument;
         private static readonly Option<string> PublisherDisplayNameOption;
+        private static readonly Option<string> AppIdOption;
         private static readonly Option<bool> PackageOption;
         private static readonly Option<bool> PublishOption;
         internal static readonly Option<DirectoryInfo?> OutputOption;
@@ -78,6 +79,11 @@ namespace MSStore.CLI.Commands
                 Description = "The Publisher Display Name used to configure the application. If provided, avoids an extra APIs call."
             };
 
+            AppIdOption = new Option<string>("--appId", "-id")
+            {
+                Description = "Specifies the Application Id to configure the project with. If not provided, the application is selected interactively, which is not possible on CI/CD environments, unless the account has a single application."
+            };
+
             PackageOption = new Option<bool>("--package")
             {
                 Description = "If supported by the app type, automatically packs the project."
@@ -121,6 +127,7 @@ namespace MSStore.CLI.Commands
         {
             Arguments.Add(PathOrUrlArgument);
             Options.Add(PublisherDisplayNameOption);
+            Options.Add(AppIdOption);
             Options.Add(PackageOption);
             Options.Add(PublishOption);
             Options.Add(PublishCommand.FlightIdOption);
@@ -141,6 +148,7 @@ namespace MSStore.CLI.Commands
             IPartnerCenterManager partnerCenterManager,
             IImageConverter imageConverter,
             IConfigurationManager<Configurations> configurationManager,
+            IEnvironmentInformationService environmentInformationService,
             IAnsiConsole ansiConsole,
             TelemetryClient telemetryClient) : AsynchronousCommandLineAction
         {
@@ -153,6 +161,7 @@ namespace MSStore.CLI.Commands
             private readonly IPartnerCenterManager _partnerCenterManager = partnerCenterManager ?? throw new ArgumentNullException(nameof(partnerCenterManager));
             private readonly IImageConverter _imageConverter = imageConverter ?? throw new ArgumentNullException(nameof(imageConverter));
             private readonly IConfigurationManager<Configurations> _configurationManager = configurationManager ?? throw new ArgumentNullException(nameof(configurationManager));
+            private readonly IEnvironmentInformationService _environmentInformationService = environmentInformationService ?? throw new ArgumentNullException(nameof(environmentInformationService));
             private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
@@ -160,6 +169,7 @@ namespace MSStore.CLI.Commands
             {
                 var pathOrUrl = parseResult.GetRequiredValue(PathOrUrlArgument);
                 var publisherDisplayName = parseResult.GetValue(PublisherDisplayNameOption);
+                var appId = parseResult.GetValue(AppIdOption);
                 var package = parseResult.GetValue(PackageOption);
                 var publish = parseResult.GetValue(PublishOption);
                 var flightId = parseResult.GetValue(PublishCommand.FlightIdOption);
@@ -175,6 +185,9 @@ namespace MSStore.CLI.Commands
                 {
                     {
                         "withPDN", (publisherDisplayName != null).ToString()
+                    },
+                    {
+                        "withAppId", (!string.IsNullOrEmpty(appId)).ToString()
                     },
                     {
                         "Package", (package == true).ToString()
@@ -273,7 +286,9 @@ namespace MSStore.CLI.Commands
 
                 var storePackagedAPI = await _storeAPIFactory.CreatePackagedAsync(ct: ct);
 
-                var app = await SelectAppAsync(storePackagedAPI, ct);
+                var app = string.IsNullOrEmpty(appId)
+                    ? await SelectAppAsync(storePackagedAPI, ct)
+                    : await GetAppByIdAsync(storePackagedAPI, appId, ct);
                 if (app == null || string.IsNullOrEmpty(app.Id))
                 {
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(-1, props, ct);
@@ -354,6 +369,30 @@ namespace MSStore.CLI.Commands
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(result, props, ct);
             }
 
+            private async Task<DevCenterApplication?> GetAppByIdAsync(IStorePackagedAPI storePackagedAPI, string appId, CancellationToken ct)
+            {
+                return await _ansiConsole.Status().StartAsync("Retrieving application...", async ctx =>
+                {
+                    try
+                    {
+                        var app = await storePackagedAPI.GetApplicationAsync(appId, ct);
+
+                        ctx.SuccessStatus(_ansiConsole, "Ok! Found the app!");
+                        return app;
+                    }
+                    catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                    {
+                        throw;
+                    }
+                    catch (Exception err)
+                    {
+                        ctx.ErrorStatus(_ansiConsole, "Could not retrieve your application. Please make sure you have the correct AppId.");
+                        _logger.LogError(err, "Could not find application with id '{AppId}'.", appId);
+                        return null;
+                    }
+                });
+            }
+
             private async Task<DevCenterApplication?> SelectAppAsync(IStorePackagedAPI storePackagedAPI, CancellationToken ct)
             {
                 var appList = await GetAppListAsync(storePackagedAPI, ct);
@@ -370,6 +409,19 @@ namespace MSStore.CLI.Commands
                     return await CreateNewAppAsync(ct);
                 }
 
+                if (_environmentInformationService.IsRunningOnCI)
+                {
+                    if (appList.Count == 1)
+                    {
+                        var singleApp = appList[0];
+                        _ansiConsole.MarkupLine($"Using [green bold]{singleApp.PrimaryName?.EscapeMarkup()}[/] ([green bold]{singleApp.Id}[/]), the only application registered in your account.");
+                        return singleApp;
+                    }
+
+                    WriteNonInteractiveError();
+                    return null;
+                }
+
                 var newAppOption = "Create a new app...";
 
                 var appNames = appList.Select(app => app.PrimaryName!).ToList();
@@ -378,14 +430,32 @@ namespace MSStore.CLI.Commands
                 appNames.Add(newAppOption);
                 */
 
-                var selectedApp = await _consoleReader.SelectionPromptAsync(
-                    "Which application should we use to configure your project?",
-                    appNames,
-                    ct: ct);
+                string selectedApp;
+                try
+                {
+                    selectedApp = await _consoleReader.SelectionPromptAsync(
+                        "Which application should we use to configure your project?",
+                        appNames,
+                        ct: ct);
+                }
+                catch (NotSupportedException err)
+                {
+                    _logger.LogError(err, "Could not show the application selection prompt.");
+                    WriteNonInteractiveError();
+                    return null;
+                }
 
                 return selectedApp == newAppOption
                     ? await CreateNewAppAsync(ct)
                     : appList.FirstOrDefault(app => app.PrimaryName == selectedApp);
+            }
+
+            private void WriteNonInteractiveError()
+            {
+                _ansiConsole.MarkupLine(":collision: [bold red]Could not select an application because the current environment is not interactive.[/]");
+                _ansiConsole.MarkupLine("Use the '[bold]--appId[/]' option to specify which application should be used, for example: '[bold]msstore init <pathOrUrl> --appId 9PXXXXXXXXXX[/]'.");
+                _ansiConsole.MarkupLine("You can list the applications registered in your account with '[bold]msstore apps list[/]'.");
+                _logger.LogError("Could not select an application because the current environment is not interactive. Use the '--appId' option to specify which application should be used.");
             }
 
             private Task<DevCenterApplication?> CreateNewAppAsync(CancellationToken ct)
