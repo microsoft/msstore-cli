@@ -24,6 +24,15 @@ namespace MSStore.CLI.Helpers
         /// The value that, when used in place of the payload argument, means "read the payload from
         /// the standard input stream".
         /// </summary>
+        /// <remarks>
+        /// Piping the payload already works without this token, but only under
+        /// <see cref="ImplicitStandardInputTimeout"/>, because a payload that was simply omitted
+        /// cannot be told apart from a stream that is redirected but will never be written to.
+        /// Using this token is the user stating that a payload really is coming, which lets the
+        /// CLI wait for it indefinitely. That is what makes
+        /// '<c>msstore submission get &lt;productId&gt; | msstore submission update &lt;productId&gt; -</c>'
+        /// dependable no matter how long the first command takes.
+        /// </remarks>
         internal const string StandardInputToken = "-";
 
         /// <summary>
