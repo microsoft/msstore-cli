@@ -33,7 +33,16 @@ namespace MSStore.CLI.Services
             X509Certificate2? cert = LoadCertificate(config, secret);
 
             StoreAPI? storeAPI;
-            if (cert != null)
+            if (config.ClientAssertion)
+            {
+                storeAPI = new StoreAPI(
+                    config.GetStoreConfigurations(),
+                    () => EnvironmentInfo.GetClientAssertionAsync(),
+                    config.StoreApiServiceUrl,
+                    config.StoreApiScope,
+                    _logger);
+            }
+            else if (cert != null)
             {
                 storeAPI = new StoreAPI(
                     config.GetStoreConfigurations(),
@@ -74,7 +83,16 @@ namespace MSStore.CLI.Services
             X509Certificate2? cert = LoadCertificate(config, secret);
 
             StorePackagedAPI? storePackagedAPI;
-            if (cert != null)
+            if (config.ClientAssertion)
+            {
+                storePackagedAPI = new StorePackagedAPI(
+                    config.GetStoreConfigurations(),
+                    () => EnvironmentInfo.GetClientAssertionAsync(),
+                    config.DevCenterServiceUrl,
+                    config.DevCenterScope,
+                    _logger);
+            }
+            else if (cert != null)
             {
                 storePackagedAPI = new StorePackagedAPI(
                     config.GetStoreConfigurations(),

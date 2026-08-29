@@ -39,6 +39,27 @@ namespace MSStore.API
         /// Initializes a new instance of the <see cref="StoreAPI"/> class.
         /// </summary>
         /// <param name="configurations">An instance of ClientConfiguration that contains all parameters populated</param>
+        /// <param name="clientAssertionAuthentication">The async delegate that, once completed, provides the client assertion authentication token.</param>
+        /// <param name="serviceUrl">The Store API URL used to make the API calls.</param>
+        /// <param name="scope">The Scope from the Store APIs that will be used to request the access token.</param>
+        /// <param name="logger">ILogger for logs.</param>
+        public StoreAPI(
+            StoreConfigurations configurations,
+            Func<Task<string>> clientAssertionAuthentication,
+            string? serviceUrl,
+            string? scope,
+            ILogger? logger = null)
+            : this(configurations, serviceUrl, scope, logger)
+        {
+            ClientAssertionAuthentication = clientAssertionAuthentication;
+            ClientSecret = null;
+            Certificate = null;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="StoreAPI"/> class.
+        /// </summary>
+        /// <param name="configurations">An instance of ClientConfiguration that contains all parameters populated</param>
         /// <param name="clientSecret">The client secret of the Microsoft Entra Application that is registered to call Store APIs</param>
         /// <param name="serviceUrl">The Store API URL used to make the API calls.</param>
         /// <param name="scope">The Scope from the Store APIs that will be used to request the access token.</param>
@@ -51,6 +72,7 @@ namespace MSStore.API
             ILogger? logger = null)
             : this(configurations, serviceUrl, scope, logger)
         {
+            ClientAssertionAuthentication = null;
             ClientSecret = clientSecret;
             Certificate = null;
         }
@@ -71,6 +93,7 @@ namespace MSStore.API
             ILogger? logger = null)
             : this(configurations, serviceUrl, scope, logger)
         {
+            ClientAssertionAuthentication = null;
             ClientSecret = null;
             Certificate = certificate;
         }
@@ -104,6 +127,7 @@ namespace MSStore.API
 
         private ILogger? Logger { get; }
 
+        private Func<Task<string>>? ClientAssertionAuthentication { get; }
         public string? ClientSecret { get; }
         public X509Certificate2? Certificate { get; }
         public string ServiceUrl { get; set; }
@@ -131,7 +155,17 @@ namespace MSStore.API
             // Get authorization token.
             Logger?.LogInformation("Getting authorization token");
             Microsoft.Identity.Client.AuthenticationResult? accessToken = null;
-            if (Certificate != null)
+            if (ClientAssertionAuthentication != null)
+            {
+                accessToken = await SubmissionClient.GetClientCredentialAccessTokenAsync(
+                    Config.TenantId!.Value.ToString(),
+                    Config.ClientId!.Value.ToString(),
+                    ClientAssertionAuthentication,
+                    Scope,
+                    Logger,
+                    ct);
+            }
+            else if (Certificate != null)
             {
                 accessToken = await SubmissionClient.GetClientCredentialAccessTokenAsync(
                     Config.TenantId!.Value.ToString(),

@@ -128,6 +128,24 @@ namespace MSStore.CLI
                 return false;
             }
 
+            if (config.ClientAssertion)
+            {
+                try
+                {
+                    await EnvironmentInfo.GetClientAssertionAsync();
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    if (ex is InvalidOperationException)
+                    {
+                        ansiConsole.MarkupLine(ex.Message.EscapeMarkup());
+                    }
+                    logger.LogCritical(ex, "Failed to get client assertion.");
+                }
+                return false;
+            }
+
             var secret = credentialManager.ReadCredential(config.ClientId.Value.ToString());
             if (string.IsNullOrEmpty(config.CertificateFilePath)
                 && string.IsNullOrEmpty(config.CertificateThumbprint)

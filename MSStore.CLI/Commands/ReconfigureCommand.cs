@@ -26,6 +26,8 @@ namespace MSStore.CLI.Commands
         private static readonly Option<string> CertificatePasswordOption;
         private static readonly Option<bool> ResetOption;
 
+        private static readonly Option<bool> ClientAssertionOption;
+
         static ReconfigureCommand()
         {
             TenantIdOption = new Option<Guid?>("--tenantId", "-t")
@@ -67,6 +69,11 @@ namespace MSStore.CLI.Commands
             {
                 Description = "Only reset the credentials, without starting over."
             };
+
+            ClientAssertionOption = new Option<bool>("--clientAssertion", "-ca")
+            {
+                Description = "Use client assertion for authentication."
+            };
         }
 
         public ReconfigureCommand()
@@ -79,6 +86,7 @@ namespace MSStore.CLI.Commands
             Options.Add(CertificateThumbprintOption);
             Options.Add(CertificateFilePathOption);
             Options.Add(CertificatePasswordOption);
+            Options.Add(ClientAssertionOption);
             Options.Add(ResetOption);
         }
 
@@ -97,6 +105,7 @@ namespace MSStore.CLI.Commands
                 var certificateThumbprint = parseResult.GetValue(CertificateThumbprintOption);
                 var certificateFilePath = parseResult.GetValue(CertificateFilePathOption);
                 var certificatePassword = parseResult.GetValue(CertificatePasswordOption);
+                var clientAssertion = parseResult.GetValue(ClientAssertionOption);
                 var reset = parseResult.GetValue(ResetOption);
 
                 bool askConfirmation = tenantId == null ||
@@ -104,7 +113,8 @@ namespace MSStore.CLI.Commands
                                        clientId == null ||
                                        (clientSecret == null &&
                                         certificateThumbprint == null &&
-                                        certificateFilePath == null);
+                                        certificateFilePath == null &&
+                                        clientAssertion == false);
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(
                     (reset == true
@@ -119,6 +129,7 @@ namespace MSStore.CLI.Commands
                             certificateThumbprint: certificateThumbprint,
                             certificateFilePath: certificateFilePath?.FullName,
                             certificatePassword: certificatePassword,
+                            clientAssertion: clientAssertion,
                             ct: ct)) ? 0 : -1,
                     new Dictionary<string, string>
                     {
