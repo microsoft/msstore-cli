@@ -226,10 +226,14 @@ namespace MSStore.CLI.UnitTests
                 .Setup(fac => fac.CreateAsync(It.IsAny<Configurations>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(FakeStoreAPI.Object);
             FakeStoreAPIFactory
+                .Setup(fac => fac.CreateWithSecretAsync(It.IsAny<Configurations>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(FakeStoreAPI.Object);
+            FakeStoreAPIFactory
                 .Setup(fac => fac.CreatePackagedAsync(It.IsAny<Configurations>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(FakeStorePackagedAPI.Object);
 
             StorePackagedAPI.DefaultSubmissionPollDelay = TimeSpan.Zero;
+            CLIConfigurator.ValidationRetryDelay = TimeSpan.Zero;
 
             var azureBlobManagerMock = new Mock<IAzureBlobManager>();
             azureBlobManagerMock
