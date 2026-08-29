@@ -368,21 +368,10 @@ namespace MSStore.CLI.Services
                     {
                         _credentialManager.WriteCredential(clientIdString, candidateSecret);
                     }
-                    else
+                    else if (!TryClearCredentials(clientIdString))
                     {
-                        _credentialManager.ClearCredentials(clientIdString);
-
-                        // ClearCredentials is best-effort on every platform: Windows swallows exceptions, and the
-                        // Linux and macOS implementations discard the native delete status. A credential that
-                        // survives the clear would be picked up by ReadCredential on the next run and handed to
-                        // LoadCertificate as the PKCS#12 password of a password-less certificate file, breaking
-                        // the very configuration that was just reported as working. Confirm the removal instead of
-                        // assuming it, so the saved configuration always matches what was validated.
-                        if (!string.IsNullOrEmpty(_credentialManager.ReadCredential(clientIdString)))
-                        {
-                            ctx.ErrorStatus(ansiConsole, $"The configuration was saved, but the obsolete credential for '{clientIdString}' could not be removed from the credential store. Remove it manually, or run 'msstore reconfigure --reset', before using the CLI.");
-                            return false;
-                        }
+                        ctx.ErrorStatus(ansiConsole, $"The configuration was saved, but the obsolete credential for '{clientIdString}' could not be removed from the credential store. Remove it manually before using the CLI.");
+                        return false;
                     }
                 }
                 catch (Exception err)
@@ -402,6 +391,23 @@ namespace MSStore.CLI.Services
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// Removes the credential stored for <paramref name="clientId"/> and confirms it is actually gone.
+        /// ClearCredentials is best-effort on every platform - Windows wraps the delete in a bare catch, and the
+        /// Linux and macOS implementations discard the native delete status - so a credential can survive the
+        /// clear silently. A leftover secret is then read back on the next run and handed to LoadCertificate as
+        /// the PKCS#12 password of a password-less certificate file, so the removal is verified rather than
+        /// assumed.
+        /// </summary>
+        /// <param name="clientId">The client Id whose credential should be removed.</param>
+        /// <returns><see langword="true"/> if no credential remains for the client Id.</returns>
+        private bool TryClearCredentials(string clientId)
+        {
+            _credentialManager.ClearCredentials(clientId);
+
+            return string.IsNullOrEmpty(_credentialManager.ReadCredential(clientId));
         }
 
         private async Task OpenPartnerCenterUserManagementPageAsync(string specificPage, CancellationToken ct)
@@ -672,9 +678,13 @@ namespace MSStore.CLI.Services
             {
                 var config = await _configurationManager.LoadAsync(true, ct: ct);
 
-                if (config.ClientId.HasValue)
+                // Remove the credential before discarding the settings, and only continue if it is really gone.
+                // Wiping settings.json while an unremovable credential lingers would leave the machine in a worse
+                // state than it started in, and reporting success would be a lie.
+                if (config.ClientId.HasValue && !TryClearCredentials(config.ClientId.Value.ToString()))
                 {
-                    _credentialManager.ClearCredentials(config.ClientId.Value.ToString());
+                    _logger.LogError("Could not remove the credential for '{ClientId}' from the credential store. Remove it manually.", config.ClientId.Value);
+                    return false;
                 }
 
                 await _configurationManager.ClearAsync(ct);

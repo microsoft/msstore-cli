@@ -199,6 +199,47 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
+        public async Task ResetShouldNotDiscardSettingsWhenTheCredentialSurvivesTheClear()
+        {
+            // `reconfigure --reset` used to report success whenever ClearCredentials silently failed. Wiping
+            // settings.json while an unremovable credential lingers leaves the machine worse off than before.
+            ArrangeExistingClientSecretConfiguration(validationSucceeds: true);
+            FakeConfigurationManager
+                .Setup(x => x.LoadAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Configurations { ClientId = new Guid(ExistingClientId) });
+            CredentialManager
+                .Setup(x => x.ClearCredentials(It.IsAny<string>()))
+                .Callback(() => { });
+            FakeConsole
+                .Setup(x => x.YesNoConfirmationAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
+
+            await ParseAndInvokeAsync(["reconfigure", "--reset"], expectedResult: -1);
+
+            _credentialStore[ExistingClientId].Should().Be(ExistingSecret);
+            FakeConfigurationManager.Verify(x => x.ClearAsync(It.IsAny<CancellationToken>()), Times.Never);
+            TokenManager.Verify(x => x.ClearAllCacheAsync(), Times.Never);
+        }
+
+        [TestMethod]
+        public async Task ResetShouldClearEverythingWhenTheCredentialIsRemoved()
+        {
+            ArrangeExistingClientSecretConfiguration(validationSucceeds: true);
+            FakeConfigurationManager
+                .Setup(x => x.LoadAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Configurations { ClientId = new Guid(ExistingClientId) });
+            FakeConsole
+                .Setup(x => x.YesNoConfirmationAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
+
+            await ParseAndInvokeAsync(["reconfigure", "--reset"], expectedResult: 0);
+
+            _credentialStore.Should().NotContainKey(ExistingClientId);
+            FakeConfigurationManager.Verify(x => x.ClearAsync(It.IsAny<CancellationToken>()), Times.Once);
+            TokenManager.Verify(x => x.ClearAllCacheAsync(), Times.Once);
+        }
+
+        [TestMethod]
         public async Task ReconfigureShouldValidateBeforeMutatingTheCredentialStore()
         {
             ArrangeExistingClientSecretConfiguration(validationSucceeds: true);
