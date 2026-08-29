@@ -291,7 +291,7 @@ namespace MSStore.CLI.Services
             // "this configuration has no secret" (certificate thumbprint or client assertion mode, or a
             // password-less certificate file), and must not fall back to whatever is currently in the credential
             // store. The credential store is only mutated once the configuration has been validated and saved, so
-            // a failed reconfigure can never destroy the credentials the user is currently relying on.
+            // a reconfigure that does not succeed can never destroy the credentials the user is relying on.
             var candidateSecret = clientSecret ?? certificatePassword;
 
             config.SellerId = await RetrieveSellerId(ansiConsole, sellerId, ct);
@@ -357,17 +357,18 @@ namespace MSStore.CLI.Services
                     }
 
                     // The configuration is known to be good at this point, so it is now safe to commit it.
-                    // Write the new secret first (a non-destructive operation), then persist the configuration,
-                    // and only then erase a credential that the new configuration no longer needs. Clearing is the
-                    // one irreversible step - a client secret cannot be read back from Entra - so it goes last.
+                    // Persist settings.json first: writing a credential overwrites whatever was stored for this
+                    // client ID, and clearing one erases it outright, so both are irreversible - a client secret
+                    // cannot be read back from Entra. Doing them only after the new configuration is durably saved
+                    // keeps the invariant that a reconfigure which does not succeed leaves the credential store
+                    // exactly as it found it.
+                    await _configurationManager.SaveAsync(config, ct);
+
                     if (candidateSecret != null)
                     {
                         _credentialManager.WriteCredential(clientIdString, candidateSecret);
                     }
-
-                    await _configurationManager.SaveAsync(config, ct);
-
-                    if (candidateSecret == null)
+                    else
                     {
                         _credentialManager.ClearCredentials(clientIdString);
                     }

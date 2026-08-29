@@ -78,14 +78,17 @@ namespace MSStore.CLI.UnitTests
                 expectedResult);
         }
 
-        private void VerifyCredentialStoreWasNotTouched()
+        private void VerifyCredentialStoreWasNotTouched(bool saveAttempted = false)
         {
             _credentialStore.Should().ContainKey(ExistingClientId);
             _credentialStore[ExistingClientId].Should().Be(ExistingSecret);
 
             CredentialManager.Verify(x => x.WriteCredential(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
             CredentialManager.Verify(x => x.ClearCredentials(It.IsAny<string>()), Times.Never);
-            FakeConfigurationManager.Verify(x => x.SaveAsync(It.IsAny<Configurations>(), It.IsAny<CancellationToken>()), Times.Never);
+
+            FakeConfigurationManager.Verify(
+                x => x.SaveAsync(It.IsAny<Configurations>(), It.IsAny<CancellationToken>()),
+                saveAttempted ? Times.Once() : Times.Never());
         }
 
         [TestMethod]
@@ -130,6 +133,34 @@ namespace MSStore.CLI.UnitTests
             await ReconfigureAsync(["--certificateFilePath", "C:\\x.pfx", "--certificatePassword", "certPassword"], expectedResult: -1);
 
             VerifyCredentialStoreWasNotTouched();
+        }
+
+        [TestMethod]
+        public async Task SaveFailureShouldNotOverwriteExistingClientSecret()
+        {
+            // Validation passes, but persisting settings.json fails. Writing the certificate password would
+            // overwrite - and permanently destroy - the client secret the saved configuration still refers to.
+            ArrangeExistingClientSecretConfiguration(validationSucceeds: true);
+            FakeConfigurationManager
+                .Setup(x => x.SaveAsync(It.IsAny<Configurations>(), It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new IOException("settings.json is locked"));
+
+            await ReconfigureAsync(["--certificateFilePath", "C:\\x.pfx", "--certificatePassword", "certPassword"], expectedResult: -1);
+
+            VerifyCredentialStoreWasNotTouched(saveAttempted: true);
+        }
+
+        [TestMethod]
+        public async Task SaveFailureShouldNotClearExistingClientSecret()
+        {
+            ArrangeExistingClientSecretConfiguration(validationSucceeds: true);
+            FakeConfigurationManager
+                .Setup(x => x.SaveAsync(It.IsAny<Configurations>(), It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new IOException("settings.json is locked"));
+
+            await ReconfigureAsync(["--clientAssertion"], expectedResult: -1);
+
+            VerifyCredentialStoreWasNotTouched(saveAttempted: true);
         }
 
         [TestMethod]
