@@ -164,6 +164,41 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
+        public async Task SilentlyFailedCredentialClearShouldNotReportSuccess()
+        {
+            // ClearCredentials cannot report failure on any platform, so a credential can survive the clear. The
+            // saved configuration would then be validated with a null PKCS#12 password but run with the stale
+            // secret as the password, so reconfigure must not claim success.
+            ArrangeExistingClientSecretConfiguration(validationSucceeds: true);
+            CredentialManager
+                .Setup(x => x.ClearCredentials(It.IsAny<string>()))
+                .Callback(() => { });
+
+            var result = await ReconfigureAsync(["--certificateFilePath", "C:\\x.pfx"], expectedResult: -1);
+
+            result.Error.Should().NotContain("Awesome! It seems to be working!");
+            result.Error.Should().Contain("could not be removed");
+
+            _credentialStore[ExistingClientId].Should().Be(ExistingSecret);
+            FakeConfigurationManager.Verify(x => x.SaveAsync(It.IsAny<Configurations>(), It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [TestMethod]
+        public async Task SuccessfulCredentialClearShouldBeVerifiedAndReportSuccess()
+        {
+            ArrangeExistingClientSecretConfiguration(validationSucceeds: true);
+
+            var result = await ReconfigureAsync(["--certificateFilePath", "C:\\x.pfx"], expectedResult: 0);
+
+            // The clear is confirmed by reading the credential back, rather than assumed to have worked.
+            // Guid.ToString() is lower-case, so match the client ID case-insensitively.
+            CredentialManager.Verify(
+                x => x.ReadCredential(It.Is<string>(s => s.Equals(ExistingClientId, StringComparison.OrdinalIgnoreCase))),
+                Times.Once);
+            result.Error.Should().Contain("Awesome! It seems to be working!");
+        }
+
+        [TestMethod]
         public async Task ReconfigureShouldValidateBeforeMutatingTheCredentialStore()
         {
             ArrangeExistingClientSecretConfiguration(validationSucceeds: true);

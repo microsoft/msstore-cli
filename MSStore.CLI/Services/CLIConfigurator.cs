@@ -371,6 +371,18 @@ namespace MSStore.CLI.Services
                     else
                     {
                         _credentialManager.ClearCredentials(clientIdString);
+
+                        // ClearCredentials is best-effort on every platform: Windows swallows exceptions, and the
+                        // Linux and macOS implementations discard the native delete status. A credential that
+                        // survives the clear would be picked up by ReadCredential on the next run and handed to
+                        // LoadCertificate as the PKCS#12 password of a password-less certificate file, breaking
+                        // the very configuration that was just reported as working. Confirm the removal instead of
+                        // assuming it, so the saved configuration always matches what was validated.
+                        if (!string.IsNullOrEmpty(_credentialManager.ReadCredential(clientIdString)))
+                        {
+                            ctx.ErrorStatus(ansiConsole, $"The configuration was saved, but the obsolete credential for '{clientIdString}' could not be removed from the credential store. Remove it manually, or run 'msstore reconfigure --reset', before using the CLI.");
+                            return false;
+                        }
                     }
                 }
                 catch (Exception err)
