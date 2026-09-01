@@ -95,7 +95,7 @@ namespace MSStore.CLI.Commands.Submission
                         var baseListing = listing.Value?.BaseListing;
                         if (baseListing != null)
                         {
-                            AnsiConsole.WriteLine(JsonSerializer.Serialize(baseListing, baseListing.GetType(), SourceGenerationContext.GetCustom(true)));
+                            StandardOutput.WriteLine(JsonSerializer.Serialize(baseListing, baseListing.GetType(), SourceGenerationContext.GetCustom(true)));
                         }
                     }
 
@@ -103,7 +103,7 @@ namespace MSStore.CLI.Commands.Submission
                 }
                 else if (ret is ListingAssetsResponse draft)
                 {
-                    AnsiConsole.WriteLine(JsonSerializer.Serialize(draft, draft.GetType(), SourceGenerationContext.GetCustom(true)));
+                    StandardOutput.WriteLine(JsonSerializer.Serialize(draft, draft.GetType(), SourceGenerationContext.GetCustom(true)));
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(0, ct);
                 }
 

@@ -21,10 +21,10 @@ namespace MSStore.CLI.Helpers
                 var defaultImages = ProjectImagesHelper.GetDefaultImagesUsedByApp(ansiConsole, appImages, projectSpecificDefaultImages, imageConverter, logger);
                 if (defaultImages.Count > 0)
                 {
-                    AnsiConsole.MarkupLine($"[bold yellow]The following images are using the default values and should be updated:[/]");
+                    ansiConsole.MarkupLine($"[bold yellow]The following images are using the default values and should be updated:[/]");
                     foreach (var image in defaultImages)
                     {
-                        AnsiConsole.MarkupLine($"[bold yellow]  {image}[/]");
+                        ansiConsole.MarkupLine($"[bold yellow]  {image}[/]");
                     }
                 }
             }

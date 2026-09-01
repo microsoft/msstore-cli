@@ -71,7 +71,7 @@ namespace MSStore.CLI.ProjectConfigurators
 
             version = AppXManifestManager.UpdateManifestVersion(manifestFile.FullName, version);
 
-            var bundleUploadFile = await AnsiConsole.Status().StartAsync("Building MSIX...", async ctx =>
+            var bundleUploadFile = await ErrorAnsiConsole.Status().StartAsync("Building MSIX...", async ctx =>
             {
                 try
                 {

@@ -99,7 +99,7 @@ namespace MSStore.CLI.UnitTests
                 ]);
 
             result.Error.Should().Contain("The packaged app is here:");
-            result.Output.Should().Contain(customPath);
+            result.Output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).Should().ContainSingle().Which.Should().Contain(customPath);
 
             ExternalCommandExecutor.VerifyAll();
         }
@@ -216,7 +216,7 @@ namespace MSStore.CLI.UnitTests
                 ]);
 
             result.Error.Should().Contain("The packaged app is here:");
-            result.Output.Should().Contain(customPath);
+            result.Output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).Should().ContainSingle().Which.Should().Contain(customPath);
 
             ExternalCommandExecutor.VerifyAll();
         }
@@ -295,7 +295,7 @@ namespace MSStore.CLI.UnitTests
                 ]);
 
             result.Error.Should().Contain("The packaged app is here:");
-            result.Output.Should().Contain(customPath);
+            result.Output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).Should().ContainSingle().Which.Should().Contain(customPath);
 
             ExternalCommandExecutor.VerifyAll();
         }
@@ -375,7 +375,7 @@ namespace MSStore.CLI.UnitTests
                 ]);
 
             result.Error.Should().Contain("The packaged app is here:");
-            result.Output.Should().Contain(path);
+            result.Output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).Should().ContainSingle().Which.Should().Contain(path);
         }
 
         [TestMethod]
@@ -426,7 +426,7 @@ namespace MSStore.CLI.UnitTests
                 ]);
 
             result.Error.Should().Contain("The packaged app is here:");
-            result.Output.Should().Contain(customPath);
+            result.Output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).Should().ContainSingle().Which.Should().Contain(customPath);
         }
 
         private void SetupPubGet(DirectoryInfo dirInfo)
@@ -478,7 +478,7 @@ namespace MSStore.CLI.UnitTests
                 ]);
 
             result.Error.Should().Contain("The packaged app is here:");
-            result.Output.Should().Contain(path);
+            result.Output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).Should().ContainSingle().Which.Should().Contain(path);
         }
 
         [TestMethod]
@@ -514,7 +514,7 @@ namespace MSStore.CLI.UnitTests
                 ]);
 
             result.Error.Should().Contain("The packaged app is here:");
-            result.Output.Should().Contain(path);
+            result.Output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).Should().ContainSingle().Which.Should().Contain(path);
         }
 
         [TestMethod]
@@ -566,7 +566,29 @@ namespace MSStore.CLI.UnitTests
                 ]);
 
             result.Error.Should().Contain("The packaged app is here:");
-            result.Output.Should().Contain(path);
+            result.Output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).Should().ContainSingle().Which.Should().Contain(path);
+        }
+
+        [TestMethod]
+        public async Task PackageCommandForPWAsShouldPrintAnAbsolutePathForARelativeArgument()
+        {
+            var path = CopyFilesRecursively("PWAProject");
+
+            // CopyFilesRecursively hands back a path relative to the test working directory, and
+            // the PWA packager is the only one that echoes the argument straight back as its
+            // output directory instead of deriving it from a built file. So this is the case
+            // where DirectoryInfo.ToString() would emit a bare relative path to stdout.
+            Path.IsPathFullyQualified(path).Should().BeFalse();
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "package",
+                    path
+                ]);
+
+            result.Error.Should().Contain("The packaged app is here:");
+            result.Output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
+                .Should().ContainSingle().Which.Should().Be(Path.GetFullPath(path));
         }
     }
 }

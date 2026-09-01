@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Text.Json;
 using MSStore.API.Models;
 
 namespace MSStore.CLI.UnitTests
@@ -66,6 +67,50 @@ namespace MSStore.CLI.UnitTests
                 ]);
 
             result.Output.Should().Contain("\"PackageId\": \"12345\"");
+        }
+
+        [TestMethod]
+        public async Task UnpackagedSubmissionGetCommandShouldNotWrapJsonOutput()
+        {
+            // Longer than the width the test console renders at, and sprinkled with characters
+            // that the serializer escapes as \uXXXX, so a wrap would both break the JSON and
+            // corrupt the description.
+            var longDescription = string.Concat(
+                Enumerable.Repeat("Sync your mail & calendar across every device without a fuss. ", 12));
+
+            FakeStoreAPI
+                .Setup(x => x.GetDraftAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new ResponseWrapper<ListingsMetadataResponse>
+                {
+                    IsSuccess = true,
+                    ResponseData = new ListingsMetadataResponse
+                    {
+                        Listings =
+                            [
+                                new Listing
+                                {
+                                    Language = "en-us",
+                                    Description = longDescription
+                                }
+                            ]
+                    }
+                });
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "submission",
+                    "get",
+                    Guid.Empty.ToString()
+                ]);
+
+            using var json = JsonDocument.Parse(result.Output);
+
+            json.RootElement
+                .GetProperty("ResponseData")
+                .GetProperty("Listings")[0]
+                .GetProperty("Description")
+                .GetString()
+                .Should().Be(longDescription);
         }
 
         [TestMethod]

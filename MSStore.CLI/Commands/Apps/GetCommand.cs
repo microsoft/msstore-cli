@@ -94,7 +94,7 @@ namespace MSStore.CLI.Commands.Apps
                     }
                     else
                     {
-                        AnsiConsole.WriteLine(JsonSerializer.Serialize(app, app.GetType(), SourceGenerationContext.GetCustom(true)));
+                        StandardOutput.WriteLine(JsonSerializer.Serialize(app, app.GetType(), SourceGenerationContext.GetCustom(true)));
                         return await _telemetryClient.TrackCommandEventAsync<Handler>(0, ct);
                     }
                 }

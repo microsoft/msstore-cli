@@ -410,7 +410,7 @@ namespace MSStore.CLI.UnitTests
                 });
         }
 
-        protected void AddDefaultFakeSubmission()
+        protected void AddDefaultFakeSubmission(string listingDescription = "BaseListingDescription")
         {
             var fakeSubmission = new DevCenterSubmission
             {
@@ -444,7 +444,7 @@ namespace MSStore.CLI.UnitTests
                             {
                                 BaseListing = new BaseListing
                                 {
-                                    Description = "BaseListingDescription"
+                                    Description = listingDescription
                                 }
                             }
                         }
@@ -802,6 +802,10 @@ namespace MSStore.CLI.UnitTests
             var outputCapture = new OutputCapture(Console.Out);
             var errorCapture = RefreshAnsiConsole();
 
+            // Only stdout is redirected: the error capture is reached exclusively through
+            // ErrorAnsiConsole, mirroring how Program.cs keeps the two streams apart.
+            Console.SetOut(outputCapture);
+
             AnsiConsole.Console = AnsiConsole.Create(new AnsiConsoleSettings
             {
                 Ansi = AnsiSupport.Yes,
@@ -909,7 +913,6 @@ namespace MSStore.CLI.UnitTests
             public OutputCapture(TextWriter textWriter)
             {
                 _stdOutWriter = textWriter;
-                Console.SetOut(this);
                 Captured = new StringWriter();
             }
 
