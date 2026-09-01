@@ -196,7 +196,11 @@ namespace MSStore.CLI.UnitTests
                 .Setup(x => x.ReadCredential(It.IsAny<string>()))
                 .Returns((string userName) =>
                 {
-                    return userName.Equals(UserNames.Last(), StringComparison.OrdinalIgnoreCase) ? Secrets.Last() : string.Empty;
+                    // Mirrors the real implementations, which return an empty string when no credential is
+                    // stored for the user - notably after ClearCredentials has emptied the lists.
+                    return UserNames.Count > 0 && userName.Equals(UserNames.Last(), StringComparison.OrdinalIgnoreCase)
+                        ? Secrets.Last()
+                        : string.Empty;
                 });
             ExternalCommandExecutor = new Mock<IExternalCommandExecutor>();
             FakeConsole = new Mock<IConsoleReader>();
@@ -226,10 +230,14 @@ namespace MSStore.CLI.UnitTests
                 .Setup(fac => fac.CreateAsync(It.IsAny<Configurations>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(FakeStoreAPI.Object);
             FakeStoreAPIFactory
+                .Setup(fac => fac.CreateWithSecretAsync(It.IsAny<Configurations>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(FakeStoreAPI.Object);
+            FakeStoreAPIFactory
                 .Setup(fac => fac.CreatePackagedAsync(It.IsAny<Configurations>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(FakeStorePackagedAPI.Object);
 
             StorePackagedAPI.DefaultSubmissionPollDelay = TimeSpan.Zero;
+            CLIConfigurator.ValidationRetryDelay = TimeSpan.Zero;
 
             var azureBlobManagerMock = new Mock<IAzureBlobManager>();
             azureBlobManagerMock

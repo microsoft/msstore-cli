@@ -29,7 +29,18 @@ namespace MSStore.CLI.Services
                 throw new InvalidOperationException("Configuration Client Id is empty.");
             }
 
-            var secret = _credentialManager.ReadCredential(config.ClientId.Value.ToString());
+            return await CreateWithSecretAsync(config, _credentialManager.ReadCredential(config.ClientId.Value.ToString()), ct);
+        }
+
+        public async Task<IStoreAPI> CreateWithSecretAsync(Configurations config, string? secret, CancellationToken ct = default)
+        {
+            ArgumentNullException.ThrowIfNull(config);
+
+            if (!config.ClientId.HasValue)
+            {
+                throw new InvalidOperationException("Configuration Client Id is empty.");
+            }
+
             X509Certificate2? cert = LoadCertificate(config, secret);
 
             StoreAPI? storeAPI;

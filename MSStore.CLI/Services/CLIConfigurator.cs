@@ -38,6 +38,12 @@ namespace MSStore.CLI.Services
         private readonly ITokenManager _tokenManager = tokenManager ?? throw new ArgumentNullException(nameof(tokenManager));
         private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
+        /// <summary>
+        /// Gets or sets how long to wait between attempts when validating a candidate configuration. Overridable so
+        /// tests don't have to sit through the real back-off.
+        /// </summary>
+        internal static TimeSpan ValidationRetryDelay { get; set; } = TimeSpan.FromSeconds(10);
+
         public async Task<bool> ConfigureAsync(IAnsiConsole ansiConsole, bool askConfirmation, Guid? tenantId = null, string? sellerId = null, Guid? clientId = null, string? clientSecret = null, string? certificateThumbprint = null, string? certificateFilePath = null, string? certificatePassword = null, bool clientAssertion = false, CancellationToken ct = default)
         {
             if (askConfirmation &&
@@ -279,18 +285,14 @@ namespace MSStore.CLI.Services
                 return false;
             }
 
-            if (clientSecret != null)
-            {
-                _credentialManager.WriteCredential(config.ClientId.Value.ToString(), clientSecret);
-            }
-            else if (certificatePassword != null)
-            {
-                _credentialManager.WriteCredential(config.ClientId.Value.ToString(), certificatePassword);
-            }
-            else
-            {
-                _credentialManager.ClearCredentials(config.ClientId.Value.ToString());
-            }
+            var clientIdString = config.ClientId.Value.ToString();
+
+            // The secret that this candidate configuration should be validated with. A null value explicitly means
+            // "this configuration has no secret" (certificate thumbprint or client assertion mode, or a
+            // password-less certificate file), and must not fall back to whatever is currently in the credential
+            // store. The credential store is only mutated once the configuration has been validated and saved, so
+            // a reconfigure that does not succeed can never destroy the credentials the user is relying on.
+            var candidateSecret = clientSecret ?? certificatePassword;
 
             config.SellerId = await RetrieveSellerId(ansiConsole, sellerId, ct);
             if (config.SellerId == null)
@@ -319,12 +321,12 @@ namespace MSStore.CLI.Services
                 {
                     IStoreAPI? storeAPI = null;
                     int maxRetry = 3;
-                    int delay = 10;
+                    var delay = ValidationRetryDelay;
                     for (int i = 0; i < maxRetry; i++)
                     {
                         try
                         {
-                            storeAPI = await _storeAPIFactory.CreateAsync(config, ct);
+                            storeAPI = await _storeAPIFactory.CreateWithSecretAsync(config, candidateSecret, ct);
                             break;
                         }
                         catch (Exception ex)
@@ -342,8 +344,8 @@ namespace MSStore.CLI.Services
                                 break;
                             }
 
-                            ansiConsole.MarkupLine($"Failed to auth... Might just need to wait a little bit. Retrying again in [b green]{delay}[/] seconds([b green]{i + 1}/{maxRetry}[/])...");
-                            await Task.Delay(TimeSpan.FromSeconds(delay), ct);
+                            ansiConsole.MarkupLine($"Failed to auth... Might just need to wait a little bit. Retrying again in [b green]{delay.TotalSeconds}[/] seconds([b green]{i + 1}/{maxRetry}[/])...");
+                            await Task.Delay(delay, ct);
                         }
                     }
 
@@ -354,7 +356,23 @@ namespace MSStore.CLI.Services
                         return false;
                     }
 
+                    // The configuration is known to be good at this point, so it is now safe to commit it.
+                    // Persist settings.json first: writing a credential overwrites whatever was stored for this
+                    // client ID, and clearing one erases it outright, so both are irreversible - a client secret
+                    // cannot be read back from Entra. Doing them only after the new configuration is durably saved
+                    // keeps the invariant that a reconfigure which does not succeed leaves the credential store
+                    // exactly as it found it.
                     await _configurationManager.SaveAsync(config, ct);
+
+                    if (candidateSecret != null)
+                    {
+                        _credentialManager.WriteCredential(clientIdString, candidateSecret);
+                    }
+                    else if (!TryClearCredentials(clientIdString))
+                    {
+                        ctx.ErrorStatus(ansiConsole, $"The configuration was saved, but the obsolete credential for '{clientIdString}' could not be removed from the credential store. Remove it manually before using the CLI.");
+                        return false;
+                    }
                 }
                 catch (Exception err)
                 {
@@ -373,6 +391,23 @@ namespace MSStore.CLI.Services
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// Removes the credential stored for <paramref name="clientId"/> and confirms it is actually gone.
+        /// ClearCredentials is best-effort on every platform - Windows wraps the delete in a bare catch, and the
+        /// Linux and macOS implementations discard the native delete status - so a credential can survive the
+        /// clear silently. A leftover secret is then read back on the next run and handed to LoadCertificate as
+        /// the PKCS#12 password of a password-less certificate file, so the removal is verified rather than
+        /// assumed.
+        /// </summary>
+        /// <param name="clientId">The client Id whose credential should be removed.</param>
+        /// <returns><see langword="true"/> if no credential remains for the client Id.</returns>
+        private bool TryClearCredentials(string clientId)
+        {
+            _credentialManager.ClearCredentials(clientId);
+
+            return string.IsNullOrEmpty(_credentialManager.ReadCredential(clientId));
         }
 
         private async Task OpenPartnerCenterUserManagementPageAsync(string specificPage, CancellationToken ct)
@@ -643,9 +678,13 @@ namespace MSStore.CLI.Services
             {
                 var config = await _configurationManager.LoadAsync(true, ct: ct);
 
-                if (config.ClientId.HasValue)
+                // Remove the credential before discarding the settings, and only continue if it is really gone.
+                // Wiping settings.json while an unremovable credential lingers would leave the machine in a worse
+                // state than it started in, and reporting success would be a lie.
+                if (config.ClientId.HasValue && !TryClearCredentials(config.ClientId.Value.ToString()))
                 {
-                    _credentialManager.ClearCredentials(config.ClientId.Value.ToString());
+                    _logger.LogError("Could not remove the credential for '{ClientId}' from the credential store. Remove it manually.", config.ClientId.Value);
+                    return false;
                 }
 
                 await _configurationManager.ClearAsync(ct);
