@@ -219,8 +219,18 @@ namespace MSStore.API.Packaged
         {
             try
             {
-                var devCenterApplicationsResponse = await GetDevCenterApplicationsAsync(0, 100, ct); // TODO: pagination
-                return devCenterApplicationsResponse.Value ?? [];
+                PagedResponse<DevCenterApplication>? lastDevCenterApplicationsResponse = null;
+                var result = new List<DevCenterApplication>();
+                int skip = 0;
+                const int top = 100;
+                do
+                {
+                    lastDevCenterApplicationsResponse = await GetDevCenterApplicationsAsync(skip, top, ct);
+                    skip += top;
+                    result.AddRange(lastDevCenterApplicationsResponse.Value ?? []);
+                }
+                while (lastDevCenterApplicationsResponse?.NextLink is not null);
+                return result;
             }
             catch (Exception error)
             {
@@ -384,8 +394,18 @@ namespace MSStore.API.Packaged
         {
             try
             {
-                var devCenterFlightsResponse = await GetFlightsAsync(productId, 0, 100, ct); // TODO: pagination
-                return devCenterFlightsResponse.Value ?? [];
+                PagedResponse<DevCenterFlight>? lastDevCenterFlightsResponse = null;
+                var result = new List<DevCenterFlight>();
+                int skip = 0;
+                const int top = 100;
+                do
+                {
+                    lastDevCenterFlightsResponse = await GetFlightsAsync(productId, skip, top, ct);
+                    skip += top;
+                    result.AddRange(lastDevCenterFlightsResponse.Value ?? []);
+                }
+                while (lastDevCenterFlightsResponse?.NextLink is not null);
+                return result;
             }
             catch (Exception error)
             {
