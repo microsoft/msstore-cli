@@ -790,17 +790,24 @@ namespace MSStore.CLI.Helpers
         /// Makes sure publishing never changes the product's price.
         /// </summary>
         /// <remarks>
-        /// The submission API replaces the whole submission on update, so a complete and valid
-        /// <c>pricing</c> object has to be sent back. Only three things can go in
-        /// <see cref="Pricing.PriceId"/>, and for a product on the newer per-market pricing model
-        /// the API returns <see cref="PriceIds.Base"/>, which is not one of them:
+        /// The submission API replaces the whole submission on update - there are no patch
+        /// semantics, so anything the request does not state explicitly is reset to its default.
+        /// A complete and valid <c>pricing</c> object therefore has to be sent back every time,
+        /// even when publishing has no interest in the price. For a product on the newer
+        /// per-market pricing model the API returns <see cref="PriceIds.Base"/>, and none of the
+        /// ways of expressing "leave the price alone" work:
         /// <list type="bullet">
         /// <item><description><see cref="PriceIds.Base"/> - rejected with <c>'Base' is not a valid PriceId for base price.</c></description></item>
-        /// <item><description>an empty value - accepted with <c>200 OK</c>, and the product silently becomes free.</description></item>
-        /// <item><description>omitting <c>pricing</c> - rejected with <c>Pricing data was not provided in the request.</c></description></item>
+        /// <item><description>an empty value, the property removed, or an empty pricing object - all accepted with <c>200 OK</c>, and the product silently becomes free.</description></item>
+        /// <item><description>a null or omitted <c>pricing</c> - rejected with <c>Pricing data was not provided in the request.</c></description></item>
         /// </list>
+        /// Nor can the real price be looked up: it is absent from the application resource, the
+        /// newer submission API does not know packaged products, and no API exposes the price
+        /// tier table. So for those products the price can only come from the caller.
+        /// <para>
         /// Any other price id (<c>Free</c>, <c>NotAvailable</c>, <c>Tier1012</c>, ...) round-trips
         /// unchanged, so paid products publish fine as long as we leave the value alone.
+        /// </para>
         /// </remarks>
         /// <returns><c>false</c> when the price cannot be preserved and publishing must stop.</returns>
         internal static bool TryPreservePricing(IAnsiConsole ansiConsole, DevCenterSubmission submission, string? priceIdOverride, ILogger logger)

@@ -38,9 +38,15 @@ namespace MSStore.API.Packaged.Models
         /// Whether a price id read from a submission can be sent back unchanged on update.
         /// </summary>
         /// <remarks>
-        /// Everything except <see cref="Base"/> (and a missing value) round-trips. Note that
-        /// an empty price id must never be sent: the API answers <c>200 OK</c> and silently
-        /// resets the product to free, which is how paid apps lost their price.
+        /// Everything except <see cref="Base"/> (and a missing value) round-trips.
+        /// <para>
+        /// An empty price id must never be sent. Update is a full replace with no patch
+        /// semantics, so anything the request does not state explicitly is reset to its default,
+        /// and the default is free. Verified against the API: a <c>null</c> price id, a pricing
+        /// object with the property removed, and an empty pricing object all answer
+        /// <c>200 OK</c> and silently turn the product free. Omitting the property is therefore
+        /// not a way to leave the price untouched - there is no such way.
+        /// </para>
         /// </remarks>
         /// <param name="priceId">The price id to check.</param>
         /// <returns><c>true</c> when <paramref name="priceId"/> is safe to send back.</returns>

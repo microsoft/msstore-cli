@@ -2,6 +2,8 @@
 // Licensed under the MIT License.
 
 using System.CommandLine;
+using System.Text.Json;
+using MSStore.API.Models;
 using MSStore.API.Packaged.Models;
 using MSStore.CLI.Commands;
 
@@ -171,6 +173,30 @@ namespace MSStore.CLI.UnitTests
             result.Error.Should().Contain("Submission commit success! Here is some data:");
             sent!.Pricing.Should().NotBeNull();
             sent.Pricing!.PriceId.Should().Be("Tier1012");
+        }
+
+        [TestMethod]
+        public void PricingMustAlwaysSerializeThePriceIdProperty()
+        {
+            // Guards against "tidying" the payload by omitting a null PriceId. Update has no
+            // patch semantics: a pricing object with the property removed is accepted with
+            // 200 OK and turns the product free, exactly like sending it as null. Adding
+            // JsonIgnore(WhenWritingNull) to Pricing.PriceId would silently reintroduce #112.
+            var json = JsonSerializer.Serialize(
+                new DevCenterSubmission { Pricing = new Pricing { PriceId = null } },
+                SourceGenerationContext.GetCustom().DevCenterSubmission);
+
+            json.Should().Contain("\"PriceId\"");
+        }
+
+        [TestMethod]
+        public void PricingShouldSerializeARealTierVerbatim()
+        {
+            var json = JsonSerializer.Serialize(
+                new DevCenterSubmission { Pricing = new Pricing { PriceId = "Tier1012" } },
+                SourceGenerationContext.GetCustom().DevCenterSubmission);
+
+            json.Should().Contain("\"PriceId\":\"Tier1012\"");
         }
 
         private static ParseResult ParsePublish(params string[] args) =>
