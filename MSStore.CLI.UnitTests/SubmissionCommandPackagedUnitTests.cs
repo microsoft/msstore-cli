@@ -145,6 +145,100 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
+        public async Task PackagedSubmissionUpdateCommandShouldAcceptAPayloadCarryingARealTier()
+        {
+            // A per-market priced product can only be updated by naming a real tier in the
+            // payload. Blocking on the *current* submission's price would reject this.
+            FakeApps[0].PendingApplicationSubmission = new ApplicationSubmissionInfo
+            {
+                Id = "123456789"
+            };
+
+            AddDefaultFakeSubmission(pricing: new Pricing { PriceId = "Base" });
+
+            DevCenterSubmission? sent = null;
+            FakeStorePackagedAPI
+                .Setup(x => x.UpdateSubmissionAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<DevCenterSubmission>(),
+                    It.IsAny<CancellationToken>()))
+                .Callback<string, string, DevCenterSubmission, CancellationToken>((_, _, s, _) => sent = s)
+                .ReturnsAsync((string _, string _, DevCenterSubmission s, CancellationToken _) => s);
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "submission",
+                    "update",
+                    FakeApps[0].Id!,
+                    @"
+{
+""Pricing"": { ""PriceId"": ""Tier1012"" },
+""ApplicationPackages"":
+    [
+        {
+            ""FileName"":""C:\\temp\\installer.msix""
+        }
+    ]
+}"
+                ]);
+
+            result.Error.Should().Contain("Updating submission product");
+            sent!.Pricing!.PriceId.Should().Be("Tier1012");
+        }
+
+        [TestMethod]
+        public async Task PackagedSubmissionUpdateCommandShouldRejectAPayloadThatWouldResetThePrice()
+        {
+            // "Base" is what the API hands back for a per-market priced product, and sending it
+            // straight back is rejected with "'Base' is not a valid PriceId for base price."
+            var result = await ParseAndInvokeAsync(
+                [
+                    "submission",
+                    "update",
+                    FakeApps[0].Id!,
+                    @"{ ""Pricing"": { ""PriceId"": ""Base"" } }"
+                ], -1);
+
+            result.Error.Should().Contain("which the submission API will not accept");
+            result.Error.Should().NotContain("only for Free products");
+
+            FakeStorePackagedAPI
+                .Verify(
+                    x => x.UpdateSubmissionAsync(
+                        It.IsAny<string>(),
+                        It.IsAny<string>(),
+                        It.IsAny<DevCenterSubmission>(),
+                        It.IsAny<CancellationToken>()),
+                    Times.Never);
+        }
+
+        [TestMethod]
+        public async Task PackagedSubmissionUpdateCommandShouldRejectAPayloadWithAnEmptyPrice()
+        {
+            // An empty price is the dangerous one: the API answers 200 OK and silently resets
+            // the product to free.
+            var result = await ParseAndInvokeAsync(
+                [
+                    "submission",
+                    "update",
+                    FakeApps[0].Id!,
+                    @"{ ""Pricing"": { ""TrialPeriod"": ""NoFreeTrial"" } }"
+                ], -1);
+
+            result.Error.Should().Contain("which the submission API will not accept");
+
+            FakeStorePackagedAPI
+                .Verify(
+                    x => x.UpdateSubmissionAsync(
+                        It.IsAny<string>(),
+                        It.IsAny<string>(),
+                        It.IsAny<DevCenterSubmission>(),
+                        It.IsAny<CancellationToken>()),
+                    Times.Never);
+        }
+
+        [TestMethod]
         public async Task PackagedSubmissionUpdateCommandWithPayloadOption()
         {
             var payloadFilePath = CreateTemporaryPayloadFile(

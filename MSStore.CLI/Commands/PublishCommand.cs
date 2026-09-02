@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Logging;
+using MSStore.API.Packaged.Models;
 using MSStore.CLI.Helpers;
 using MSStore.CLI.ProjectConfigurators;
 using MSStore.CLI.Services;
@@ -28,6 +29,7 @@ namespace MSStore.CLI.Commands
 
         internal static readonly Option<string> FlightIdOption;
         internal static readonly Option<float?> PackageRolloutPercentageOption;
+        internal static readonly Option<string?> PriceIdOption;
         internal static readonly Option<long> UploadTimeoutOption;
         private static readonly Option<DirectoryInfo?> InputDirectoryOption;
         private static readonly Option<string> AppIdOption;
@@ -64,6 +66,26 @@ namespace MSStore.CLI.Commands
                     {
                         return parsedPercentage;
                     }
+                }
+            };
+
+            PriceIdOption = new Option<string?>("--priceId", "-pid")
+            {
+                Description = "Specifies the base price tier to set on the submission, for example 'Tier1012', 'Free' or 'NotAvailable'. Only needed when the Store reports a base price the submission API will not accept back, which happens when the price is managed per market from Partner Center.",
+                CustomParser = result =>
+                {
+                    if (result.Tokens.Count == 0)
+                    {
+                        return null;
+                    }
+
+                    if (!PriceIds.TryNormalize(result.Tokens.Single().Value, out var normalized))
+                    {
+                        result.AddError("Invalid price id. The value must be 'Free', 'NotAvailable', or a tier such as 'Tier1012'.");
+                        return null;
+                    }
+
+                    return normalized;
                 }
             };
 
@@ -143,6 +165,7 @@ namespace MSStore.CLI.Commands
             Options.Add(NoCommitOption);
             Options.Add(FlightIdOption);
             Options.Add(PackageRolloutPercentageOption);
+            Options.Add(PriceIdOption);
             Options.Add(UploadTimeoutOption);
         }
 
@@ -165,6 +188,7 @@ namespace MSStore.CLI.Commands
                 var appId = parseResult.GetValue(AppIdOption);
                 var flightId = parseResult.GetValue(FlightIdOption);
                 var packageRolloutPercentage = parseResult.GetValue(PackageRolloutPercentageOption);
+                var priceId = parseResult.GetValue(PriceIdOption);
                 var inputDirectory = parseResult.GetValue(InputDirectoryOption);
                 var noCommit = parseResult.GetRequiredValue(NoCommitOption);
                 var uploadTimeout = parseResult.GetValue(UploadTimeoutOption);
@@ -214,7 +238,7 @@ namespace MSStore.CLI.Commands
                 }
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(
-                    await projectPublisher.PublishAsync(pathOrUrl, app, flightId, inputDirectory, noCommit, packageRolloutPercentage, uploadTimeout, storePackagedAPI, ct), props, ct);
+                    await projectPublisher.PublishAsync(pathOrUrl, app, flightId, inputDirectory, noCommit, packageRolloutPercentage, priceId, uploadTimeout, storePackagedAPI, ct), props, ct);
             }
         }
     }

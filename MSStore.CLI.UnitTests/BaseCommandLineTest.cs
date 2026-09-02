@@ -410,13 +410,14 @@ namespace MSStore.CLI.UnitTests
                 });
         }
 
-        protected void AddDefaultFakeSubmission(string listingDescription = "BaseListingDescription")
+        protected void AddDefaultFakeSubmission(string listingDescription = "BaseListingDescription", Pricing? pricing = null)
         {
             var fakeSubmission = new DevCenterSubmission
             {
                 Id = "123456789",
                 ApplicationCategory = DevCenterApplicationCategory.NotSet,
                 FileUploadUrl = "https://azureblob.com/fileupload",
+                Pricing = pricing,
                 ApplicationPackages =
                     [
                         new ApplicationPackage
@@ -573,9 +574,9 @@ namespace MSStore.CLI.UnitTests
                 });
         }
 
-        protected void AddDefaultFakeSuccessfulSubmission()
+        protected void AddDefaultFakeSuccessfulSubmission(Pricing? pricing = null)
         {
-            AddDefaultFakeSubmission();
+            AddDefaultFakeSubmission(pricing: pricing);
             InitDefaultSubmissionStatusResponseQueue();
 
             FakeStorePackagedAPI

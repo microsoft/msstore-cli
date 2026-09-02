@@ -352,6 +352,7 @@ namespace MSStore.CLI.Helpers
             IEnumerable<FileInfo> input,
             bool noCommit,
             float? packageRolloutPercentage,
+            string? priceId,
             long uploadTimeout,
             IBrowserLauncher browserLauncher,
             IConsoleReader consoleReader,
@@ -493,10 +494,10 @@ namespace MSStore.CLI.Helpers
             DevCenterSubmission? devCenterSubmission = submission as DevCenterSubmission;
             DevCenterFlightSubmission? devCenterFlightSubmission = submission as DevCenterFlightSubmission;
 
-            if (devCenterSubmission?.Pricing != null && devCenterSubmission?.Pricing?.PriceId == "Base")
+            if (devCenterSubmission != null
+                && !TryPreservePricing(ansiConsole, devCenterSubmission, priceId, logger))
             {
                 await storePackagedAPI.DeleteSubmissionAsync(app.Id, submission.Id, ct);
-                ansiConsole.MarkupLine("[red bold]App updates are supported only for Free products.[/]");
                 return -1;
             }
 
@@ -781,6 +782,53 @@ namespace MSStore.CLI.Helpers
                 image.FileName = Path.Combine(listingKey, fileName);
                 return true;
             }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Makes sure publishing never changes the product's price.
+        /// </summary>
+        /// <remarks>
+        /// The submission API replaces the whole submission on update, so a complete and valid
+        /// <c>pricing</c> object has to be sent back. Only three things can go in
+        /// <see cref="Pricing.PriceId"/>, and for a product on the newer per-market pricing model
+        /// the API returns <see cref="PriceIds.Base"/>, which is not one of them:
+        /// <list type="bullet">
+        /// <item><description><see cref="PriceIds.Base"/> - rejected with <c>'Base' is not a valid PriceId for base price.</c></description></item>
+        /// <item><description>an empty value - accepted with <c>200 OK</c>, and the product silently becomes free.</description></item>
+        /// <item><description>omitting <c>pricing</c> - rejected with <c>Pricing data was not provided in the request.</c></description></item>
+        /// </list>
+        /// Any other price id (<c>Free</c>, <c>NotAvailable</c>, <c>Tier1012</c>, ...) round-trips
+        /// unchanged, so paid products publish fine as long as we leave the value alone.
+        /// </remarks>
+        /// <returns><c>false</c> when the price cannot be preserved and publishing must stop.</returns>
+        internal static bool TryPreservePricing(IAnsiConsole ansiConsole, DevCenterSubmission submission, string? priceIdOverride, ILogger logger)
+        {
+            if (priceIdOverride != null)
+            {
+                logger.LogInformation("Overriding PriceId '{OriginalPriceId}' with '{PriceIdOverride}'.", submission.Pricing?.PriceId, priceIdOverride);
+                ansiConsole.MarkupLine($"Setting the base price to [green]{priceIdOverride.EscapeMarkup()}[/].");
+
+                // A product whose price is managed per market can come back without any pricing
+                // at all, and the API rejects an update that omits it.
+                submission.Pricing ??= new Pricing();
+                submission.Pricing.PriceId = priceIdOverride;
+                return true;
+            }
+
+            if (submission.Pricing == null || PriceIds.IsRoundTrippable(submission.Pricing.PriceId))
+            {
+                return true;
+            }
+
+            var priceId = submission.Pricing.PriceId;
+            logger.LogError("Cannot preserve the product's price. The API returned PriceId '{PriceId}', which it does not accept back on update.", priceId);
+
+            ansiConsole.MarkupLine("[red bold]Could not preserve this product's price.[/]");
+            ansiConsole.MarkupLine($"The Store returned a base price of [yellow]'{(priceId ?? "<empty>").EscapeMarkup()}'[/], which the submission API refuses on update. This happens when the price is managed per market from Partner Center.");
+            ansiConsole.MarkupLine("Publishing would reset the product to [bold]Free[/], so it has been stopped instead.");
+            ansiConsole.MarkupLine("Re-run with [green]--priceId[/] to state the base price explicitly (for example [green]--priceId Tier1012[/]), or publish this submission from Partner Center.");
 
             return false;
         }

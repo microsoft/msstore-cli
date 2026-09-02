@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using MSStore.API;
 using MSStore.API.Models;
 using MSStore.API.Packaged;
+using MSStore.API.Packaged.Models;
 using MSStore.CLI.Helpers;
 using MSStore.CLI.Services;
 using Spectre.Console;
@@ -48,6 +49,14 @@ namespace MSStore.CLI.Commands.Submission
             private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
+            /// <summary>
+            /// Updates a packaged submission.
+            /// </summary>
+            /// <returns>
+            /// The updated submission, or <c>null</c> when the update did not happen. A failure
+            /// must never be signalled with an <c>int</c>: the caller only checks for <c>null</c>,
+            /// so a boxed code would be reported as success and printed as the command's output.
+            /// </returns>
             public static async Task<object?> PackagedUpdateCommandAsync(IAnsiConsole ansiConsole, IStoreAPIFactory storeAPIFactory, string product, string productId, ILogger logger, CancellationToken ct)
             {
                 var updateSubmission = JsonSerializer.Deserialize(product, SourceGenerationContext.GetCustom().DevCenterSubmission);
@@ -84,7 +93,7 @@ namespace MSStore.CLI.Commands.Submission
 
                 if (storePackagedAPI == null || application == null || application?.Id == null)
                 {
-                    return 1;
+                    return null;
                 }
 
                 string? submissionId = application.PendingApplicationSubmission?.Id;
@@ -103,11 +112,21 @@ namespace MSStore.CLI.Commands.Submission
                 }
 
                 var currentSubmission = await storePackagedAPI.GetSubmissionAsync(application.Id, submissionId, ct);
-                if (currentSubmission?.Pricing != null && currentSubmission?.Pricing?.PriceId == "Base")
+
+                // Only the payload actually being sent matters here. Blocking on the *current*
+                // submission would reject a perfectly good update whose JSON already carries a
+                // valid tier, which is the one way a per-market priced product can be updated.
+                var updatedPriceId = updateSubmission.Pricing?.PriceId;
+                if (updateSubmission.Pricing != null && !PriceIds.IsRoundTrippable(updatedPriceId))
                 {
-                    await storePackagedAPI.DeleteSubmissionAsync(application.Id, submissionId: currentSubmission.Id!, ct);
-                    ansiConsole.MarkupLine("[red bold]App updates are supported only for Free products.[/]");
-                    return -1;
+                    if (currentSubmission?.Id != null && application.PendingApplicationSubmission?.Id == null)
+                    {
+                        await storePackagedAPI.DeleteSubmissionAsync(application.Id, currentSubmission.Id, ct);
+                    }
+
+                    ansiConsole.MarkupLine($"[red bold]The provided product has a base price of '{(updatedPriceId ?? "<empty>").EscapeMarkup()}', which the submission API will not accept.[/]");
+                    ansiConsole.MarkupLine("Sending it would reset the product to [bold]Free[/]. Set 'Pricing.PriceId' to a real tier (for example 'Tier1012'), 'Free', or 'NotAvailable' and try again.");
+                    return null;
                 }
 
                 return await ansiConsole.Status().StartAsync("Updating submission product", async ctx =>
