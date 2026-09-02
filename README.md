@@ -8,6 +8,47 @@ The Microsoft Store Developer Command Line Interface is a cross-platform (Window
 ## Helpful links
 * [Documentation](https://aka.ms/msstoredevcli/docs) - Microsoft's official documentation on regards to available commands, installation steps, how to properly setup CI/CD environments, and general guidance.
 
+## Standard output vs. standard error
+
+The CLI keeps its two output streams separate:
+
+* **stdout** carries only machine-readable payloads — the JSON emitted by commands such as `submission get`, `apps get` and `submission rollout get`, and the package path printed by `package`. This keeps `msstore submission get ... | ConvertFrom-Json` and `$(msstore package ...)` reliable.
+* **stderr** carries everything meant for a human — progress, status, success messages, tables and verbose logging.
+
+### Azure DevOps
+
+Azure DevOps reports every stderr line as `##[error]`, even when the command succeeded and even when the task sets `failOnStderr: false`. A successful `msstore publish` therefore shows up as a failed or partially failed stage.
+
+To avoid this, move the human-readable output to stdout:
+
+```yaml
+- script: msstore publish ./MyApp --output-stream stdout
+  displayName: Publish to the Microsoft Store
+```
+
+Or set it once for a whole job, so that every `msstore` call picks it up:
+
+```yaml
+variables:
+  MSSTORE_OUTPUT_STREAM: stdout
+```
+
+> [!IMPORTANT]
+> Machine-readable payloads always go to stdout. When `MSSTORE_OUTPUT_STREAM` is set for a whole job, the human-readable output is interleaved with the payload, which breaks capturing it. Pass `--output-stream stderr` on those specific calls to opt back out — the option always overrides the environment variable:
+>
+> ```yaml
+> variables:
+>   MSSTORE_OUTPUT_STREAM: stdout
+>
+> steps:
+> - script: msstore publish ./MyApp                                   # human-readable output on stdout
+> - script: msstore submission get $(AppId) --output-stream stderr    # clean JSON on stdout
+> ```
+
+### GitHub Actions
+
+No change is needed. GitHub Actions fails a step based on its exit code alone and never turns stderr into an error annotation, so the default is already correct.
+
 ## Contributing
 
 This project welcomes contributions and suggestions.  Most contributions require you to agree to a

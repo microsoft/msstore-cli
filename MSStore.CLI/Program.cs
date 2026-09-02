@@ -52,11 +52,18 @@ namespace MSStore.CLI
                                 null);
             TelemetryConfigurations telemetryConfigurations = await telemetryConfigurationManager.LoadAsync(true, CancellationToken.None);
             TelemetryClient telemetryClient = await CreateTelemetryClientAsync(telemetryConfigurationManager, telemetryConfigurations);
+            var (outputStream, outputStreamWarning) = OutputStreamResolver.Resolve(args);
+            var useStdout = outputStream == OutputStream.Stdout;
             var ansiConsole = AnsiConsole.Create(new()
             {
-                Interactive = Console.IsErrorRedirected ? InteractionSupport.No : InteractionSupport.Yes,
-                Out = new AnsiConsoleOutput(Console.Error)
+                Interactive = (useStdout ? Console.IsOutputRedirected : Console.IsErrorRedirected) ? InteractionSupport.No : InteractionSupport.Yes,
+                Out = new AnsiConsoleOutput(useStdout ? Console.Out : Console.Error)
             });
+
+            if (outputStreamWarning != null)
+            {
+                ansiConsole.MarkupLine($":warning: {outputStreamWarning.EscapeMarkup()}");
+            }
 
             if (args.Contains(MicrosoftStoreCLI.VerboseOption.Name) || args.Any(MicrosoftStoreCLI.VerboseOption.Aliases.Contains))
             {

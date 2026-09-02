@@ -21,12 +21,19 @@ namespace MSStore.CLI
     {
         internal static Option<bool> VerboseOption { get; }
 
+        internal static Option<OutputStream> OutputStreamOption { get; }
+
         static MicrosoftStoreCLI()
         {
             VerboseOption = new Option<bool>("--verbose", "-v")
             {
                 DefaultValueFactory = _ => false,
                 Description = "Verbose output"
+            };
+
+            OutputStreamOption = new Option<OutputStream>(OutputStreamResolver.OptionName)
+            {
+                Description = $"The stream that human-readable output is written to. Defaults to '{nameof(OutputStream.Stderr)}', which keeps stdout free for machine-readable payloads. Use '{nameof(OutputStream.Stdout)}' on Azure DevOps, which reports every stderr line as an error. Also settable through the {EnvironmentInfo.OutputStreamEnvironmentVariable} environment variable, which this option overrides."
             };
         }
 
