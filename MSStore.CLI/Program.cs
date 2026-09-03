@@ -53,17 +53,7 @@ namespace MSStore.CLI
             TelemetryConfigurations telemetryConfigurations = await telemetryConfigurationManager.LoadAsync(true, CancellationToken.None);
             TelemetryClient telemetryClient = await CreateTelemetryClientAsync(telemetryConfigurationManager, telemetryConfigurations);
             var (outputStream, outputStreamWarning) = OutputStreamResolver.Resolve(args);
-            var useStdout = outputStream == OutputStream.Stdout;
-            var ansiConsole = AnsiConsole.Create(new()
-            {
-                Interactive = (useStdout ? Console.IsOutputRedirected : Console.IsErrorRedirected) ? InteractionSupport.No : InteractionSupport.Yes,
-                Out = new AnsiConsoleOutput(useStdout ? Console.Out : Console.Error)
-            });
-
-            // A handful of call sites (list/info tables, prompts, the browser launcher) still reach for the
-            // static console. Point it at the same instance so every human-readable write honours the
-            // selected stream, and stdout is left to StandardOutput.
-            AnsiConsole.Console = ansiConsole;
+            var ansiConsole = ConsoleFactory.Create(outputStream);
 
             if (outputStreamWarning != null)
             {

@@ -19,6 +19,63 @@ namespace MSStore.CLI.UnitTests
         // is written through the configured Spectre console, so it lands on whichever stream was selected.
         private const string HumanOutputMarker = "Command is";
 
+        private static readonly List<(string Path, string? Content)> TelemetrySettingsBackups = [];
+
+        /// <summary>
+        /// Program.Main loads (and may rewrite) telemetrySettings.json before it even parses --help. The
+        /// location comes from Environment.GetFolderPath, which ignores LOCALAPPDATA/HOME on Windows, so the
+        /// child cannot simply be pointed at a temporary profile. Snapshot the file instead and put it back,
+        /// so running the suite leaves the real configuration exactly as it found it.
+        /// </summary>
+        /// <param name="context">The test context.</param>
+        [ClassInitialize]
+        public static void BackUpTelemetrySettings(TestContext context)
+        {
+            foreach (var path in TelemetrySettingsPaths())
+            {
+                TelemetrySettingsBackups.Add((path, File.Exists(path) ? File.ReadAllText(path) : null));
+            }
+        }
+
+        [ClassCleanup]
+        public static void RestoreTelemetrySettings()
+        {
+            foreach (var (path, content) in TelemetrySettingsBackups)
+            {
+                if (content == null)
+                {
+                    File.Delete(path);
+                }
+                else
+                {
+                    File.WriteAllText(path, content);
+                }
+            }
+
+            TelemetrySettingsBackups.Clear();
+        }
+
+        private static IEnumerable<string> TelemetrySettingsPaths()
+        {
+            yield return Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Microsoft",
+                "MSStore.CLI",
+                "telemetrySettings.json");
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                // ConfigurationManager prefers the native ApplicationSupportDirectory on macOS.
+                yield return Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                    "Library",
+                    "Application Support",
+                    "Microsoft",
+                    "MSStore.CLI",
+                    "telemetrySettings.json");
+            }
+        }
+
         [TestMethod]
         public async Task DefaultRoutesHumanReadableOutputToStandardError()
         {
