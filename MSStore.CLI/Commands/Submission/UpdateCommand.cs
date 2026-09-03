@@ -124,7 +124,9 @@ namespace MSStore.CLI.Commands.Submission
                         await storePackagedAPI.DeleteSubmissionAsync(application.Id, currentSubmission.Id, ct);
                     }
 
-                    ansiConsole.MarkupLine($"[red bold]The provided product has a base price of '{(updatedPriceId ?? "<empty>").EscapeMarkup()}', which the submission API will not accept.[/]");
+                    ansiConsole.MarkupLine(string.IsNullOrWhiteSpace(updatedPriceId)
+                        ? "[red bold]The JSON you provided does not set 'Pricing.PriceId', which the submission API will not accept.[/]"
+                        : $"[red bold]The JSON you provided sets 'Pricing.PriceId' to '{updatedPriceId.EscapeMarkup()}', which the submission API will not accept.[/]");
                     ansiConsole.MarkupLine("Sending it would reset the product to [bold]Free[/]. Set 'Pricing.PriceId' to a real tier (for example 'Tier1012'), 'Free', or 'NotAvailable' and try again.");
                     return null;
                 }

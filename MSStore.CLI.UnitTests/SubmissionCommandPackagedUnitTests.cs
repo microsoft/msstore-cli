@@ -200,6 +200,7 @@ namespace MSStore.CLI.UnitTests
                     @"{ ""Pricing"": { ""PriceId"": ""Base"" } }"
                 ], -1);
 
+            result.Error.Should().Contain("sets 'Pricing.PriceId' to 'Base'");
             result.Error.Should().Contain("which the submission API will not accept");
             result.Error.Should().NotContain("only for Free products");
 
@@ -226,6 +227,7 @@ namespace MSStore.CLI.UnitTests
                     @"{ ""Pricing"": { ""TrialPeriod"": ""NoFreeTrial"" } }"
                 ], -1);
 
+            result.Error.Should().Contain("does not set 'Pricing.PriceId'");
             result.Error.Should().Contain("which the submission API will not accept");
 
             FakeStorePackagedAPI
