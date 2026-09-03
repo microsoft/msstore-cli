@@ -255,6 +255,9 @@ namespace MSStore.CLI
                 parseError.ShowHelp = true;
             }
 
+            // InvocationConfiguration is left at its defaults on purpose, so --output-stream does not move it:
+            // help goes to stdout so that `msstore --help | more` works, and parse diagnostics go to stderr
+            // because they accompany a non-zero exit code.
             var result = await parseResult.InvokeAsync(parseResult.InvocationConfiguration, lifetime.ApplicationStopping);
 
             await host.StopAsync();

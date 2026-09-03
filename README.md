@@ -10,12 +10,17 @@ The Microsoft Store Developer Command Line Interface is a cross-platform (Window
 
 ## Standard output vs. standard error
 
-By default the CLI keeps its two output streams separate:
+By default the CLI splits its output as follows:
 
-* **stdout** carries only machine-readable payloads — the JSON emitted by commands such as `submission get`, `apps get` and `submission rollout get`, and the package path printed by `package`. This keeps `msstore submission get ... | ConvertFrom-Json` and `$(msstore package ...)` reliable.
-* **stderr** carries everything meant for a human — progress, status, success messages, tables and verbose logging.
+* **stdout** carries the command's result — machine-readable payloads such as the JSON emitted by `submission get`, `apps get` and `submission rollout get`, the package path printed by `package`, and `--help` text. This keeps `msstore submission get ... | ConvertFrom-Json` and `$(msstore package ...)` reliable.
+* **stderr** carries everything else meant for a human — progress, status, success messages, tables, prompts and verbose logging.
 
-`--output-stream stdout` deliberately breaks that separation: it moves the human-readable half onto stdout, where it is interleaved with any payload. Machine-readable payloads are always written to stdout and are never affected by the option.
+`--output-stream stdout` deliberately breaks that separation: it moves the human-readable half onto stdout, where it is interleaved with any payload.
+
+Two things sit outside the option's scope on purpose, matching the behavior of other CLIs:
+
+* Machine-readable payloads are always written to stdout, so they are never affected by the option.
+* `--help` is always written to stdout, so that `msstore --help | more` works, and command line parse errors are always written to stderr, because they accompany a non-zero exit code.
 
 ### Azure DevOps
 
