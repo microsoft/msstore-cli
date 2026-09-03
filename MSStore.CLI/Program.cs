@@ -60,6 +60,11 @@ namespace MSStore.CLI
                 Out = new AnsiConsoleOutput(useStdout ? Console.Out : Console.Error)
             });
 
+            // A handful of call sites (list/info tables, prompts, the browser launcher) still reach for the
+            // static console. Point it at the same instance so every human-readable write honours the
+            // selected stream, and stdout is left to StandardOutput.
+            AnsiConsole.Console = ansiConsole;
+
             if (outputStreamWarning != null)
             {
                 ansiConsole.MarkupLine($":warning: {outputStreamWarning.EscapeMarkup()}");

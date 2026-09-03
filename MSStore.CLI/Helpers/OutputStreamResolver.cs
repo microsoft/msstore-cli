@@ -26,6 +26,8 @@ namespace MSStore.CLI.Helpers
     {
         internal const string OptionName = "--output-stream";
 
+        private const string EndOfOptions = "--";
+
         private static readonly char[] InlineValueSeparators = [':', '='];
 
         /// <summary>
@@ -85,13 +87,28 @@ namespace MSStore.CLI.Helpers
         /// <param name="value">The value to parse.</param>
         /// <param name="outputStream">The parsed stream.</param>
         /// <returns>True when the value names a known stream.</returns>
+        /// <remarks>
+        /// Only the two names are accepted. <see cref="Enum.TryParse{TEnum}(string, bool, out TEnum)"/> would also
+        /// accept the underlying numeric values, which are not part of the documented contract.
+        /// </remarks>
         public static bool TryParse(string? value, out OutputStream outputStream)
         {
             outputStream = OutputStream.Stderr;
 
-            return !string.IsNullOrWhiteSpace(value)
-                && Enum.TryParse(value.Trim(), ignoreCase: true, out outputStream)
-                && Enum.IsDefined(outputStream);
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return false;
+            }
+
+            var name = value.Trim();
+
+            if (string.Equals(name, nameof(OutputStream.Stdout), StringComparison.OrdinalIgnoreCase))
+            {
+                outputStream = OutputStream.Stdout;
+                return true;
+            }
+
+            return string.Equals(name, nameof(OutputStream.Stderr), StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>
@@ -100,6 +117,10 @@ namespace MSStore.CLI.Helpers
         /// </summary>
         /// <param name="args">The raw command line arguments.</param>
         /// <returns>The value, or null when the option is absent.</returns>
+        /// <remarks>
+        /// Scanning stops at a standalone <c>--</c>, because System.CommandLine treats everything after it as
+        /// literal arguments rather than options.
+        /// </remarks>
         private static string? FindOptionValue(IReadOnlyList<string> args)
         {
             string? value = null;
@@ -110,6 +131,11 @@ namespace MSStore.CLI.Helpers
                 if (arg == null)
                 {
                     continue;
+                }
+
+                if (string.Equals(arg, EndOfOptions, StringComparison.Ordinal))
+                {
+                    break;
                 }
 
                 if (arg.Length > OptionName.Length

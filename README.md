@@ -10,10 +10,12 @@ The Microsoft Store Developer Command Line Interface is a cross-platform (Window
 
 ## Standard output vs. standard error
 
-The CLI keeps its two output streams separate:
+By default the CLI keeps its two output streams separate:
 
 * **stdout** carries only machine-readable payloads — the JSON emitted by commands such as `submission get`, `apps get` and `submission rollout get`, and the package path printed by `package`. This keeps `msstore submission get ... | ConvertFrom-Json` and `$(msstore package ...)` reliable.
 * **stderr** carries everything meant for a human — progress, status, success messages, tables and verbose logging.
+
+`--output-stream stdout` deliberately breaks that separation: it moves the human-readable half onto stdout, where it is interleaved with any payload. Machine-readable payloads are always written to stdout and are never affected by the option.
 
 ### Azure DevOps
 

@@ -144,6 +144,42 @@ namespace MSStore.CLI.UnitTests
             warning.Should().BeNull();
         }
 
+        [DataRow("0")]
+        [DataRow("1")]
+        [DataRow("2")]
+        [TestMethod]
+        public void ResolveRejectsNumericEnumValues(string environmentValue)
+        {
+            // Only the two names are part of the contract, so the underlying numbers must not be accepted.
+            var (stream, warning) = OutputStreamResolver.Resolve(["publish"], environmentValue);
+
+            stream.Should().Be(OutputStream.Stderr);
+            warning.Should().Contain(environmentValue);
+        }
+
+        [DataRow("--output-stream", "stdout")]
+        [DataRow("--output-stream=stdout", null)]
+        [TestMethod]
+        public void ResolveStopsScanningAtTheEndOfOptionsMarker(string arg, string? value)
+        {
+            // System.CommandLine treats everything after `--` as a literal argument, so the resolver must too.
+            string[] args = value == null ? ["package", "--", arg] : ["package", "--", arg, value];
+
+            var (stream, _) = OutputStreamResolver.Resolve(args, null);
+
+            stream.Should().Be(OutputStream.Stderr);
+        }
+
+        [TestMethod]
+        public void ResolveStillReadsTheOptionBeforeTheEndOfOptionsMarker()
+        {
+            var (stream, _) = OutputStreamResolver.Resolve(
+                ["package", "--output-stream", "stdout", "--", "--output-stream=stderr"],
+                null);
+
+            stream.Should().Be(OutputStream.Stdout);
+        }
+
         [TestMethod]
         public void ResolveReadsTheRealEnvironmentVariable()
         {
