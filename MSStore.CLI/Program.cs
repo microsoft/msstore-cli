@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.CommandLine.Invocation;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -274,7 +275,15 @@ namespace MSStore.CLI
 
             if (changed)
             {
-                await telemetryConfigurationManager.SaveAsync(telemetryConfigurations, CancellationToken.None);
+                try
+                {
+                    await telemetryConfigurationManager.SaveAsync(telemetryConfigurations, CancellationToken.None);
+                }
+                catch (IOException)
+                {
+                    // Telemetry settings are incidental bookkeeping. If another instance of the CLI
+                    // is using the file, just move on instead of failing the command.
+                }
             }
 
             TelemetryConfiguration telemetryConfiguration = TelemetryConfiguration.CreateDefault();
