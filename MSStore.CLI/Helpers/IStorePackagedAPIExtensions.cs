@@ -833,20 +833,22 @@ namespace MSStore.CLI.Helpers
             // differently: the first two are rejected outright, an empty price id is accepted and
             // silently turns the product free. Stop for all three, and say which one it is.
             var priceId = submission.Pricing?.PriceId;
-            logger.LogError("Cannot preserve the product's price. The submission has PriceId '{PriceId}', which cannot be sent back.", priceId);
 
             ansiConsole.MarkupLine("[red bold]Could not preserve this product's price.[/]");
 
             if (submission.Pricing == null)
             {
+                logger.LogError("Cannot preserve the product's price: the submission carries no pricing, which the API rejects on update.");
                 ansiConsole.MarkupLine("The Store returned no pricing for this product, and the submission API rejects an update that does not carry one.");
             }
             else if (string.IsNullOrWhiteSpace(priceId))
             {
+                logger.LogError("Cannot preserve the product's price: the submission has no PriceId, and sending that resets the product to free.");
                 ansiConsole.MarkupLine("The Store returned no base price for this product. The submission API would accept that and silently reset the product to [bold]Free[/].");
             }
             else
             {
+                logger.LogError("Cannot preserve the product's price: the submission has PriceId '{PriceId}', which the API rejects on update.", priceId);
                 ansiConsole.MarkupLine($"The Store returned a base price of [yellow]'{priceId.EscapeMarkup()}'[/], which the submission API rejects on update. This happens when the price is managed per market from Partner Center.");
             }
 
