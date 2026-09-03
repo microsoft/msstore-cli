@@ -72,7 +72,7 @@ namespace MSStore.CLI.UnitTests
             // The core regression for issue #112: publishing must never alter the base price.
             var (result, sent) = await PublishMsixAsync(new Pricing { PriceId = priceId });
 
-            result.Error.Should().Contain("Submission commit success! Here is some data:");
+            Unwrapped(result.Error).Should().Contain("Submission commit success! Here is some data:");
 
             sent.Should().NotBeNull();
             sent!.Pricing.Should().NotBeNull();
@@ -99,7 +99,7 @@ namespace MSStore.CLI.UnitTests
             var (result, sent) = await PublishMsixAsync(
                 new Pricing { PriceId = "Tier1012", IsAdvancedPricingModel = true });
 
-            result.Error.Should().Contain("Submission commit success! Here is some data:");
+            Unwrapped(result.Error).Should().Contain("Submission commit success! Here is some data:");
             sent!.Pricing!.PriceId.Should().Be("Tier1012");
         }
 
@@ -108,8 +108,8 @@ namespace MSStore.CLI.UnitTests
         {
             var (result, sent) = await PublishMsixAsync(new Pricing { PriceId = "Base" }, -1);
 
-            result.Error.Should().Contain("Could not preserve this product's price");
-            result.Error.Should().Contain("--priceId");
+            Unwrapped(result.Error).Should().Contain("Could not preserve this product's price");
+            Unwrapped(result.Error).Should().Contain("--priceId");
 
             // Nothing may be sent, otherwise the product would be reset to free.
             sent.Should().BeNull();
@@ -127,7 +127,7 @@ namespace MSStore.CLI.UnitTests
             // wrong: a product with a real tier publishes fine, as the tests above show.
             var (result, _) = await PublishMsixAsync(new Pricing { PriceId = "Base" }, -1);
 
-            result.Error.Should().NotContain("only for Free products");
+            Unwrapped(result.Error).Should().NotContain("only for Free products");
         }
 
         [TestMethod]
@@ -140,7 +140,7 @@ namespace MSStore.CLI.UnitTests
                 "--priceId",
                 "Tier1012");
 
-            result.Error.Should().Contain("Submission commit success! Here is some data:");
+            Unwrapped(result.Error).Should().Contain("Submission commit success! Here is some data:");
             sent!.Pricing!.PriceId.Should().Be("Tier1012");
         }
 
@@ -165,9 +165,9 @@ namespace MSStore.CLI.UnitTests
             // of letting UpdateSubmissionAsync surface a raw 400.
             var (result, sent) = await PublishMsixAsync(null, -1, withoutPricing: true);
 
-            result.Error.Should().Contain("Could not preserve this product's price");
-            result.Error.Should().Contain("returned no pricing for this product");
-            result.Error.Should().Contain("--priceId");
+            Unwrapped(result.Error).Should().Contain("Could not preserve this product's price");
+            Unwrapped(result.Error).Should().Contain("returned no pricing for this product");
+            Unwrapped(result.Error).Should().Contain("--priceId");
 
             sent.Should().BeNull();
         }
@@ -179,7 +179,7 @@ namespace MSStore.CLI.UnitTests
             // materialized rather than silently dropped.
             var (result, sent) = await PublishMsixAsync(null, 0, true, "--priceId", "Tier1012");
 
-            result.Error.Should().Contain("Submission commit success! Here is some data:");
+            Unwrapped(result.Error).Should().Contain("Submission commit success! Here is some data:");
             sent!.Pricing.Should().NotBeNull();
             sent.Pricing!.PriceId.Should().Be("Tier1012");
         }

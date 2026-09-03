@@ -127,6 +127,16 @@ namespace MSStore.CLI.UnitTests
             }
         }
 
+        /// <summary>
+        /// Collapses the line breaks Spectre.Console introduces when it wraps output to the
+        /// console width, so an assertion on message text does not depend on how wide the test
+        /// console happens to be. Local and CI runners wrap at different widths.
+        /// </summary>
+        /// <param name="text">The captured console output.</param>
+        /// <returns>The same text with every run of whitespace collapsed to a single space.</returns>
+        protected static string Unwrapped(string text) =>
+            System.Text.RegularExpressions.Regex.Replace(text, @"\s+", " ");
+
         private readonly List<string> _temporaryPayloadFiles = [];
 
         /// <summary>
