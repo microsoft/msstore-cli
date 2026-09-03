@@ -131,6 +131,7 @@ namespace MSStore.CLI.UnitTests
                     FakeApps[0].Id!,
                     @"
 {
+""Pricing"": { ""PriceId"": ""Free"" },
 ""ApplicationPackages"":
     [
         {
@@ -241,11 +242,68 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
+        public async Task PackagedSubmissionUpdateCommandShouldRejectAPayloadWithNoPricingObject()
+        {
+            // An update replaces the whole submission, so a payload without pricing is rejected
+            // outright ("Pricing data was not provided in the request."). Stopping here also
+            // avoids stranding the draft this command just created.
+            var result = await ParseAndInvokeAsync(
+                [
+                    "submission",
+                    "update",
+                    FakeApps[0].Id!,
+                    @"{ ""ApplicationPackages"": [ { ""FileName"": ""test.msix"" } ] }"
+                ], -1);
+
+            result.Error.Should().Contain("has no 'Pricing' object");
+
+            FakeStorePackagedAPI
+                .Verify(
+                    x => x.UpdateSubmissionAsync(
+                        It.IsAny<string>(),
+                        It.IsAny<string>(),
+                        It.IsAny<DevCenterSubmission>(),
+                        It.IsAny<CancellationToken>()),
+                    Times.Never);
+
+            // The draft was created by this command, so it must not be left behind.
+            FakeStorePackagedAPI
+                .Verify(
+                    x => x.DeleteSubmissionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+                    Times.Once);
+        }
+
+        [TestMethod]
+        public async Task PackagedSubmissionUpdateCommandShouldNotDeleteADraftItDidNotCreate()
+        {
+            FakeApps[0].PendingApplicationSubmission = new ApplicationSubmissionInfo
+            {
+                Id = "123456789"
+            };
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "submission",
+                    "update",
+                    FakeApps[0].Id!,
+                    @"{ ""Pricing"": { ""PriceId"": ""Base"" } }"
+                ], -1);
+
+            result.Error.Should().Contain("which the submission API rejects");
+
+            FakeStorePackagedAPI
+                .Verify(
+                    x => x.DeleteSubmissionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+                    Times.Never);
+        }
+
+        [TestMethod]
         public async Task PackagedSubmissionUpdateCommandWithPayloadOption()
         {
             var payloadFilePath = CreateTemporaryPayloadFile(
                 @"
 {
+""Pricing"": { ""PriceId"": ""Free"" },
 ""ApplicationPackages"":
     [
         {
@@ -273,6 +331,7 @@ namespace MSStore.CLI.UnitTests
             var payloadFilePath = CreateTemporaryPayloadFile(
                 @"
 {
+""Pricing"": { ""PriceId"": ""Free"" },
 ""ApplicationPackages"":
     [
         {
@@ -301,6 +360,7 @@ namespace MSStore.CLI.UnitTests
                 .ReturnsAsync(
                     @"
 {
+""Pricing"": { ""PriceId"": ""Free"" },
 ""ApplicationPackages"":
     [
         {
@@ -332,6 +392,7 @@ namespace MSStore.CLI.UnitTests
                 .ReturnsAsync(
                     @"
 {
+""Pricing"": { ""PriceId"": ""Free"" },
 ""ApplicationPackages"":
     [
         {
@@ -384,6 +445,7 @@ namespace MSStore.CLI.UnitTests
             var payloadFilePath = CreateTemporaryPayloadFile(
                 @"
 {
+""Pricing"": { ""PriceId"": ""Free"" },
 ""ApplicationPackages"":
     [
         {
@@ -415,6 +477,7 @@ namespace MSStore.CLI.UnitTests
             var payloadFilePath = CreateTemporaryPayloadFile(
                 @"
 {
+""Pricing"": { ""PriceId"": ""Free"" },
 ""Listings"":
     {
         ""en-us"":
@@ -458,6 +521,7 @@ namespace MSStore.CLI.UnitTests
                     FakeApps[0].Id!,
                     @"
 {
+""Pricing"": { ""PriceId"": ""Free"" },
 ""Listings"":
     {
         ""en-us"":
@@ -481,6 +545,7 @@ namespace MSStore.CLI.UnitTests
             var payloadFilePath = CreateTemporaryPayloadFile(
                 @"
 {
+""Pricing"": { ""PriceId"": ""Free"" },
 ""Listings"":
     {
         ""en-us"":

@@ -116,7 +116,7 @@ namespace MSStore.CLI.Commands.Submission
                 // submission would reject a perfectly good update whose JSON already carries a
                 // valid tier, which is the one way a per-market priced product can be updated.
                 var updatedPriceId = updateSubmission.Pricing?.PriceId;
-                if (updateSubmission.Pricing != null && !PriceIds.IsRoundTrippable(updatedPriceId))
+                if (updateSubmission.Pricing == null || !PriceIds.IsRoundTrippable(updatedPriceId))
                 {
                     // Clean up after ourselves, but never delete a draft the caller already had.
                     if (draftWasCreatedHere)
@@ -124,7 +124,12 @@ namespace MSStore.CLI.Commands.Submission
                         await storePackagedAPI.DeleteSubmissionAsync(application.Id, submissionId, ct);
                     }
 
-                    if (string.IsNullOrWhiteSpace(updatedPriceId))
+                    if (updateSubmission.Pricing == null)
+                    {
+                        ansiConsole.MarkupLine("[red bold]The JSON you provided has no 'Pricing' object.[/]");
+                        ansiConsole.MarkupLine("An update replaces the whole submission, and the submission API rejects one that does not carry pricing.");
+                    }
+                    else if (string.IsNullOrWhiteSpace(updatedPriceId))
                     {
                         ansiConsole.MarkupLine("[red bold]The JSON you provided does not set 'Pricing.PriceId'.[/]");
                         ansiConsole.MarkupLine("The submission API would accept that and silently reset the product to [bold]Free[/], so the update has been stopped instead.");
