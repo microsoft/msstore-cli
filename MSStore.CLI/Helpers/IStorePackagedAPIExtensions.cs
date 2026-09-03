@@ -824,16 +824,21 @@ namespace MSStore.CLI.Helpers
                 return true;
             }
 
-            if (submission.Pricing == null || PriceIds.IsRoundTrippable(submission.Pricing.PriceId))
+            if (submission.Pricing != null && PriceIds.IsRoundTrippable(submission.Pricing.PriceId))
             {
                 return true;
             }
 
-            var priceId = submission.Pricing.PriceId;
-            logger.LogError("Cannot preserve the product's price. The API returned PriceId '{PriceId}', which it does not accept back on update.", priceId);
+            // A missing pricing object is just as unsendable as a bad price id - the API answers
+            // "Pricing data was not provided in the request." - so stop here with usable guidance
+            // rather than letting the update fail with a raw 400 further down.
+            var priceId = submission.Pricing?.PriceId;
+            logger.LogError("Cannot preserve the product's price. The submission has PriceId '{PriceId}', which the API does not accept on update.", priceId);
 
             ansiConsole.MarkupLine("[red bold]Could not preserve this product's price.[/]");
-            ansiConsole.MarkupLine($"The Store returned a base price of [yellow]'{(priceId ?? "<empty>").EscapeMarkup()}'[/], which the submission API refuses on update. This happens when the price is managed per market from Partner Center.");
+            ansiConsole.MarkupLine(submission.Pricing == null
+                ? "The Store returned no pricing for this product, and the submission API rejects an update that does not carry one."
+                : $"The Store returned a base price of [yellow]'{(priceId ?? "<empty>").EscapeMarkup()}'[/], which the submission API refuses on update. This happens when the price is managed per market from Partner Center.");
             ansiConsole.MarkupLine("Publishing would reset the product to [bold]Free[/], so it has been stopped instead.");
             ansiConsole.MarkupLine("Re-run with [green]--priceId[/] to state the base price explicitly (for example [green]--priceId Tier1012[/]), or publish this submission from Partner Center.");
 

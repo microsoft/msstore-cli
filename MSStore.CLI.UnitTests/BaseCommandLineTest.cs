@@ -410,14 +410,17 @@ namespace MSStore.CLI.UnitTests
                 });
         }
 
-        protected void AddDefaultFakeSubmission(string listingDescription = "BaseListingDescription", Pricing? pricing = null)
+        protected void AddDefaultFakeSubmission(string listingDescription = "BaseListingDescription", Pricing? pricing = null, bool withoutPricing = false)
         {
             var fakeSubmission = new DevCenterSubmission
             {
                 Id = "123456789",
                 ApplicationCategory = DevCenterApplicationCategory.NotSet,
                 FileUploadUrl = "https://azureblob.com/fileupload",
-                Pricing = pricing,
+
+                // Every real app submission comes back carrying a pricing object, so that is what
+                // the fixtures model. 'withoutPricing' exists only to cover the degenerate case.
+                Pricing = withoutPricing ? null : pricing ?? new Pricing { PriceId = PriceIds.Free },
                 ApplicationPackages =
                     [
                         new ApplicationPackage
@@ -574,9 +577,9 @@ namespace MSStore.CLI.UnitTests
                 });
         }
 
-        protected void AddDefaultFakeSuccessfulSubmission(Pricing? pricing = null)
+        protected void AddDefaultFakeSuccessfulSubmission(Pricing? pricing = null, bool withoutPricing = false)
         {
-            AddDefaultFakeSubmission(pricing: pricing);
+            AddDefaultFakeSubmission(pricing: pricing, withoutPricing: withoutPricing);
             InitDefaultSubmissionStatusResponseQueue();
 
             FakeStorePackagedAPI

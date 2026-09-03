@@ -37,12 +37,13 @@ namespace MSStore.CLI.UnitTests
         private async Task<((string Output, string Error) Result, DevCenterSubmission? Sent)> PublishMsixAsync(
             Pricing? pricing,
             int? expectedExitCode = 0,
+            bool withoutPricing = false,
             params string[] extraArgs)
         {
             var path = CopyFilesRecursively("MSIXProject");
             var msixPath = Path.Combine(path, "test.msix");
 
-            AddDefaultFakeSuccessfulSubmission(pricing);
+            AddDefaultFakeSuccessfulSubmission(pricing, withoutPricing);
 
             DevCenterSubmission? sent = null;
             FakeStorePackagedAPI
@@ -135,6 +136,7 @@ namespace MSStore.CLI.UnitTests
             var (result, sent) = await PublishMsixAsync(
                 new Pricing { PriceId = "Base" },
                 0,
+                false,
                 "--priceId",
                 "Tier1012");
 
@@ -148,6 +150,7 @@ namespace MSStore.CLI.UnitTests
             var (_, sent) = await PublishMsixAsync(
                 new Pricing { PriceId = "Tier1012" },
                 0,
+                false,
                 "--priceId",
                 "Tier1424");
 
@@ -155,12 +158,18 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
-        public async Task PublishShouldSucceedWhenTheProductHasNoPricingAtAll()
+        public async Task PublishShouldStopWhenTheProductHasNoPricingAtAll()
         {
-            var (result, sent) = await PublishMsixAsync(null);
+            // Missing pricing is just as unsendable as a bad price id: the API answers
+            // "Pricing data was not provided in the request.". Fail fast with guidance instead
+            // of letting UpdateSubmissionAsync surface a raw 400.
+            var (result, sent) = await PublishMsixAsync(null, -1, withoutPricing: true);
 
-            result.Error.Should().Contain("Submission commit success! Here is some data:");
-            sent!.Pricing.Should().BeNull();
+            result.Error.Should().Contain("Could not preserve this product's price");
+            result.Error.Should().Contain("returned no pricing for this product");
+            result.Error.Should().Contain("--priceId");
+
+            sent.Should().BeNull();
         }
 
         [TestMethod]
@@ -168,7 +177,7 @@ namespace MSStore.CLI.UnitTests
         {
             // The API rejects an update that omits pricing, so an explicit price has to be
             // materialized rather than silently dropped.
-            var (result, sent) = await PublishMsixAsync(null, 0, "--priceId", "Tier1012");
+            var (result, sent) = await PublishMsixAsync(null, 0, true, "--priceId", "Tier1012");
 
             result.Error.Should().Contain("Submission commit success! Here is some data:");
             sent!.Pricing.Should().NotBeNull();
