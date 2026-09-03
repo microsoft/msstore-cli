@@ -667,7 +667,7 @@ namespace MSStore.API.Packaged
         private static async IAsyncEnumerable<T> GetAllObjectsPagedAsync<T>(Func<int, int, CancellationToken, Task<PagedResponse<T>>> pageFunc, [EnumeratorCancellation] CancellationToken ct = default)
         {
             int skip = 0;
-            int top = 100;
+            const int top = 10;
             PagedResponse<T>? lastPage;
             do
             {
@@ -681,7 +681,7 @@ namespace MSStore.API.Packaged
                     yield return item;
                 }
             }
-            while (!string.IsNullOrEmpty(lastPage.NextLink) && lastPage.Value?.Count == top);
+            while (lastPage is { NextLink.Length: > 0, Value.Count: top });
         }
     }
 }
