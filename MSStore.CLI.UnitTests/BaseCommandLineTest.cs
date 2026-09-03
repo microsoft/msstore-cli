@@ -128,14 +128,19 @@ namespace MSStore.CLI.UnitTests
         }
 
         /// <summary>
-        /// Collapses the line breaks Spectre.Console introduces when it wraps output to the
-        /// console width, so an assertion on message text does not depend on how wide the test
-        /// console happens to be. Local and CI runners wrap at different widths.
+        /// Reduces captured console output to plain text: strips the ANSI escape sequences
+        /// Spectre.Console emits for styling, and collapses the line breaks it inserts when
+        /// wrapping to the console width. Without this, an assertion on message text depends on
+        /// both the width and the colour support of whatever terminal the test ran under, which
+        /// differs between local runs and CI.
         /// </summary>
         /// <param name="text">The captured console output.</param>
-        /// <returns>The same text with every run of whitespace collapsed to a single space.</returns>
-        protected static string Unwrapped(string text) =>
-            System.Text.RegularExpressions.Regex.Replace(text, @"\s+", " ");
+        /// <returns>The text without styling, with every run of whitespace collapsed to one space.</returns>
+        protected static string PlainConsoleText(string text)
+        {
+            var withoutAnsi = System.Text.RegularExpressions.Regex.Replace(text, @"\x1B\[[0-9;]*[a-zA-Z]", string.Empty);
+            return System.Text.RegularExpressions.Regex.Replace(withoutAnsi, @"\s+", " ");
+        }
 
         private readonly List<string> _temporaryPayloadFiles = [];
 

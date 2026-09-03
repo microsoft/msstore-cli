@@ -46,8 +46,8 @@ namespace MSStore.CLI.UnitTests
                     FakeApps[0].Id!
                 ]);
 
-            Unwrapped(result.Error).Should().Contain("Code1");
-            Unwrapped(result.Error).Should().Contain("Detail1");
+            PlainConsoleText(result.Error).Should().Contain("Code1");
+            PlainConsoleText(result.Error).Should().Contain("Detail1");
         }
 
         [TestMethod]
@@ -141,7 +141,7 @@ namespace MSStore.CLI.UnitTests
 }"
                 ]);
 
-            Unwrapped(result.Error).Should().Contain("Updating submission product");
+            PlainConsoleText(result.Error).Should().Contain("Updating submission product");
             result.Output.Should().Contain("\"FileUploadUrl\": \"https://azureblob.com/fileupload\"");
         }
 
@@ -184,7 +184,7 @@ namespace MSStore.CLI.UnitTests
 }"
                 ]);
 
-            Unwrapped(result.Error).Should().Contain("Updating submission product");
+            PlainConsoleText(result.Error).Should().Contain("Updating submission product");
             sent!.Pricing!.PriceId.Should().Be("Tier1012");
         }
 
@@ -201,9 +201,9 @@ namespace MSStore.CLI.UnitTests
                     @"{ ""Pricing"": { ""PriceId"": ""Base"" } }"
                 ], -1);
 
-            Unwrapped(result.Error).Should().Contain("sets 'Pricing.PriceId' to 'Base'");
-            Unwrapped(result.Error).Should().Contain("which the submission API rejects");
-            Unwrapped(result.Error).Should().NotContain("only for Free products");
+            PlainConsoleText(result.Error).Should().Contain("sets 'Pricing.PriceId' to 'Base'");
+            PlainConsoleText(result.Error).Should().Contain("which the submission API rejects");
+            PlainConsoleText(result.Error).Should().NotContain("only for Free products");
 
             FakeStorePackagedAPI
                 .Verify(
@@ -228,8 +228,8 @@ namespace MSStore.CLI.UnitTests
                     @"{ ""Pricing"": { ""TrialPeriod"": ""NoFreeTrial"" } }"
                 ], -1);
 
-            Unwrapped(result.Error).Should().Contain("does not set 'Pricing.PriceId'");
-            Unwrapped(result.Error).Should().Contain("silently reset the product to Free");
+            PlainConsoleText(result.Error).Should().Contain("does not set 'Pricing.PriceId'");
+            PlainConsoleText(result.Error).Should().Contain("silently reset the product to Free");
 
             FakeStorePackagedAPI
                 .Verify(
@@ -255,7 +255,7 @@ namespace MSStore.CLI.UnitTests
                     @"{ ""ApplicationPackages"": [ { ""FileName"": ""test.msix"" } ] }"
                 ], -1);
 
-            Unwrapped(result.Error).Should().Contain("has no 'Pricing' object");
+            PlainConsoleText(result.Error).Should().Contain("has no 'Pricing' object");
 
             FakeStorePackagedAPI
                 .Verify(
@@ -289,7 +289,7 @@ namespace MSStore.CLI.UnitTests
                     @"{ ""Pricing"": { ""PriceId"": ""Base"" } }"
                 ], -1);
 
-            Unwrapped(result.Error).Should().Contain("which the submission API rejects");
+            PlainConsoleText(result.Error).Should().Contain("which the submission API rejects");
 
             FakeStorePackagedAPI
                 .Verify(
@@ -321,7 +321,7 @@ namespace MSStore.CLI.UnitTests
                     payloadFilePath
                 ]);
 
-            Unwrapped(result.Error).Should().Contain("Updating submission product");
+            PlainConsoleText(result.Error).Should().Contain("Updating submission product");
             result.Output.Should().Contain("\"FileUploadUrl\": \"https://azureblob.com/fileupload\"");
         }
 
@@ -348,7 +348,7 @@ namespace MSStore.CLI.UnitTests
                     payloadFilePath
                 ]);
 
-            Unwrapped(result.Error).Should().Contain("Updating submission product");
+            PlainConsoleText(result.Error).Should().Contain("Updating submission product");
             result.Output.Should().Contain("\"FileUploadUrl\": \"https://azureblob.com/fileupload\"");
         }
 
@@ -377,7 +377,7 @@ namespace MSStore.CLI.UnitTests
                     "-"
                 ]);
 
-            Unwrapped(result.Error).Should().Contain("Updating submission product");
+            PlainConsoleText(result.Error).Should().Contain("Updating submission product");
             result.Output.Should().Contain("\"FileUploadUrl\": \"https://azureblob.com/fileupload\"");
         }
 
@@ -408,7 +408,7 @@ namespace MSStore.CLI.UnitTests
                     FakeApps[0].Id!
                 ]);
 
-            Unwrapped(result.Error).Should().Contain("Updating submission product");
+            PlainConsoleText(result.Error).Should().Contain("Updating submission product");
             result.Output.Should().Contain("\"FileUploadUrl\": \"https://azureblob.com/fileupload\"");
         }
 
@@ -422,7 +422,7 @@ namespace MSStore.CLI.UnitTests
                     FakeApps[0].Id!
                 ], 1);
 
-            Unwrapped(result.Error).Should().Contain("No 'product' was provided.");
+            PlainConsoleText(result.Error).Should().Contain("No 'product' was provided.");
         }
 
         [TestMethod]
@@ -436,7 +436,7 @@ namespace MSStore.CLI.UnitTests
                     "this-file-does-not-exist.json"
                 ], 1);
 
-            Unwrapped(result.Error).Should().Contain("is neither a JSON payload nor a path to an existing file");
+            PlainConsoleText(result.Error).Should().Contain("is neither a JSON payload nor a path to an existing file");
         }
 
         [TestMethod]
@@ -464,7 +464,7 @@ namespace MSStore.CLI.UnitTests
                     payloadFilePath
                 ], 1);
 
-            Unwrapped(result.Error).Should().Contain("Use only one of them.");
+            PlainConsoleText(result.Error).Should().Contain("Use only one of them.");
         }
 
         [TestMethod]
@@ -507,7 +507,7 @@ namespace MSStore.CLI.UnitTests
                     It.IsAny<CancellationToken>()),
                 Times.Once);
 
-            Unwrapped(result.Error).Should().Contain("Updating submission product");
+            PlainConsoleText(result.Error).Should().Contain("Updating submission product");
             result.Output.Should().Contain("\"FileUploadUrl\": \"https://azureblob.com/fileupload\"");
         }
 
@@ -535,7 +535,7 @@ namespace MSStore.CLI.UnitTests
 }"
                 ]);
 
-            Unwrapped(result.Error).Should().Contain("Updating submission product");
+            PlainConsoleText(result.Error).Should().Contain("Updating submission product");
             result.Output.Should().Contain("\"FileUploadUrl\": \"https://azureblob.com/fileupload\"");
         }
 
@@ -567,7 +567,7 @@ namespace MSStore.CLI.UnitTests
                     payloadFilePath
                 ]);
 
-            Unwrapped(result.Error).Should().Contain("Updating submission product");
+            PlainConsoleText(result.Error).Should().Contain("Updating submission product");
             result.Output.Should().Contain("\"FileUploadUrl\": \"https://azureblob.com/fileupload\"");
         }
 
@@ -593,7 +593,7 @@ namespace MSStore.CLI.UnitTests
                     FakeApps[0].Id!
                 ]);
 
-            Unwrapped(result.Error).Should().Contain("Submission Committed with status");
+            PlainConsoleText(result.Error).Should().Contain("Submission Committed with status");
         }
 
         [TestMethod]
@@ -613,7 +613,7 @@ namespace MSStore.CLI.UnitTests
                     FakeApps[0].Id!
                 ]);
 
-            Unwrapped(result.Error).Should().Contain("Submission commit success!");
+            PlainConsoleText(result.Error).Should().Contain("Submission commit success!");
         }
 
         [TestMethod]
@@ -637,8 +637,8 @@ namespace MSStore.CLI.UnitTests
 
             FakeConsole.Verify(x => x.YesNoConfirmationAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
 
-            Unwrapped(result.Error).Should().Contain($"Found Pending Submission with Id '{FakeApps[0].PendingApplicationSubmission!.Id}'");
-            Unwrapped(result.Error).Should().Contain("Existing submission deleted!");
+            PlainConsoleText(result.Error).Should().Contain($"Found Pending Submission with Id '{FakeApps[0].PendingApplicationSubmission!.Id}'");
+            PlainConsoleText(result.Error).Should().Contain("Existing submission deleted!");
         }
     }
 }
