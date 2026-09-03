@@ -226,5 +226,24 @@ namespace MSStore.CLI.UnitTests
 
             result.Error.Should().Contain("--output-stream");
         }
+
+        [DataRow("0")]
+        [DataRow("1")]
+        [TestMethod]
+        public async Task NumericOutputStreamOptionValueIsRejectedByTheParser(string value)
+        {
+            // The parser and OutputStreamResolver have to agree: the resolver rejects the underlying
+            // numbers, so the option must not silently accept them through the built-in enum converter.
+            var result = await ParseAndInvokeAsync(
+                [
+                    "apps",
+                    "list",
+                    "--output-stream",
+                    value
+                ],
+                1);
+
+            result.Error.Should().Contain("--output-stream");
+        }
     }
 }
