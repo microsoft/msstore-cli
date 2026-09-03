@@ -208,6 +208,33 @@ namespace MSStore.CLI.UnitTests
             json.Should().Contain("\"PriceId\":\"Tier1012\"");
         }
 
+        [TestMethod]
+        [DataRow("Tier1012")]
+        [DataRow("Free")]
+        [DataRow("NotAvailable")]
+        [DataRow("Tier2")]
+        public void RoundTrippablePriceIdsAreSentBackUnchanged(string priceId)
+        {
+            PriceIds.IsRoundTrippable(priceId).Should().BeTrue();
+        }
+
+        [TestMethod]
+        [DataRow(null)]
+        [DataRow("")]
+        [DataRow("   ")]
+        [DataRow("Base")]
+        [DataRow("base")]
+        [DataRow("BASE")]
+        [DataRow("Base ")]
+        [DataRow(" Base")]
+        [DataRow("  base  ")]
+        public void UnsendablePriceIdsAreNotRoundTrippable(string? priceId)
+        {
+            // Whitespace must not smuggle the Base sentinel past the guard: TryNormalize already
+            // treats surrounding whitespace as insignificant, and sending "Base " is still a 400.
+            PriceIds.IsRoundTrippable(priceId).Should().BeFalse();
+        }
+
         private static ParseResult ParsePublish(params string[] args) =>
             new PublishCommand().Parse(args);
 

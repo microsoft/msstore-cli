@@ -52,7 +52,7 @@ namespace MSStore.API.Packaged.Models
         /// <returns><c>true</c> when <paramref name="priceId"/> is safe to send back.</returns>
         public static bool IsRoundTrippable(string? priceId) =>
             !string.IsNullOrWhiteSpace(priceId) &&
-            !string.Equals(priceId, Base, StringComparison.OrdinalIgnoreCase);
+            !string.Equals(priceId.Trim(), Base, StringComparison.OrdinalIgnoreCase);
 
         /// <summary>
         /// Validates a user supplied price id and converts it to the casing the API expects.
