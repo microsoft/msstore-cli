@@ -195,7 +195,9 @@ extends:
           env:
             GITHUB_PAT: $(GitHubPAT)
           inputs:
-            script: git clone https://oauth2:%GITHUB_PAT%@github.com/microsoft/homebrew-msstore-cli.git $(Pipeline.Workspace)\homebrew-msstore-cli
+            script: |-
+              if "%GITHUB_PAT%"=="" (echo ##[error]GITHUB_PAT is empty & exit 1)
+              git clone https://x-access-token:%GITHUB_PAT%@github.com/microsoft/homebrew-msstore-cli.git $(Pipeline.Workspace)\homebrew-msstore-cli
         - task: DownloadGitHubRelease@0
           displayName: Download GitHub Release
           inputs:
@@ -213,6 +215,8 @@ extends:
             workingDirectory: $(Pipeline.Workspace)\homebrew-msstore-cli
         - task: CmdLine@2
           displayName: Git operations
+          env:
+            GITHUB_PAT: $(GitHubPAT)
           inputs:
             workingDirectory: $(Pipeline.Workspace)\homebrew-msstore-cli
             script: |-
@@ -221,4 +225,4 @@ extends:
               git add -f Formula\msstore-cli.rb
               git checkout -B $(Build.SourceBranchName)
               git commit -m "Update formula with new release ($(Build.SourceBranchName))."
-              git push origin $(Build.SourceBranchName)
+              git push https://x-access-token:%GITHUB_PAT%@github.com/microsoft/homebrew-msstore-cli.git HEAD:$(Build.SourceBranchName)
