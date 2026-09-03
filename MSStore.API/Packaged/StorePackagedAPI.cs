@@ -667,7 +667,7 @@ namespace MSStore.API.Packaged
         private static async IAsyncEnumerable<T> GetAllObjectsPagedAsync<T>(Func<int, int, CancellationToken, Task<PagedResponse<T>>> pageFunc, [EnumeratorCancellation] CancellationToken ct = default)
         {
             int skip = 0;
-            const int top = 10;
+            const int top = 100;
             PagedResponse<T>? lastPage;
             do
             {
