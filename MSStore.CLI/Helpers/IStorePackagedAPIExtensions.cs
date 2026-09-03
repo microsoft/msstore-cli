@@ -829,17 +829,28 @@ namespace MSStore.CLI.Helpers
                 return true;
             }
 
-            // A missing pricing object is just as unsendable as a bad price id - the API answers
-            // "Pricing data was not provided in the request." - so stop here with usable guidance
-            // rather than letting the update fail with a raw 400 further down.
+            // Neither a missing pricing object nor an unusable price id can be sent, but they fail
+            // differently: the first two are rejected outright, an empty price id is accepted and
+            // silently turns the product free. Stop for all three, and say which one it is.
             var priceId = submission.Pricing?.PriceId;
-            logger.LogError("Cannot preserve the product's price. The submission has PriceId '{PriceId}', which the API does not accept on update.", priceId);
+            logger.LogError("Cannot preserve the product's price. The submission has PriceId '{PriceId}', which cannot be sent back.", priceId);
 
             ansiConsole.MarkupLine("[red bold]Could not preserve this product's price.[/]");
-            ansiConsole.MarkupLine(submission.Pricing == null
-                ? "The Store returned no pricing for this product, and the submission API rejects an update that does not carry one."
-                : $"The Store returned a base price of [yellow]'{(priceId ?? "<empty>").EscapeMarkup()}'[/], which the submission API refuses on update. This happens when the price is managed per market from Partner Center.");
-            ansiConsole.MarkupLine("Publishing would reset the product to [bold]Free[/], so it has been stopped instead.");
+
+            if (submission.Pricing == null)
+            {
+                ansiConsole.MarkupLine("The Store returned no pricing for this product, and the submission API rejects an update that does not carry one.");
+            }
+            else if (string.IsNullOrWhiteSpace(priceId))
+            {
+                ansiConsole.MarkupLine("The Store returned no base price for this product. The submission API would accept that and silently reset the product to [bold]Free[/].");
+            }
+            else
+            {
+                ansiConsole.MarkupLine($"The Store returned a base price of [yellow]'{priceId.EscapeMarkup()}'[/], which the submission API rejects on update. This happens when the price is managed per market from Partner Center.");
+            }
+
+            ansiConsole.MarkupLine("Publishing has been stopped so the price is left as it is.");
             ansiConsole.MarkupLine("Re-run with [green]--priceId[/] to state the base price explicitly (for example [green]--priceId Tier1012[/]), or publish this submission from Partner Center.");
 
             return false;

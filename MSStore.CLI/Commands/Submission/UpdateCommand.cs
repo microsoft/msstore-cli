@@ -97,6 +97,7 @@ namespace MSStore.CLI.Commands.Submission
                 }
 
                 string? submissionId = application.PendingApplicationSubmission?.Id;
+                var draftWasCreatedHere = submissionId == null;
 
                 if (submissionId == null)
                 {
@@ -111,23 +112,29 @@ namespace MSStore.CLI.Commands.Submission
                     }
                 }
 
-                var currentSubmission = await storePackagedAPI.GetSubmissionAsync(application.Id, submissionId, ct);
-
                 // Only the payload actually being sent matters here. Blocking on the *current*
                 // submission would reject a perfectly good update whose JSON already carries a
                 // valid tier, which is the one way a per-market priced product can be updated.
                 var updatedPriceId = updateSubmission.Pricing?.PriceId;
                 if (updateSubmission.Pricing != null && !PriceIds.IsRoundTrippable(updatedPriceId))
                 {
-                    if (currentSubmission?.Id != null && application.PendingApplicationSubmission?.Id == null)
+                    // Clean up after ourselves, but never delete a draft the caller already had.
+                    if (draftWasCreatedHere)
                     {
-                        await storePackagedAPI.DeleteSubmissionAsync(application.Id, currentSubmission.Id, ct);
+                        await storePackagedAPI.DeleteSubmissionAsync(application.Id, submissionId, ct);
                     }
 
-                    ansiConsole.MarkupLine(string.IsNullOrWhiteSpace(updatedPriceId)
-                        ? "[red bold]The JSON you provided does not set 'Pricing.PriceId', which the submission API will not accept.[/]"
-                        : $"[red bold]The JSON you provided sets 'Pricing.PriceId' to '{updatedPriceId.EscapeMarkup()}', which the submission API will not accept.[/]");
-                    ansiConsole.MarkupLine("Sending it would reset the product to [bold]Free[/]. Set 'Pricing.PriceId' to a real tier (for example 'Tier1012'), 'Free', or 'NotAvailable' and try again.");
+                    if (string.IsNullOrWhiteSpace(updatedPriceId))
+                    {
+                        ansiConsole.MarkupLine("[red bold]The JSON you provided does not set 'Pricing.PriceId'.[/]");
+                        ansiConsole.MarkupLine("The submission API would accept that and silently reset the product to [bold]Free[/], so the update has been stopped instead.");
+                    }
+                    else
+                    {
+                        ansiConsole.MarkupLine($"[red bold]The JSON you provided sets 'Pricing.PriceId' to '{updatedPriceId.EscapeMarkup()}', which the submission API rejects.[/]");
+                    }
+
+                    ansiConsole.MarkupLine("Set 'Pricing.PriceId' to a real tier (for example 'Tier1012'), 'Free', or 'NotAvailable' and try again.");
                     return null;
                 }
 

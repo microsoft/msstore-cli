@@ -201,7 +201,7 @@ namespace MSStore.CLI.UnitTests
                 ], -1);
 
             result.Error.Should().Contain("sets 'Pricing.PriceId' to 'Base'");
-            result.Error.Should().Contain("which the submission API will not accept");
+            result.Error.Should().Contain("which the submission API rejects");
             result.Error.Should().NotContain("only for Free products");
 
             FakeStorePackagedAPI
@@ -228,7 +228,7 @@ namespace MSStore.CLI.UnitTests
                 ], -1);
 
             result.Error.Should().Contain("does not set 'Pricing.PriceId'");
-            result.Error.Should().Contain("which the submission API will not accept");
+            result.Error.Should().Contain("silently reset the product to Free");
 
             FakeStorePackagedAPI
                 .Verify(
