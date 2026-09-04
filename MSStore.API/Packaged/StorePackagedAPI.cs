@@ -5,7 +5,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Linq;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
@@ -219,8 +221,7 @@ namespace MSStore.API.Packaged
         {
             try
             {
-                var devCenterApplicationsResponse = await GetDevCenterApplicationsAsync(0, 100, ct); // TODO: pagination
-                return devCenterApplicationsResponse.Value ?? [];
+                return await GetAllObjectsPagedAsync<DevCenterApplication>(pageFunc: GetDevCenterApplicationsAsync, ct).ToListAsync(ct);
             }
             catch (Exception error)
             {
@@ -384,8 +385,7 @@ namespace MSStore.API.Packaged
         {
             try
             {
-                var devCenterFlightsResponse = await GetFlightsAsync(productId, 0, 100, ct); // TODO: pagination
-                return devCenterFlightsResponse.Value ?? [];
+                return await GetAllObjectsPagedAsync<DevCenterFlight>((skip, top, ct) => GetFlightsAsync(productId, skip, top, ct), ct).ToListAsync(ct);
             }
             catch (Exception error)
             {
@@ -662,6 +662,26 @@ namespace MSStore.API.Packaged
                 null,
                 SourceGenerationContext.GetCustom().PackageRollout,
                 ct);
+        }
+
+        private static async IAsyncEnumerable<T> GetAllObjectsPagedAsync<T>(Func<int, int, CancellationToken, Task<PagedResponse<T>>> pageFunc, [EnumeratorCancellation] CancellationToken ct = default)
+        {
+            int skip = 0;
+            const int top = 100;
+            PagedResponse<T>? lastPage;
+            do
+            {
+                ct.ThrowIfCancellationRequested();
+
+                lastPage = await pageFunc(skip, top, ct);
+                skip += top;
+
+                foreach (var item in lastPage.Value ?? [])
+                {
+                    yield return item;
+                }
+            }
+            while (lastPage is { NextLink.Length: > 0, Value.Count: top });
         }
     }
 }
