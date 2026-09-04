@@ -352,6 +352,7 @@ namespace MSStore.CLI.Helpers
             IEnumerable<FileInfo> input,
             bool noCommit,
             float? packageRolloutPercentage,
+            string? priceId,
             long uploadTimeout,
             IBrowserLauncher browserLauncher,
             IConsoleReader consoleReader,
@@ -493,10 +494,10 @@ namespace MSStore.CLI.Helpers
             DevCenterSubmission? devCenterSubmission = submission as DevCenterSubmission;
             DevCenterFlightSubmission? devCenterFlightSubmission = submission as DevCenterFlightSubmission;
 
-            if (devCenterSubmission?.Pricing != null && devCenterSubmission?.Pricing?.PriceId == "Base")
+            if (devCenterSubmission != null
+                && !TryPreservePricing(ansiConsole, devCenterSubmission, priceId, logger))
             {
                 await storePackagedAPI.DeleteSubmissionAsync(app.Id, submission.Id, ct);
-                ansiConsole.MarkupLine("[red bold]App updates are supported only for Free products.[/]");
                 return -1;
             }
 
@@ -781,6 +782,78 @@ namespace MSStore.CLI.Helpers
                 image.FileName = Path.Combine(listingKey, fileName);
                 return true;
             }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Makes sure publishing never changes the product's price.
+        /// </summary>
+        /// <remarks>
+        /// The submission API replaces the whole submission on update - there are no patch
+        /// semantics, so anything the request does not state explicitly is reset to its default.
+        /// A complete and valid <c>pricing</c> object therefore has to be sent back every time,
+        /// even when publishing has no interest in the price. For a product on the newer
+        /// per-market pricing model the API returns <see cref="PriceIds.Base"/>, and none of the
+        /// ways of expressing "leave the price alone" work:
+        /// <list type="bullet">
+        /// <item><description><see cref="PriceIds.Base"/> - rejected with <c>'Base' is not a valid PriceId for base price.</c></description></item>
+        /// <item><description>an empty value, the property removed, or an empty pricing object - all accepted with <c>200 OK</c>, and the product silently becomes free.</description></item>
+        /// <item><description>a null or omitted <c>pricing</c> - rejected with <c>Pricing data was not provided in the request.</c></description></item>
+        /// </list>
+        /// Nor can the real price be looked up: it is absent from the application resource, the
+        /// newer submission API does not know packaged products, and no API exposes the price
+        /// tier table. So for those products the price can only come from the caller.
+        /// <para>
+        /// Any other price id (<c>Free</c>, <c>NotAvailable</c>, <c>Tier1012</c>, ...) round-trips
+        /// unchanged, so paid products publish fine as long as we leave the value alone.
+        /// </para>
+        /// </remarks>
+        /// <returns><c>false</c> when the price cannot be preserved and publishing must stop.</returns>
+        internal static bool TryPreservePricing(IAnsiConsole ansiConsole, DevCenterSubmission submission, string? priceIdOverride, ILogger logger)
+        {
+            if (priceIdOverride != null)
+            {
+                logger.LogInformation("Overriding PriceId '{OriginalPriceId}' with '{PriceIdOverride}'.", submission.Pricing?.PriceId, priceIdOverride);
+                ansiConsole.MarkupLine($"Setting the base price to [green]{priceIdOverride.EscapeMarkup()}[/].");
+
+                // A product whose price is managed per market can come back without any pricing
+                // at all, and the API rejects an update that omits it.
+                submission.Pricing ??= new Pricing();
+                submission.Pricing.PriceId = priceIdOverride;
+                return true;
+            }
+
+            if (submission.Pricing != null && PriceIds.IsRoundTrippable(submission.Pricing.PriceId))
+            {
+                return true;
+            }
+
+            // Neither a missing pricing object nor an unusable price id can be sent, but they fail
+            // differently: the first two are rejected outright, an empty price id is accepted and
+            // silently turns the product free. Stop for all three, and say which one it is.
+            var priceId = submission.Pricing?.PriceId;
+
+            ansiConsole.MarkupLine("[red bold]Could not preserve this product's price.[/]");
+
+            if (submission.Pricing == null)
+            {
+                logger.LogError("Cannot preserve the product's price: the submission carries no pricing, which the API rejects on update.");
+                ansiConsole.MarkupLine("The Store returned no pricing for this product, and the submission API rejects an update that does not carry one.");
+            }
+            else if (string.IsNullOrWhiteSpace(priceId))
+            {
+                logger.LogError("Cannot preserve the product's price: the submission has no PriceId, and sending that resets the product to free.");
+                ansiConsole.MarkupLine("The Store returned no base price for this product. The submission API would accept that and silently reset the product to [bold]Free[/].");
+            }
+            else
+            {
+                logger.LogError("Cannot preserve the product's price: the submission has PriceId '{PriceId}', which the API rejects on update.", priceId);
+                ansiConsole.MarkupLine($"The Store returned a base price of [yellow]'{priceId.EscapeMarkup()}'[/], which the submission API rejects on update. This happens when the price is managed per market from Partner Center.");
+            }
+
+            ansiConsole.MarkupLine("Publishing has been stopped so the price is left as it is.");
+            ansiConsole.MarkupLine("Re-run with [green]--priceId[/] to state the base price explicitly (for example [green]--priceId Tier1012[/]), or publish this submission from Partner Center.");
 
             return false;
         }

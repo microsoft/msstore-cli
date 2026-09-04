@@ -127,6 +127,21 @@ namespace MSStore.CLI.UnitTests
             }
         }
 
+        /// <summary>
+        /// Reduces captured console output to plain text: strips the ANSI escape sequences
+        /// Spectre.Console emits for styling, and collapses the line breaks it inserts when
+        /// wrapping to the console width. Without this, an assertion on message text depends on
+        /// both the width and the colour support of whatever terminal the test ran under, which
+        /// differs between local runs and CI.
+        /// </summary>
+        /// <param name="text">The captured console output.</param>
+        /// <returns>The text without styling, with every run of whitespace collapsed to one space.</returns>
+        protected static string PlainConsoleText(string text)
+        {
+            var withoutAnsi = System.Text.RegularExpressions.Regex.Replace(text, @"\x1B\[[0-9;]*[a-zA-Z]", string.Empty);
+            return System.Text.RegularExpressions.Regex.Replace(withoutAnsi, @"\s+", " ");
+        }
+
         private readonly List<string> _temporaryPayloadFiles = [];
 
         /// <summary>
@@ -410,13 +425,17 @@ namespace MSStore.CLI.UnitTests
                 });
         }
 
-        protected void AddDefaultFakeSubmission(string listingDescription = "BaseListingDescription")
+        protected void AddDefaultFakeSubmission(string listingDescription = "BaseListingDescription", Pricing? pricing = null, bool withoutPricing = false)
         {
             var fakeSubmission = new DevCenterSubmission
             {
                 Id = "123456789",
                 ApplicationCategory = DevCenterApplicationCategory.NotSet,
                 FileUploadUrl = "https://azureblob.com/fileupload",
+
+                // Every real app submission comes back carrying a pricing object, so that is what
+                // the fixtures model. 'withoutPricing' exists only to cover the degenerate case.
+                Pricing = withoutPricing ? null : pricing ?? new Pricing { PriceId = PriceIds.Free },
                 ApplicationPackages =
                     [
                         new ApplicationPackage
@@ -573,9 +592,9 @@ namespace MSStore.CLI.UnitTests
                 });
         }
 
-        protected void AddDefaultFakeSuccessfulSubmission()
+        protected void AddDefaultFakeSuccessfulSubmission(Pricing? pricing = null, bool withoutPricing = false)
         {
-            AddDefaultFakeSubmission();
+            AddDefaultFakeSubmission(pricing: pricing, withoutPricing: withoutPricing);
             InitDefaultSubmissionStatusResponseQueue();
 
             FakeStorePackagedAPI
