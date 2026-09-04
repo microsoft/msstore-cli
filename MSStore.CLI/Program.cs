@@ -51,8 +51,8 @@ namespace MSStore.CLI
                                 TelemetrySourceGenerationContext.Default.TelemetryConfigurations,
                                 "telemetrySettings.json",
                                 null);
-            TelemetryConfigurations telemetryConfigurations = await telemetryConfigurationManager.LoadAsync(true, CancellationToken.None);
-            TelemetryClient telemetryClient = await CreateTelemetryClientAsync(telemetryConfigurationManager, telemetryConfigurations);
+            (TelemetryConfigurations telemetryConfigurations, bool telemetryConfigurationsReadable) = await LoadTelemetryConfigurationsAsync(telemetryConfigurationManager);
+            TelemetryClient telemetryClient = await CreateTelemetryClientAsync(telemetryConfigurationManager, telemetryConfigurations, telemetryConfigurationsReadable);
             var ansiConsole = AnsiConsole.Create(new()
             {
                 Interactive = Console.IsErrorRedirected ? InteractionSupport.No : InteractionSupport.Yes,
@@ -255,14 +255,42 @@ namespace MSStore.CLI
 
         internal static string SessionId { get; } = Guid.NewGuid().ToString();
 
-        private static async Task<TelemetryClient> CreateTelemetryClientAsync(ConfigurationManager<TelemetryConfigurations> telemetryConfigurationManager, TelemetryConfigurations telemetryConfigurations)
+        /// <summary>
+        /// Loads the telemetry configurations, reporting whether they could actually be read.
+        /// A concurrent invocation of the CLI may be holding the file, in which case the stored
+        /// preferences are unknown and must not be overwritten.
+        /// </summary>
+        private static async Task<(TelemetryConfigurations Configurations, bool Readable)> LoadTelemetryConfigurationsAsync(ConfigurationManager<TelemetryConfigurations> telemetryConfigurationManager)
+        {
+            try
+            {
+                // Do not repair yet, so that a locked file is distinguishable from an invalid one.
+                return (await telemetryConfigurationManager.LoadAsync(false, CancellationToken.None), true);
+            }
+            catch (IOException)
+            {
+                return (new TelemetryConfigurations(), false);
+            }
+            catch
+            {
+                // The file is invalid for some other reason. Repair it.
+                try
+                {
+                    return (await telemetryConfigurationManager.LoadAsync(true, CancellationToken.None), true);
+                }
+                catch (IOException)
+                {
+                    return (new TelemetryConfigurations(), false);
+                }
+            }
+        }
+
+        private static async Task<TelemetryClient> CreateTelemetryClientAsync(ConfigurationManager<TelemetryConfigurations> telemetryConfigurationManager, TelemetryConfigurations telemetryConfigurations, bool telemetryConfigurationsReadable)
         {
             var changed = false;
-            var telemetryEnabledDefaulted = false;
             if (!telemetryConfigurations.TelemetryEnabled.HasValue)
             {
                 telemetryConfigurations.TelemetryEnabled = true;
-                telemetryEnabledDefaulted = true;
                 changed = true;
             }
 
@@ -275,6 +303,14 @@ namespace MSStore.CLI
                 changed = true;
             }
 
+            if (!telemetryConfigurationsReadable)
+            {
+                // We could not read the stored preferences, so we cannot tell whether the user opted
+                // out. Fail closed for this run, and do not persist defaults over their settings.
+                telemetryConfigurations.TelemetryEnabled = false;
+                changed = false;
+            }
+
             if (changed)
             {
                 try
@@ -285,12 +321,6 @@ namespace MSStore.CLI
                 {
                     // Telemetry settings are incidental bookkeeping. If another instance of the CLI
                     // is using the file, just move on instead of failing the command.
-                    if (telemetryEnabledDefaulted)
-                    {
-                        // We could not read the file, so we might be defaulting over a user that
-                        // has opted out. Fail closed and keep telemetry off for this run.
-                        telemetryConfigurations.TelemetryEnabled = false;
-                    }
                 }
             }
 

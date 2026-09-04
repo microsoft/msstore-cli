@@ -72,6 +72,18 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
+        public async Task LoadAsyncThrowsIfFileIsLockedAndClearInvalidConfigIsDisabled()
+        {
+            await _configurationManager.ClearAsync(TestContext.CancellationToken);
+
+            using var otherProcessFile = File.Open(_configurationManager.ConfigPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+
+            // Callers that need to tell a locked file apart from an invalid one rely on this.
+            await Assert.ThrowsExactlyAsync<IOException>(
+                () => _configurationManager.LoadAsync(false, TestContext.CancellationToken));
+        }
+
+        [TestMethod]
         public async Task LoadAsyncRecreatesTheFileIfItContainsInvalidJson()
         {
             await _configurationManager.ClearAsync(TestContext.CancellationToken);
