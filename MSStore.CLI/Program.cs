@@ -258,9 +258,11 @@ namespace MSStore.CLI
         private static async Task<TelemetryClient> CreateTelemetryClientAsync(ConfigurationManager<TelemetryConfigurations> telemetryConfigurationManager, TelemetryConfigurations telemetryConfigurations)
         {
             var changed = false;
+            var telemetryEnabledDefaulted = false;
             if (!telemetryConfigurations.TelemetryEnabled.HasValue)
             {
                 telemetryConfigurations.TelemetryEnabled = true;
+                telemetryEnabledDefaulted = true;
                 changed = true;
             }
 
@@ -283,6 +285,12 @@ namespace MSStore.CLI
                 {
                     // Telemetry settings are incidental bookkeeping. If another instance of the CLI
                     // is using the file, just move on instead of failing the command.
+                    if (telemetryEnabledDefaulted)
+                    {
+                        // We could not read the file, so we might be defaulting over a user that
+                        // has opted out. Fail closed and keep telemetry off for this run.
+                        telemetryConfigurations.TelemetryEnabled = false;
+                    }
                 }
             }
 

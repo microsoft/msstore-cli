@@ -72,6 +72,22 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
+        public async Task LoadAsyncRecreatesTheFileIfItContainsInvalidJson()
+        {
+            await _configurationManager.ClearAsync(TestContext.CancellationToken);
+
+            await File.WriteAllTextAsync(_configurationManager.ConfigPath, "not json", TestContext.CancellationToken);
+
+            var telemetryConfigurations = await _configurationManager.LoadAsync(true, TestContext.CancellationToken);
+
+            telemetryConfigurations.Should().NotBeNull();
+
+            // The invalid file should have been repaired.
+            var content = await File.ReadAllTextAsync(_configurationManager.ConfigPath, TestContext.CancellationToken);
+            content.Should().NotBe("not json");
+        }
+
+        [TestMethod]
         public async Task ConcurrentLoadsAndSavesDoNotThrow()
         {
             var tasks = new List<Task>();
@@ -88,9 +104,8 @@ namespace MSStore.CLI.UnitTests
                     TestContext.CancellationToken));
             }
 
-            var act = () => Task.WhenAll(tasks);
-
-            await act.Should().NotThrowAsync();
+            // Any exception thrown by a concurrent load/save fails the test.
+            await Task.WhenAll(tasks);
         }
     }
 }

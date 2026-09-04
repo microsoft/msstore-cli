@@ -67,7 +67,7 @@ namespace MSStore.CLI.Services
 
                 return await JsonSerializer.DeserializeAsync(file, _jsonTypeInfo, ct) ?? new T();
             }
-            catch (IOException ex)
+            catch (IOException ex) when (ex is not FileNotFoundException and not DirectoryNotFoundException)
             {
                 // Another process is using the file. Do not overwrite its contents,
                 // just fallback to the default configuration.
