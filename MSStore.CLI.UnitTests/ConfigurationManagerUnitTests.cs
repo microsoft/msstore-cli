@@ -42,6 +42,10 @@ namespace MSStore.CLI.UnitTests
 
             await Task.Delay(100, TestContext.CancellationToken);
 
+            // The save must not have completed yet, otherwise it did not really
+            // wait for the other process to release the file.
+            saveTask.IsCompleted.Should().BeFalse();
+
             otherProcessFile.Dispose();
 
             await saveTask;
