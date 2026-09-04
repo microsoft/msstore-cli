@@ -802,8 +802,9 @@ namespace MSStore.CLI.UnitTests
             var outputCapture = new OutputCapture(Console.Out);
             var errorCapture = RefreshAnsiConsole();
 
-            // Only stdout is redirected: the error capture is reached exclusively through
-            // ErrorAnsiConsole, mirroring how Program.cs keeps the two streams apart.
+            // Only stdout is redirected: it is reserved for StandardOutput payloads. Human-readable writes
+            // reach the error capture through either ErrorAnsiConsole or the static console, mirroring how
+            // Program.cs points both at the same instance.
             Console.SetOut(outputCapture);
 
             AnsiConsole.Console = AnsiConsole.Create(new AnsiConsoleSettings
@@ -811,7 +812,7 @@ namespace MSStore.CLI.UnitTests
                 Ansi = AnsiSupport.Yes,
                 ColorSystem = ColorSystemSupport.TrueColor,
                 Interactive = InteractionSupport.No,
-                Out = new CustomAnsiConsoleOutput(outputCapture),
+                Out = new CustomAnsiConsoleOutput(errorCapture),
                 Enrichment = new ProfileEnrichment
                 {
                     UseDefaultEnrichers = false

@@ -23,8 +23,8 @@ namespace MSStore.CLI.UnitTests
                     "list"
                 ]);
 
-            result.Output.Should().ContainAll(FakeApps.Select(a => a.Id));
-            result.Output.Should().ContainAll(FakeApps.Select(a => a.PrimaryName));
+            result.Error.Should().ContainAll(FakeApps.Select(a => a.Id));
+            result.Error.Should().ContainAll(FakeApps.Select(a => a.PrimaryName));
         }
 
         [TestMethod]

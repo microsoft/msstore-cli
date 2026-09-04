@@ -52,11 +52,13 @@ namespace MSStore.CLI
                                 null);
             TelemetryConfigurations telemetryConfigurations = await telemetryConfigurationManager.LoadAsync(true, CancellationToken.None);
             TelemetryClient telemetryClient = await CreateTelemetryClientAsync(telemetryConfigurationManager, telemetryConfigurations);
-            var ansiConsole = AnsiConsole.Create(new()
+            var (outputStream, outputStreamWarning) = OutputStreamResolver.Resolve(args);
+            var ansiConsole = ConsoleFactory.Create(outputStream);
+
+            if (outputStreamWarning != null)
             {
-                Interactive = Console.IsErrorRedirected ? InteractionSupport.No : InteractionSupport.Yes,
-                Out = new AnsiConsoleOutput(Console.Error)
-            });
+                ansiConsole.MarkupLine($":warning: {outputStreamWarning.EscapeMarkup()}");
+            }
 
             if (args.Contains(MicrosoftStoreCLI.VerboseOption.Name) || args.Any(MicrosoftStoreCLI.VerboseOption.Aliases.Contains))
             {
@@ -243,6 +245,9 @@ namespace MSStore.CLI
                 parseError.ShowHelp = true;
             }
 
+            // InvocationConfiguration is left at its defaults on purpose, so --output-stream does not move it:
+            // help goes to stdout so that `msstore --help | more` works, and parse diagnostics go to stderr
+            // because they accompany a non-zero exit code.
             var result = await parseResult.InvokeAsync(parseResult.InvocationConfiguration, lifetime.ApplicationStopping);
 
             await host.StopAsync();
