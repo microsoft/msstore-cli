@@ -221,7 +221,7 @@ namespace MSStore.API.Packaged
         {
             try
             {
-                return await GetAllObjectsPagedAsync<DevCenterApplication>(pageFunc: GetDevCenterApplicationsAsync, ct).ToListAsync(ct);
+                return await GetAllPagesAsync<DevCenterApplication>(pageFunc: GetDevCenterApplicationsAsync, ct).ToListAsync(ct);
             }
             catch (Exception error)
             {
@@ -385,7 +385,7 @@ namespace MSStore.API.Packaged
         {
             try
             {
-                return await GetAllObjectsPagedAsync<DevCenterFlight>((skip, top, ct) => GetFlightsAsync(productId, skip, top, ct), ct).ToListAsync(ct);
+                return await GetAllPagesAsync<DevCenterFlight>((skip, top, ct) => GetFlightsAsync(productId, skip, top, ct), ct).ToListAsync(ct);
             }
             catch (Exception error)
             {
@@ -664,7 +664,7 @@ namespace MSStore.API.Packaged
                 ct);
         }
 
-        private static async IAsyncEnumerable<T> GetAllObjectsPagedAsync<T>(Func<int, int, CancellationToken, Task<PagedResponse<T>>> pageFunc, [EnumeratorCancellation] CancellationToken ct = default)
+        private static async IAsyncEnumerable<T> GetAllPagesAsync<T>(Func<int, int, CancellationToken, Task<PagedResponse<T>>> pageFunc, [EnumeratorCancellation] CancellationToken ct = default)
         {
             int skip = 0;
             const int top = 100;
