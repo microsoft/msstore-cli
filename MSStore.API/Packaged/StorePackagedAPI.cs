@@ -221,7 +221,7 @@ namespace MSStore.API.Packaged
         {
             try
             {
-                return await GetAllPagesAsync<DevCenterApplication>(pageFunc: GetDevCenterApplicationsAsync, ct).ToListAsync(ct);
+                return await GetAllPagesAsync<DevCenterApplication>(GetDevCenterApplicationsAsync, ct).ToListAsync(ct);
             }
             catch (Exception error)
             {
