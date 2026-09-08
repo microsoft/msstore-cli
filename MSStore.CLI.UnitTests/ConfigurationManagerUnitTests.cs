@@ -27,7 +27,10 @@ namespace MSStore.CLI.UnitTests
 
             public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
             {
-                if (logLevel == LogLevel.Information)
+                // Match the retry message specifically. The configuration manager also logs at
+                // Information when it creates the settings directory, which would otherwise signal
+                // before a single retry had happened on a machine that has never run the CLI.
+                if (logLevel == LogLevel.Information && formatter(state, exception).Contains("Retrying", StringComparison.Ordinal))
                 {
                     _retryObserved.TrySetResult();
                 }
