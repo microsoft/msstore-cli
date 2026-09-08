@@ -854,6 +854,7 @@ namespace MSStore.CLI.Helpers
 
             ansiConsole.MarkupLine("Publishing has been stopped so the price is left as it is.");
             ansiConsole.MarkupLine("Re-run with [green]--priceId[/] to state the base price explicitly (for example [green]--priceId Tier1012[/]), or publish this submission from Partner Center.");
+            ansiConsole.MarkupLine("[yellow]--priceId[/] sets a single base price for the product rather than preserving per-market prices, so publishing from Partner Center is the safer option when this product is priced per market.");
 
             return false;
         }

@@ -71,7 +71,7 @@ namespace MSStore.CLI.Commands
 
             PriceIdOption = new Option<string?>("--priceId", "-pid")
             {
-                Description = "Specifies the base price tier to set on the submission, for example 'Tier1012', 'Free' or 'NotAvailable'. Only needed when the Store reports a base price the submission API will not accept back, which happens when the price is managed per market from Partner Center.",
+                Description = "Specifies the base price tier to set on the submission, for example 'Tier1012', 'Free' or 'NotAvailable'. Only needed when the Store reports a base price the submission API will not accept back, which happens when the price is managed per market from Partner Center. This sets a single base price for the product rather than preserving per-market prices, so consider '--noCommit' to review the submission before it goes live.",
                 CustomParser = result =>
                 {
                     if (result.Tokens.Count == 0)
