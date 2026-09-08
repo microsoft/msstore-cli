@@ -44,12 +44,14 @@ namespace MSStore.CLI.UnitTests
         {
             var result = await RunCliAsync(["--verbose", "--help"], null);
 
+            result.ExitCode.Should().Be(0);
             result.StdErr.Should().Contain(HumanOutputMarker);
             result.StdOut.Should().NotContain(HumanOutputMarker);
         }
 
         [DataRow("--output-stream", "stdout")]
         [DataRow("--output-stream=stdout", null)]
+        [DataRow("--output-stream:stdout", null)]
         [DataRow("--output-stream", "STDOUT")]
         [TestMethod]
         public async Task OptionRoutesHumanReadableOutputToStandardOutput(string arg, string? value)
@@ -60,6 +62,11 @@ namespace MSStore.CLI.UnitTests
 
             var result = await RunCliAsync(args, null);
 
+            // Guards against the command failing for an unrelated reason while the marker still lands on the
+            // right stream. It does not prove the spelling parsed: --help takes precedence over parse errors,
+            // so an unrecognized token here would still exit 0. Parser acceptance of each spelling is covered
+            // in-process by OutputStreamUnitTests, where no help action is involved.
+            result.ExitCode.Should().Be(0);
             result.StdOut.Should().Contain(HumanOutputMarker);
             result.StdErr.Should().NotContain(HumanOutputMarker);
         }
@@ -69,6 +76,7 @@ namespace MSStore.CLI.UnitTests
         {
             var result = await RunCliAsync(["--verbose", "--help"], "stdout");
 
+            result.ExitCode.Should().Be(0);
             result.StdOut.Should().Contain(HumanOutputMarker);
             result.StdErr.Should().NotContain(HumanOutputMarker);
         }
@@ -78,6 +86,7 @@ namespace MSStore.CLI.UnitTests
         {
             var result = await RunCliAsync(["--verbose", "--output-stream", "stderr", "--help"], "stdout");
 
+            result.ExitCode.Should().Be(0);
             result.StdErr.Should().Contain(HumanOutputMarker);
             result.StdOut.Should().NotContain(HumanOutputMarker);
         }
@@ -87,9 +96,22 @@ namespace MSStore.CLI.UnitTests
         {
             var result = await RunCliAsync(["--verbose", "--help"], "1");
 
+            // A malformed environment variable warns and falls back; it must not fail the command.
+            result.ExitCode.Should().Be(0);
             result.StdErr.Should().Contain(HumanOutputMarker);
             result.StdErr.Should().Contain(EnvironmentInfo.OutputStreamEnvironmentVariable);
             result.StdOut.Should().NotContain(HumanOutputMarker);
+        }
+
+        [TestMethod]
+        public async Task InvalidOptionValueIsRejected()
+        {
+            // No --help here: System.CommandLine gives the help action precedence over the parse error, so
+            // `--output-stream console --help` exits 0. The rejection is only observable without it.
+            var result = await RunCliAsync(["--verbose", "--output-stream", "console"], null);
+
+            result.ExitCode.Should().NotBe(0);
+            result.StdErr.Should().Contain("--output-stream");
         }
 
         [DataRow(null)]

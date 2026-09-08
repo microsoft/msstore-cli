@@ -212,6 +212,30 @@ namespace MSStore.CLI.UnitTests
             result.Output.Should().Contain($"\"Id\": \"{appId}\",");
         }
 
+        [DataRow("--output-stream=stdout")]
+        [DataRow("--output-stream:stdout")]
+        [DataRow("--output-stream=stderr")]
+        [DataRow("--output-stream:stderr")]
+        [TestMethod]
+        public async Task InlineOutputStreamOptionFormsAreAcceptedByCommands(string arg)
+        {
+            // OutputStreamResolver accepts both inline separators, so the parser has to as well. This is
+            // asserted here rather than in the process tests because those pass --help, which takes
+            // precedence over parse errors and would mask an unrecognized token. ParseAndInvokeAsync
+            // asserts an exit code of 0, so a rejected spelling fails.
+            var appId = FakeApps[2].Id!;
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "apps",
+                    "get",
+                    appId,
+                    arg
+                ]);
+
+            result.Output.Should().Contain($"\"Id\": \"{appId}\",");
+        }
+
         [TestMethod]
         public async Task InvalidOutputStreamOptionValueIsRejectedByTheParser()
         {
