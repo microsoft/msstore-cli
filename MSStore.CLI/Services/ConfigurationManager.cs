@@ -129,7 +129,12 @@ namespace MSStore.CLI.Services
                 // Whether this is contention or a genuine I/O failure, the file is there and we
                 // could not read it, so the stored state is unknown and must not be reported as
                 // an empty configuration that the caller is free to act on.
-                _logger?.LogWarning(ex, "Could not read the configuration file: {SettingsPath}", _settingsPath);
+                // LoadAsync already logs contention before rethrowing, so only report what it does not.
+                if (!IsFileInUse(ex))
+                {
+                    _logger?.LogWarning(ex, "Could not read the configuration file: {SettingsPath}", _settingsPath);
+                }
+
                 return (new T(), false);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
