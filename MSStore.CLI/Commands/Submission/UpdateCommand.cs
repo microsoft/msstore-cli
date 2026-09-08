@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using MSStore.API;
 using MSStore.API.Models;
 using MSStore.API.Packaged;
+using MSStore.API.Packaged.Models;
 using MSStore.CLI.Helpers;
 using MSStore.CLI.Services;
 using Spectre.Console;
@@ -48,6 +49,14 @@ namespace MSStore.CLI.Commands.Submission
             private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
+            /// <summary>
+            /// Updates a packaged submission.
+            /// </summary>
+            /// <returns>
+            /// The updated submission, or <c>null</c> when the update did not happen. A failure
+            /// must never be signalled with an <c>int</c>: the caller only checks for <c>null</c>,
+            /// so a boxed code would be reported as success and printed as the command's output.
+            /// </returns>
             public static async Task<object?> PackagedUpdateCommandAsync(IAnsiConsole ansiConsole, IStoreAPIFactory storeAPIFactory, string product, string productId, ILogger logger, CancellationToken ct)
             {
                 var updateSubmission = JsonSerializer.Deserialize(product, SourceGenerationContext.GetCustom().DevCenterSubmission);
@@ -84,10 +93,11 @@ namespace MSStore.CLI.Commands.Submission
 
                 if (storePackagedAPI == null || application == null || application?.Id == null)
                 {
-                    return 1;
+                    return null;
                 }
 
                 string? submissionId = application.PendingApplicationSubmission?.Id;
+                var draftWasCreatedHere = submissionId == null;
 
                 if (submissionId == null)
                 {
@@ -102,12 +112,35 @@ namespace MSStore.CLI.Commands.Submission
                     }
                 }
 
-                var currentSubmission = await storePackagedAPI.GetSubmissionAsync(application.Id, submissionId, ct);
-                if (currentSubmission?.Pricing != null && currentSubmission?.Pricing?.PriceId == "Base")
+                // Only the payload actually being sent matters here. Blocking on the *current*
+                // submission would reject a perfectly good update whose JSON already carries a
+                // valid tier, which is the one way a per-market priced product can be updated.
+                var updatedPriceId = updateSubmission.Pricing?.PriceId;
+                if (updateSubmission.Pricing == null || !PriceIds.IsRoundTrippable(updatedPriceId))
                 {
-                    await storePackagedAPI.DeleteSubmissionAsync(application.Id, submissionId: currentSubmission.Id!, ct);
-                    ansiConsole.MarkupLine("[red bold]App updates are supported only for Free products.[/]");
-                    return -1;
+                    // Clean up after ourselves, but never delete a draft the caller already had.
+                    if (draftWasCreatedHere)
+                    {
+                        await storePackagedAPI.DeleteSubmissionAsync(application.Id, submissionId, ct);
+                    }
+
+                    if (updateSubmission.Pricing == null)
+                    {
+                        ansiConsole.MarkupLine("[red bold]The JSON you provided has no 'Pricing' object.[/]");
+                        ansiConsole.MarkupLine("An update replaces the whole submission, and the submission API rejects one that does not carry pricing.");
+                    }
+                    else if (string.IsNullOrWhiteSpace(updatedPriceId))
+                    {
+                        ansiConsole.MarkupLine("[red bold]The JSON you provided does not set 'Pricing.PriceId'.[/]");
+                        ansiConsole.MarkupLine("The submission API would accept that and silently reset the product to [bold]Free[/], so the update has been stopped instead.");
+                    }
+                    else
+                    {
+                        ansiConsole.MarkupLine($"[red bold]The JSON you provided sets 'Pricing.PriceId' to '{updatedPriceId.EscapeMarkup()}', which the submission API rejects.[/]");
+                    }
+
+                    ansiConsole.MarkupLine("Set 'Pricing.PriceId' to a real tier (for example 'Tier1012'), 'Free', or 'NotAvailable' and try again.");
+                    return null;
                 }
 
                 return await ansiConsole.Status().StartAsync("Updating submission product", async ctx =>
