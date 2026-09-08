@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.CommandLine.Invocation;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -50,8 +51,8 @@ namespace MSStore.CLI
                                 TelemetrySourceGenerationContext.Default.TelemetryConfigurations,
                                 "telemetrySettings.json",
                                 null);
-            TelemetryConfigurations telemetryConfigurations = await telemetryConfigurationManager.LoadAsync(true, CancellationToken.None);
-            TelemetryClient telemetryClient = await CreateTelemetryClientAsync(telemetryConfigurationManager, telemetryConfigurations);
+            (TelemetryConfigurations telemetryConfigurations, bool telemetryConfigurationsReadable) = await telemetryConfigurationManager.TryLoadAsync();
+            TelemetryClient telemetryClient = await CreateTelemetryClientAsync(telemetryConfigurationManager, telemetryConfigurations, telemetryConfigurationsReadable);
             var ansiConsole = AnsiConsole.Create(new()
             {
                 Interactive = Console.IsErrorRedirected ? InteractionSupport.No : InteractionSupport.Yes,
@@ -254,7 +255,7 @@ namespace MSStore.CLI
 
         internal static string SessionId { get; } = Guid.NewGuid().ToString();
 
-        private static async Task<TelemetryClient> CreateTelemetryClientAsync(ConfigurationManager<TelemetryConfigurations> telemetryConfigurationManager, TelemetryConfigurations telemetryConfigurations)
+        private static async Task<TelemetryClient> CreateTelemetryClientAsync(ConfigurationManager<TelemetryConfigurations> telemetryConfigurationManager, TelemetryConfigurations telemetryConfigurations, bool telemetryConfigurationsReadable)
         {
             var changed = false;
             if (!telemetryConfigurations.TelemetryEnabled.HasValue)
@@ -272,9 +273,25 @@ namespace MSStore.CLI
                 changed = true;
             }
 
+            if (!telemetryConfigurationsReadable)
+            {
+                // We could not read the stored preferences, so we cannot tell whether the user opted
+                // out. Fail closed for this run, and do not persist defaults over their settings.
+                telemetryConfigurations.TelemetryEnabled = false;
+                changed = false;
+            }
+
             if (changed)
             {
-                await telemetryConfigurationManager.SaveAsync(telemetryConfigurations, CancellationToken.None);
+                try
+                {
+                    await telemetryConfigurationManager.SaveAsync(telemetryConfigurations, CancellationToken.None);
+                }
+                catch (IOException)
+                {
+                    // Telemetry settings are incidental bookkeeping. If another instance of the CLI
+                    // is using the file, just move on instead of failing the command.
+                }
             }
 
             TelemetryConfiguration telemetryConfiguration = TelemetryConfiguration.CreateDefault();

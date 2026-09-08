@@ -19,6 +19,17 @@ namespace MSStore.CLI.Services
     internal class ConfigurationManager<T>(JsonTypeInfo<T> jsonTypeInfo, string fileName, ILogger<ConfigurationManager<T>>? logger) : IConfigurationManager<T>
         where T : new()
     {
+        private const int MaxOpenAttempts = 5;
+
+        // HRESULTs Windows reports when another process holds the file open.
+        private const int ErrorSharingViolation = unchecked((int)0x80070020); // ERROR_SHARING_VIOLATION (32)
+        private const int ErrorLockViolation = unchecked((int)0x80070021); // ERROR_LOCK_VIOLATION (33)
+
+        // On Unix, FileShare is implemented with flock(), and .NET surfaces the raw errno
+        // (EWOULDBLOCK) as the HResult when the lock cannot be taken. The value differs per platform.
+        private const int ErrorWouldBlockLinux = 11; // EAGAIN/EWOULDBLOCK on Linux
+        private const int ErrorWouldBlockBsd = 35; // EAGAIN/EWOULDBLOCK on macOS and other BSDs
+
         private static readonly string SettingsDirectory = Path.Combine(GetSystemLocalApplicationDataPath(), "Microsoft", "MSStore.CLI");
 
         private static string GetSystemLocalApplicationDataPath()
@@ -43,6 +54,23 @@ namespace MSStore.CLI.Services
             return Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         }
 
+        private static readonly TimeSpan OpenRetryDelay = TimeSpan.FromMilliseconds(50);
+
+        /// <summary>
+        /// Checks whether an <see cref="IOException"/> was caused by another process holding the file open,
+        /// as opposed to an unrelated I/O failure that should not be retried or silently ignored.
+        /// </summary>
+        private static bool IsFileInUse(IOException ex)
+        {
+            // A missing file/directory is never a sharing violation, even though both derive from IOException.
+            if (ex is FileNotFoundException or DirectoryNotFoundException)
+            {
+                return false;
+            }
+
+            return ex.HResult is ErrorSharingViolation or ErrorLockViolation or ErrorWouldBlockLinux or ErrorWouldBlockBsd;
+        }
+
         private readonly string _settingsPath = Path.Combine(SettingsDirectory, fileName);
         private readonly JsonTypeInfo<T> _jsonTypeInfo = jsonTypeInfo ?? throw new ArgumentNullException(nameof(jsonTypeInfo));
         private readonly ILogger? _logger = logger;
@@ -59,9 +87,24 @@ namespace MSStore.CLI.Services
                     return await ClearAsync(ct);
                 }
 
-                using var file = File.Open(_settingsPath, FileMode.Open);
+                // Reading does not need to exclude other readers: only a concurrent writer can
+                // produce a half-written file, and that already holds an exclusive lock.
+                using var file = await OpenAsync(FileMode.Open, FileAccess.Read, FileShare.Read, ct);
 
                 return await JsonSerializer.DeserializeAsync(file, _jsonTypeInfo, ct) ?? new T();
+            }
+            catch (IOException ex) when (IsFileInUse(ex))
+            {
+                // Another process is using the file. Do not overwrite its contents,
+                // just fallback to the default configuration.
+                _logger?.LogWarning(ex, "Could not read the configuration file: {SettingsPath}", _settingsPath);
+
+                if (!clearInvalidConfig)
+                {
+                    throw;
+                }
+
+                return new T();
             }
             catch
             {
@@ -74,10 +117,63 @@ namespace MSStore.CLI.Services
             }
         }
 
+        public async Task<(T Configurations, bool Readable)> TryLoadAsync(CancellationToken ct = default)
+        {
+            try
+            {
+                // Do not repair yet, so that a locked file is distinguishable from an invalid one.
+                return (await LoadAsync(false, ct), true);
+            }
+            catch (IOException ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+            {
+                // The file vanished between the existence check and the open. That leaves us in the
+                // same state as never having had one, so recreate the defaults instead of reporting
+                // the configuration as unknown and making callers abort on a benign race.
+                _logger?.LogWarning(ex, "Configuration file vanished while reading it: {SettingsPath}", _settingsPath);
+
+                return await TryRecreateAsync(ct);
+            }
+            catch (IOException ex)
+            {
+                // Whether this is contention or a genuine I/O failure, the file is there and we
+                // could not read it, so the stored state is unknown and must not be reported as
+                // an empty configuration that the caller is free to act on.
+                // LoadAsync already logs contention before rethrowing, so only report what it does not.
+                if (!IsFileInUse(ex))
+                {
+                    _logger?.LogWarning(ex, "Could not read the configuration file: {SettingsPath}", _settingsPath);
+                }
+
+                return (new T(), false);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // The content is invalid. Recreate it rather than going through LoadAsync(true),
+                // which swallows a lock taken since the first attempt and would report a read that
+                // never happened.
+                _logger?.LogWarning(ex, "Invalid configuration file, recreating it: {SettingsPath}", _settingsPath);
+
+                return await TryRecreateAsync(ct);
+            }
+        }
+
+        private async Task<(T Configurations, bool Readable)> TryRecreateAsync(CancellationToken ct)
+        {
+            try
+            {
+                return (await ClearAsync(ct), true);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger?.LogWarning(ex, "Could not recreate the configuration file: {SettingsPath}", _settingsPath);
+                return (new T(), false);
+            }
+        }
+
         public async Task<T> ClearAsync(CancellationToken ct)
         {
             EnsureDirectoryExists();
-            using var file = File.Open(_settingsPath, FileMode.OpenOrCreate);
+            using var file = await OpenAsync(FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None, ct);
             file.SetLength(0);
             await file.FlushAsync(ct);
             file.Position = 0;
@@ -88,10 +184,28 @@ namespace MSStore.CLI.Services
 
         public async Task SaveAsync(T config, CancellationToken ct)
         {
-            using var file = File.Open(_settingsPath, FileMode.OpenOrCreate);
+            using var file = await OpenAsync(FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None, ct);
             file.SetLength(0);
             file.Position = 0;
             await JsonSerializer.SerializeAsync(file, config, _jsonTypeInfo, ct);
+        }
+
+        private async Task<FileStream> OpenAsync(FileMode fileMode, FileAccess fileAccess, FileShare fileShare, CancellationToken ct)
+        {
+            for (var attempt = 1; ; attempt++)
+            {
+                try
+                {
+                    return File.Open(_settingsPath, fileMode, fileAccess, fileShare);
+                }
+                catch (IOException ex) when (attempt < MaxOpenAttempts && IsFileInUse(ex))
+                {
+                    // The file is being used by another process. Wait a bit and try again.
+                    _logger?.LogInformation("Configuration file '{SettingsPath}' is in use. Retrying ({Attempt}/{MaxOpenAttempts})...", _settingsPath, attempt, MaxOpenAttempts);
+
+                    await Task.Delay(OpenRetryDelay * attempt, ct);
+                }
+            }
         }
 
         private void EnsureDirectoryExists()

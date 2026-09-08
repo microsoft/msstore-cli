@@ -666,7 +666,7 @@ namespace MSStore.CLI.Services
             });
         }
 
-        public async Task<bool> ResetAsync(CancellationToken ct = default)
+        public async Task<bool> ResetAsync(IAnsiConsole ansiConsole, CancellationToken ct = default)
         {
             if (!await _consoleReader.YesNoConfirmationAsync(
                     "Are you sure you want to reset the MSStore CLI credentials?", ct))
@@ -676,7 +676,17 @@ namespace MSStore.CLI.Services
 
             try
             {
-                var config = await _configurationManager.LoadAsync(true, ct: ct);
+                var (config, readable) = await _configurationManager.TryLoadAsync(ct);
+
+                // If the settings file could not be read (e.g. another process is holding it open),
+                // we cannot tell whether a credential was ever stored, so we must not wipe settings.json:
+                // that could leave an orphaned credential in the OS store with no ClientId left to find it.
+                if (!readable)
+                {
+                    _logger.LogError("Could not read the configuration file. Please try again.");
+                    ansiConsole.MarkupLine(":collision: [bold red]Could not read the configuration file. It may be in use by another process. Nothing was changed.[/]");
+                    return false;
+                }
 
                 // Remove the credential before discarding the settings, and only continue if it is really gone.
                 // Wiping settings.json while an unremovable credential lingers would leave the machine in a worse
@@ -684,6 +694,7 @@ namespace MSStore.CLI.Services
                 if (config.ClientId.HasValue && !TryClearCredentials(config.ClientId.Value.ToString()))
                 {
                     _logger.LogError("Could not remove the credential for '{ClientId}' from the credential store. Remove it manually.", config.ClientId.Value);
+                    ansiConsole.MarkupLine($":collision: [bold red]Could not remove the credential for '{config.ClientId.Value}'. Nothing was changed, remove it manually.[/]");
                     return false;
                 }
 
@@ -696,6 +707,7 @@ namespace MSStore.CLI.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error while resetting configuration");
+                ansiConsole.MarkupLine($":collision: [bold red]Error while resetting the configuration: {ex.Message.EscapeMarkup()}[/]");
                 return false;
             }
         }

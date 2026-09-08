@@ -205,8 +205,8 @@ namespace MSStore.CLI.UnitTests
             // settings.json while an unremovable credential lingers leaves the machine worse off than before.
             ArrangeExistingClientSecretConfiguration(validationSucceeds: true);
             FakeConfigurationManager
-                .Setup(x => x.LoadAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new Configurations { ClientId = new Guid(ExistingClientId) });
+                .Setup(x => x.TryLoadAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync((new Configurations { ClientId = new Guid(ExistingClientId) }, true));
             CredentialManager
                 .Setup(x => x.ClearCredentials(It.IsAny<string>()))
                 .Callback(() => { });
@@ -214,11 +214,15 @@ namespace MSStore.CLI.UnitTests
                 .Setup(x => x.YesNoConfirmationAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
 
-            await ParseAndInvokeAsync(["reconfigure", "--reset"], expectedResult: -1);
+            var result = await ParseAndInvokeAsync(["reconfigure", "--reset"], expectedResult: -1);
 
             _credentialStore[ExistingClientId].Should().Be(ExistingSecret);
             FakeConfigurationManager.Verify(x => x.ClearAsync(It.IsAny<CancellationToken>()), Times.Never);
             TokenManager.Verify(x => x.ClearAllCacheAsync(), Times.Never);
+
+            // The default log level is Critical, so a LogError alone would leave the user staring at
+            // a bare -1. The reason has to reach the console.
+            result.Error.Should().Contain("Could not remove the credential for");
         }
 
         [TestMethod]
@@ -226,8 +230,8 @@ namespace MSStore.CLI.UnitTests
         {
             ArrangeExistingClientSecretConfiguration(validationSucceeds: true);
             FakeConfigurationManager
-                .Setup(x => x.LoadAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new Configurations { ClientId = new Guid(ExistingClientId) });
+                .Setup(x => x.TryLoadAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync((new Configurations { ClientId = new Guid(ExistingClientId) }, true));
             FakeConsole
                 .Setup(x => x.YesNoConfirmationAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
@@ -237,6 +241,32 @@ namespace MSStore.CLI.UnitTests
             _credentialStore.Should().NotContainKey(ExistingClientId);
             FakeConfigurationManager.Verify(x => x.ClearAsync(It.IsAny<CancellationToken>()), Times.Once);
             TokenManager.Verify(x => x.ClearAllCacheAsync(), Times.Once);
+        }
+
+        [TestMethod]
+        public async Task ResetShouldNotWipeSettingsWhenTheConfigurationCouldNotBeRead()
+        {
+            // If settings.json could not be read (e.g. a concurrent `msstore` process is holding it open),
+            // we cannot tell a config that never had a ClientId apart from one we simply couldn't read. Wiping
+            // settings.json in that case could orphan a credential in the OS store with no ClientId left to find it.
+            ArrangeExistingClientSecretConfiguration(validationSucceeds: true);
+            FakeConfigurationManager
+                .Setup(x => x.TryLoadAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync((new Configurations(), false));
+            FakeConsole
+                .Setup(x => x.YesNoConfirmationAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
+
+            var result = await ParseAndInvokeAsync(["reconfigure", "--reset"], expectedResult: -1);
+
+            _credentialStore[ExistingClientId].Should().Be(ExistingSecret);
+            CredentialManager.Verify(x => x.ClearCredentials(It.IsAny<string>()), Times.Never);
+            FakeConfigurationManager.Verify(x => x.ClearAsync(It.IsAny<CancellationToken>()), Times.Never);
+            TokenManager.Verify(x => x.ClearAllCacheAsync(), Times.Never);
+
+            // The default log level is Critical, so a LogError alone would leave the user staring at
+            // a bare -1. The reason has to reach the console.
+            result.Error.Should().Contain("Could not read the configuration file.");
         }
 
         [TestMethod]
