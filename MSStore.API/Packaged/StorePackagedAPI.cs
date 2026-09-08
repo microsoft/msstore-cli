@@ -42,6 +42,7 @@ namespace MSStore.API.Packaged
         private static readonly CompositeFormat DevCenterUpdatePackageRolloutPercentageTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}{2}/submissions/{3}/updatepackagerolloutpercentage?percentage={4}");
         private static readonly CompositeFormat DevCenterHaltPackageRolloutTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}{2}/submissions/{3}/haltpackagerollout");
         private static readonly CompositeFormat DevCenterFinalizePackageRolloutTemplate = CompositeFormat.Parse("/v{0}/my/applications/{1}{2}/submissions/{3}/finalizepackagerollout");
+        private static readonly CompositeFormat DevCenterAnalyticsReviewsTemplate = CompositeFormat.Parse("/v{0}/my/analytics/reviews?applicationId={1}");
 
         private SubmissionClient? _devCenterClient;
 
@@ -661,6 +662,65 @@ namespace MSStore.API.Packaged
                     submissionId),
                 null,
                 SourceGenerationContext.GetCustom().PackageRollout,
+                ct);
+        }
+
+        /// <summary>
+        /// The maximum number of reviews the analytics API accepts for the <c>top</c> parameter.
+        /// Larger values are rejected with <c>InvalidQueryParameters</c>.
+        /// </summary>
+        public const int MaxReviewsPerRequest = 10000;
+
+        public async Task<PagedResponse<AppReview>> GetAppReviewsAsync(string productId, DateOnly? startDate = null, DateOnly? endDate = null, int? top = null, int? skip = null, string? filter = null, string? orderby = null, CancellationToken ct = default)
+        {
+            AssertClientInitialized();
+
+            if (top is > MaxReviewsPerRequest)
+            {
+                throw new ArgumentOutOfRangeException(nameof(top), $"The Microsoft Store analytics API accepts at most {MaxReviewsPerRequest} reviews per request.");
+            }
+
+            var url = new StringBuilder(string.Format(
+                CultureInfo.InvariantCulture,
+                DevCenterAnalyticsReviewsTemplate,
+                DevCenterVersion,
+                Uri.EscapeDataString(productId)));
+
+            if (startDate.HasValue)
+            {
+                url.Append(CultureInfo.InvariantCulture, $"&startDate={startDate.Value:yyyy-MM-dd}");
+            }
+
+            if (endDate.HasValue)
+            {
+                url.Append(CultureInfo.InvariantCulture, $"&endDate={endDate.Value:yyyy-MM-dd}");
+            }
+
+            if (top.HasValue)
+            {
+                url.Append(CultureInfo.InvariantCulture, $"&top={top.Value}");
+            }
+
+            if (skip.HasValue)
+            {
+                url.Append(CultureInfo.InvariantCulture, $"&skip={skip.Value}");
+            }
+
+            if (!string.IsNullOrEmpty(filter))
+            {
+                url.Append(CultureInfo.InvariantCulture, $"&filter={Uri.EscapeDataString(filter)}");
+            }
+
+            if (!string.IsNullOrEmpty(orderby))
+            {
+                url.Append(CultureInfo.InvariantCulture, $"&orderby={Uri.EscapeDataString(orderby)}");
+            }
+
+            return await _devCenterClient.InvokeAsync<PagedResponse<AppReview>>(
+                HttpMethod.Get,
+                url.ToString(),
+                null,
+                SourceGenerationContext.GetCustom().PagedResponseAppReview,
                 ct);
         }
     }
