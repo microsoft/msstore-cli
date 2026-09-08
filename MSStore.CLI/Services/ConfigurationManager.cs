@@ -87,7 +87,9 @@ namespace MSStore.CLI.Services
                     return await ClearAsync(ct);
                 }
 
-                using var file = await OpenAsync(FileMode.Open, ct);
+                // Reading does not need to exclude other readers: only a concurrent writer can
+                // produce a half-written file, and that already holds an exclusive lock.
+                using var file = await OpenAsync(FileMode.Open, FileAccess.Read, FileShare.Read, ct);
 
                 return await JsonSerializer.DeserializeAsync(file, _jsonTypeInfo, ct) ?? new T();
             }
@@ -115,10 +117,35 @@ namespace MSStore.CLI.Services
             }
         }
 
+        public async Task<(T Configurations, bool Readable)> TryLoadAsync(CancellationToken ct = default)
+        {
+            try
+            {
+                // Do not repair yet, so that a locked file is distinguishable from an invalid one.
+                return (await LoadAsync(false, ct), true);
+            }
+            catch (IOException)
+            {
+                return (new T(), false);
+            }
+            catch
+            {
+                // The file is invalid for some other reason. Repair it.
+                try
+                {
+                    return (await LoadAsync(true, ct), true);
+                }
+                catch (IOException)
+                {
+                    return (new T(), false);
+                }
+            }
+        }
+
         public async Task<T> ClearAsync(CancellationToken ct)
         {
             EnsureDirectoryExists();
-            using var file = await OpenAsync(FileMode.OpenOrCreate, ct);
+            using var file = await OpenAsync(FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None, ct);
             file.SetLength(0);
             await file.FlushAsync(ct);
             file.Position = 0;
@@ -129,19 +156,19 @@ namespace MSStore.CLI.Services
 
         public async Task SaveAsync(T config, CancellationToken ct)
         {
-            using var file = await OpenAsync(FileMode.OpenOrCreate, ct);
+            using var file = await OpenAsync(FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None, ct);
             file.SetLength(0);
             file.Position = 0;
             await JsonSerializer.SerializeAsync(file, config, _jsonTypeInfo, ct);
         }
 
-        private async Task<FileStream> OpenAsync(FileMode fileMode, CancellationToken ct)
+        private async Task<FileStream> OpenAsync(FileMode fileMode, FileAccess fileAccess, FileShare fileShare, CancellationToken ct)
         {
             for (var attempt = 1; ; attempt++)
             {
                 try
                 {
-                    return File.Open(_settingsPath, fileMode, FileAccess.ReadWrite, FileShare.None);
+                    return File.Open(_settingsPath, fileMode, fileAccess, fileShare);
                 }
                 catch (IOException ex) when (attempt < MaxOpenAttempts && IsFileInUse(ex))
                 {

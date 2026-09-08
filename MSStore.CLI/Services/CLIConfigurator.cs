@@ -676,7 +676,16 @@ namespace MSStore.CLI.Services
 
             try
             {
-                var config = await _configurationManager.LoadAsync(true, ct: ct);
+                var (config, readable) = await _configurationManager.TryLoadAsync(ct);
+
+                // If the settings file could not be read (e.g. another process is holding it open),
+                // we cannot tell whether a credential was ever stored, so we must not wipe settings.json:
+                // that could leave an orphaned credential in the OS store with no ClientId left to find it.
+                if (!readable)
+                {
+                    _logger.LogError("Could not read the configuration file. Please try again.");
+                    return false;
+                }
 
                 // Remove the credential before discarding the settings, and only continue if it is really gone.
                 // Wiping settings.json while an unremovable credential lingers would leave the machine in a worse

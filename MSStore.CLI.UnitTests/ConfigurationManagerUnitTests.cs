@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+using Microsoft.Extensions.Logging;
 using MSStore.CLI.Services;
 using MSStore.CLI.Services.Telemetry;
 
@@ -9,6 +10,29 @@ namespace MSStore.CLI.UnitTests
     [TestClass]
     public class ConfigurationManagerUnitTests
     {
+        /// <summary>
+        /// Signals as soon as the configuration manager logs its first open retry, so tests can
+        /// react to an actual retry attempt instead of racing against a fixed delay.
+        /// </summary>
+        private sealed class RetrySignalingLogger : ILogger<ConfigurationManager<TelemetryConfigurations>>
+        {
+            private readonly TaskCompletionSource _retryObserved = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            public Task RetryObserved => _retryObserved.Task;
+
+            public IDisposable? BeginScope<TState>(TState state)
+                where TState : notnull => null;
+
+            public bool IsEnabled(LogLevel logLevel) => true;
+
+            public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+            {
+                if (logLevel == LogLevel.Information)
+                {
+                    _retryObserved.TrySetResult();
+                }
+            }
+        }
         private ConfigurationManager<TelemetryConfigurations> _configurationManager = null!;
 
         public TestContext TestContext { get; set; } = null!;
@@ -34,25 +58,44 @@ namespace MSStore.CLI.UnitTests
         [TestMethod]
         public async Task SaveAsyncWaitsForOtherProcessToReleaseTheFile()
         {
-            await _configurationManager.ClearAsync(TestContext.CancellationToken);
+            var logger = new RetrySignalingLogger();
+            var configurationManager = new ConfigurationManager<TelemetryConfigurations>(
+                TelemetrySourceGenerationContext.Default.TelemetryConfigurations,
+                $"test_{Guid.NewGuid()}.json",
+                logger);
 
-            var otherProcessFile = File.Open(_configurationManager.ConfigPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+            try
+            {
+                await configurationManager.ClearAsync(TestContext.CancellationToken);
 
-            var saveTask = _configurationManager.SaveAsync(new TelemetryConfigurations { TelemetryEnabled = true }, TestContext.CancellationToken);
+                var otherProcessFile = File.Open(configurationManager.ConfigPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
 
-            await Task.Delay(100, TestContext.CancellationToken);
+                var saveTask = configurationManager.SaveAsync(new TelemetryConfigurations { TelemetryEnabled = true }, TestContext.CancellationToken);
 
-            // The save must not have completed yet, otherwise it did not really
-            // wait for the other process to release the file.
-            saveTask.IsCompleted.Should().BeFalse();
+                // Wait for an actual retry attempt to be logged, instead of a fixed delay, so this
+                // cannot flake if the runner is slow to schedule this thread: as soon as the first
+                // retry is observed, the file is released well within the remaining retry budget.
+                await logger.RetryObserved.WaitAsync(TimeSpan.FromSeconds(30), TestContext.CancellationToken);
 
-            otherProcessFile.Dispose();
+                // The save must not have completed yet, otherwise it did not really
+                // wait for the other process to release the file.
+                saveTask.IsCompleted.Should().BeFalse();
 
-            await saveTask;
+                otherProcessFile.Dispose();
 
-            var telemetryConfigurations = await _configurationManager.LoadAsync(true, TestContext.CancellationToken);
+                await saveTask;
 
-            telemetryConfigurations.TelemetryEnabled.Should().BeTrue();
+                var telemetryConfigurations = await configurationManager.LoadAsync(true, TestContext.CancellationToken);
+
+                telemetryConfigurations.TelemetryEnabled.Should().BeTrue();
+            }
+            finally
+            {
+                if (File.Exists(configurationManager.ConfigPath))
+                {
+                    File.Delete(configurationManager.ConfigPath);
+                }
+            }
         }
 
         [TestMethod]

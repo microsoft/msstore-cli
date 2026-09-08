@@ -51,7 +51,7 @@ namespace MSStore.CLI
                                 TelemetrySourceGenerationContext.Default.TelemetryConfigurations,
                                 "telemetrySettings.json",
                                 null);
-            (TelemetryConfigurations telemetryConfigurations, bool telemetryConfigurationsReadable) = await LoadTelemetryConfigurationsAsync(telemetryConfigurationManager);
+            (TelemetryConfigurations telemetryConfigurations, bool telemetryConfigurationsReadable) = await telemetryConfigurationManager.TryLoadAsync();
             TelemetryClient telemetryClient = await CreateTelemetryClientAsync(telemetryConfigurationManager, telemetryConfigurations, telemetryConfigurationsReadable);
             var ansiConsole = AnsiConsole.Create(new()
             {
@@ -254,36 +254,6 @@ namespace MSStore.CLI
         }
 
         internal static string SessionId { get; } = Guid.NewGuid().ToString();
-
-        /// <summary>
-        /// Loads the telemetry configurations, reporting whether they could actually be read.
-        /// A concurrent invocation of the CLI may be holding the file, in which case the stored
-        /// preferences are unknown and must not be overwritten.
-        /// </summary>
-        private static async Task<(TelemetryConfigurations Configurations, bool Readable)> LoadTelemetryConfigurationsAsync(ConfigurationManager<TelemetryConfigurations> telemetryConfigurationManager)
-        {
-            try
-            {
-                // Do not repair yet, so that a locked file is distinguishable from an invalid one.
-                return (await telemetryConfigurationManager.LoadAsync(false, CancellationToken.None), true);
-            }
-            catch (IOException)
-            {
-                return (new TelemetryConfigurations(), false);
-            }
-            catch
-            {
-                // The file is invalid for some other reason. Repair it.
-                try
-                {
-                    return (await telemetryConfigurationManager.LoadAsync(true, CancellationToken.None), true);
-                }
-                catch (IOException)
-                {
-                    return (new TelemetryConfigurations(), false);
-                }
-            }
-        }
 
         private static async Task<TelemetryClient> CreateTelemetryClientAsync(ConfigurationManager<TelemetryConfigurations> telemetryConfigurationManager, TelemetryConfigurations telemetryConfigurations, bool telemetryConfigurationsReadable)
         {
