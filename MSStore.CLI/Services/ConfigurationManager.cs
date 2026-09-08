@@ -124,6 +124,15 @@ namespace MSStore.CLI.Services
                 // Do not repair yet, so that a locked file is distinguishable from an invalid one.
                 return (await LoadAsync(false, ct), true);
             }
+            catch (IOException ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+            {
+                // The file vanished between the existence check and the open. That leaves us in the
+                // same state as never having had one, so recreate the defaults instead of reporting
+                // the configuration as unknown and making callers abort on a benign race.
+                _logger?.LogWarning(ex, "Configuration file vanished while reading it: {SettingsPath}", _settingsPath);
+
+                return await TryRecreateAsync(ct);
+            }
             catch (IOException ex)
             {
                 // Whether this is contention or a genuine I/O failure, the file is there and we
@@ -139,19 +148,25 @@ namespace MSStore.CLI.Services
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
+                // The content is invalid. Recreate it rather than going through LoadAsync(true),
+                // which swallows a lock taken since the first attempt and would report a read that
+                // never happened.
                 _logger?.LogWarning(ex, "Invalid configuration file, recreating it: {SettingsPath}", _settingsPath);
 
-                // Recreate it directly rather than going through LoadAsync(true), which swallows a
-                // lock taken since the first attempt and would report a read that never happened.
-                try
-                {
-                    return (await ClearAsync(ct), true);
-                }
-                catch (Exception repairEx) when (repairEx is not OperationCanceledException)
-                {
-                    _logger?.LogWarning(repairEx, "Could not recreate the configuration file: {SettingsPath}", _settingsPath);
-                    return (new T(), false);
-                }
+                return await TryRecreateAsync(ct);
+            }
+        }
+
+        private async Task<(T Configurations, bool Readable)> TryRecreateAsync(CancellationToken ct)
+        {
+            try
+            {
+                return (await ClearAsync(ct), true);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger?.LogWarning(ex, "Could not recreate the configuration file: {SettingsPath}", _settingsPath);
+                return (new T(), false);
             }
         }
 
