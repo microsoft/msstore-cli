@@ -14,14 +14,15 @@ namespace MSStore.CLI.Services
 
         /// <summary>
         /// Loads the configuration, repairing invalid content, but reporting separately when the
-        /// file could not be read at all because another process holds it open, so callers can
-        /// avoid making destructive decisions based on a configuration they never actually read.
+        /// stored state could not be determined at all, so callers can avoid making destructive
+        /// decisions based on a configuration they never actually read.
         /// </summary>
         /// <returns>
         /// The loaded (or default) configuration, and whether the stored state is known.
-        /// The flag is <see langword="false"/> only when the file could not be opened because
-        /// another process holds it. A missing file (created with defaults) and repaired invalid
-        /// content both count as known, since in neither case are we discarding a real setting.
+        /// The flag is <see langword="false"/> when the file exists but could not be read or
+        /// recreated, whether because another process holds it or because of an I/O failure.
+        /// A missing file (created with defaults) and repaired invalid content both count as
+        /// known, since in neither case are we discarding a real setting.
         /// </returns>
         Task<(T Configurations, bool Readable)> TryLoadAsync(CancellationToken ct = default);
         Task<T> ClearAsync(CancellationToken ct);

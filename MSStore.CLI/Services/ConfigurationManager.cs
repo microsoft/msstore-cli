@@ -124,19 +124,27 @@ namespace MSStore.CLI.Services
                 // Do not repair yet, so that a locked file is distinguishable from an invalid one.
                 return (await LoadAsync(false, ct), true);
             }
-            catch (IOException)
+            catch (IOException ex)
             {
+                // Whether this is contention or a genuine I/O failure, the file is there and we
+                // could not read it, so the stored state is unknown and must not be reported as
+                // an empty configuration that the caller is free to act on.
+                _logger?.LogWarning(ex, "Could not read the configuration file: {SettingsPath}", _settingsPath);
                 return (new T(), false);
             }
-            catch
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                // The file is invalid for some other reason. Repair it.
+                _logger?.LogWarning(ex, "Invalid configuration file, recreating it: {SettingsPath}", _settingsPath);
+
+                // Recreate it directly rather than going through LoadAsync(true), which swallows a
+                // lock taken since the first attempt and would report a read that never happened.
                 try
                 {
-                    return (await LoadAsync(true, ct), true);
+                    return (await ClearAsync(ct), true);
                 }
-                catch (IOException)
+                catch (Exception repairEx) when (repairEx is not OperationCanceledException)
                 {
+                    _logger?.LogWarning(repairEx, "Could not recreate the configuration file: {SettingsPath}", _settingsPath);
                     return (new T(), false);
                 }
             }

@@ -214,11 +214,15 @@ namespace MSStore.CLI.UnitTests
                 .Setup(x => x.YesNoConfirmationAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
 
-            await ParseAndInvokeAsync(["reconfigure", "--reset"], expectedResult: -1);
+            var result = await ParseAndInvokeAsync(["reconfigure", "--reset"], expectedResult: -1);
 
             _credentialStore[ExistingClientId].Should().Be(ExistingSecret);
             FakeConfigurationManager.Verify(x => x.ClearAsync(It.IsAny<CancellationToken>()), Times.Never);
             TokenManager.Verify(x => x.ClearAllCacheAsync(), Times.Never);
+
+            // The default log level is Critical, so a LogError alone would leave the user staring at
+            // a bare -1. The reason has to reach the console.
+            result.Error.Should().Contain("Could not remove the credential for");
         }
 
         [TestMethod]
@@ -253,12 +257,16 @@ namespace MSStore.CLI.UnitTests
                 .Setup(x => x.YesNoConfirmationAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
 
-            await ParseAndInvokeAsync(["reconfigure", "--reset"], expectedResult: -1);
+            var result = await ParseAndInvokeAsync(["reconfigure", "--reset"], expectedResult: -1);
 
             _credentialStore[ExistingClientId].Should().Be(ExistingSecret);
             CredentialManager.Verify(x => x.ClearCredentials(It.IsAny<string>()), Times.Never);
             FakeConfigurationManager.Verify(x => x.ClearAsync(It.IsAny<CancellationToken>()), Times.Never);
             TokenManager.Verify(x => x.ClearAllCacheAsync(), Times.Never);
+
+            // The default log level is Critical, so a LogError alone would leave the user staring at
+            // a bare -1. The reason has to reach the console.
+            result.Error.Should().Contain("Could not read the configuration file.");
         }
 
         [TestMethod]
