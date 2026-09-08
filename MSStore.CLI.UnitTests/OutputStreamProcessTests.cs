@@ -12,6 +12,14 @@ namespace MSStore.CLI.UnitTests
     /// reach: <see cref="BaseCommandLineTest.ParseAndInvokeAsync"/> builds its own consoles and never runs
     /// <c>Main</c>. These run the built executable and read stdout and stderr separately.
     /// </summary>
+    /// <remarks>
+    /// Opt-in through <c>MSSTORE_RUN_PROCESS_TESTS</c>, which CI sets. Running the real executable also runs
+    /// <c>CreateTelemetryClientAsync</c>, which rewrites <c>telemetrySettings.json</c> whenever the telemetry
+    /// GUID is missing or older than 24 hours, and <c>ConfigurationManager</c> resolves that path through
+    /// <see cref="Environment.GetFolderPath(Environment.SpecialFolder)"/>, which ignores <c>LOCALAPPDATA</c>
+    /// and <c>HOME</c> on Windows. There is no way to redirect it at a temporary profile, so rather than
+    /// mutate a developer's real configuration these only run where that is harmless.
+    /// </remarks>
     [TestClass]
     public class OutputStreamProcessTests
     {
@@ -19,60 +27,15 @@ namespace MSStore.CLI.UnitTests
         // is written through the configured Spectre console, so it lands on whichever stream was selected.
         private const string HumanOutputMarker = "Command is";
 
-        private static readonly List<(string Path, string? Content)> TelemetrySettingsBackups = [];
+        private const string OptInEnvironmentVariable = "MSSTORE_RUN_PROCESS_TESTS";
 
-        /// <summary>
-        /// Program.Main loads (and may rewrite) telemetrySettings.json before it even parses --help. The
-        /// location comes from Environment.GetFolderPath, which ignores LOCALAPPDATA/HOME on Windows, so the
-        /// child cannot simply be pointed at a temporary profile. Snapshot the file instead and put it back,
-        /// so running the suite leaves the real configuration exactly as it found it.
-        /// </summary>
-        /// <param name="context">The test context.</param>
-        [ClassInitialize]
-        public static void BackUpTelemetrySettings(TestContext context)
+        [TestInitialize]
+        public void SkipUnlessOptedIn()
         {
-            foreach (var path in TelemetrySettingsPaths())
+            if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable(OptInEnvironmentVariable)))
             {
-                TelemetrySettingsBackups.Add((path, File.Exists(path) ? File.ReadAllText(path) : null));
-            }
-        }
-
-        [ClassCleanup]
-        public static void RestoreTelemetrySettings()
-        {
-            foreach (var (path, content) in TelemetrySettingsBackups)
-            {
-                if (content == null)
-                {
-                    File.Delete(path);
-                }
-                else
-                {
-                    File.WriteAllText(path, content);
-                }
-            }
-
-            TelemetrySettingsBackups.Clear();
-        }
-
-        private static IEnumerable<string> TelemetrySettingsPaths()
-        {
-            yield return Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Microsoft",
-                "MSStore.CLI",
-                "telemetrySettings.json");
-
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            {
-                // ConfigurationManager prefers the native ApplicationSupportDirectory on macOS.
-                yield return Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                    "Library",
-                    "Application Support",
-                    "Microsoft",
-                    "MSStore.CLI",
-                    "telemetrySettings.json");
+                Assert.Inconclusive(
+                    $"Set {OptInEnvironmentVariable} to run these tests. They execute the real CLI, which rewrites the telemetry settings of whoever runs them.");
             }
         }
 
@@ -144,13 +107,7 @@ namespace MSStore.CLI.UnitTests
 
         private static async Task<(int ExitCode, string StdOut, string StdErr)> RunCliAsync(string[] args, string? outputStreamEnvironmentValue)
         {
-            var cliPath = FindCliExecutable();
-            if (cliPath == null)
-            {
-                Assert.Inconclusive("The MSStore.CLI executable was not found. Build the solution before running this test.");
-            }
-
-            var startInfo = new ProcessStartInfo(cliPath)
+            var startInfo = new ProcessStartInfo(ResolveCliExecutable())
             {
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
@@ -192,17 +149,22 @@ namespace MSStore.CLI.UnitTests
             return (process.ExitCode, await stdOutTask, await stdErrTask);
         }
 
-        private static string? FindCliExecutable()
+        /// <summary>
+        /// Locates the CLI built alongside this test assembly.
+        /// </summary>
+        /// <returns>The full path to the executable.</returns>
+        /// <remarks>
+        /// A miss is a failure rather than a skip: these are the only tests covering the real
+        /// <see cref="Program"/> stream wiring, so quietly reporting green would drop that coverage the moment
+        /// the build layout changes.
+        /// </remarks>
+        private static string ResolveCliExecutable()
         {
             // The test binary lives in <repo>/MSStore.CLI.UnitTests/bin/<Configuration>/<TargetFramework>,
             // and the CLI is built alongside it under the same configuration and target framework.
             var testOutputDirectory = new DirectoryInfo(AppContext.BaseDirectory);
             var targetFramework = testOutputDirectory.Name;
             var configuration = testOutputDirectory.Parent?.Name;
-            if (configuration == null)
-            {
-                return null;
-            }
 
             var repositoryRoot = testOutputDirectory;
             while (repositoryRoot != null && !File.Exists(Path.Combine(repositoryRoot.FullName, "MSStore.CLI.sln")))
@@ -210,15 +172,20 @@ namespace MSStore.CLI.UnitTests
                 repositoryRoot = repositoryRoot.Parent;
             }
 
-            if (repositoryRoot == null)
+            if (configuration == null || repositoryRoot == null)
             {
-                return null;
+                Assert.Fail($"Could not locate MSStore.CLI.sln or the build configuration by walking up from '{AppContext.BaseDirectory}'.");
             }
 
             var fileName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "msstore.exe" : "msstore";
             var cliPath = Path.Combine(repositoryRoot.FullName, "MSStore.CLI", "bin", configuration, targetFramework, fileName);
 
-            return File.Exists(cliPath) ? cliPath : null;
+            if (!File.Exists(cliPath))
+            {
+                Assert.Fail($"The MSStore.CLI executable was not found at '{cliPath}'. Build MSStore.CLI.sln for configuration '{configuration}' and target framework '{targetFramework}' before running these tests.");
+            }
+
+            return cliPath;
         }
     }
 }

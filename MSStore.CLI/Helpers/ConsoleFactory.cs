@@ -23,7 +23,7 @@ namespace MSStore.CLI.Helpers
         /// instance keeps them on the selected stream instead of Spectre's default stdout console, and leaves
         /// stdout to <see cref="StandardOutput"/>.
         /// </remarks>
-        public static IAnsiConsole Create(OutputStream outputStream)
+        public static IAnsiConsole CreateAndInstall(OutputStream outputStream)
         {
             var useStdout = outputStream == OutputStream.Stdout;
 

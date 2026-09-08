@@ -53,7 +53,7 @@ namespace MSStore.CLI
             TelemetryConfigurations telemetryConfigurations = await telemetryConfigurationManager.LoadAsync(true, CancellationToken.None);
             TelemetryClient telemetryClient = await CreateTelemetryClientAsync(telemetryConfigurationManager, telemetryConfigurations);
             var (outputStream, outputStreamWarning) = OutputStreamResolver.Resolve(args);
-            var ansiConsole = ConsoleFactory.Create(outputStream);
+            var ansiConsole = ConsoleFactory.CreateAndInstall(outputStream);
 
             if (outputStreamWarning != null)
             {

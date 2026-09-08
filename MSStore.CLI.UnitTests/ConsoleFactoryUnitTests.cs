@@ -47,9 +47,9 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
-        public void CreateWritesToStandardErrorForStderr()
+        public void CreateAndInstallWritesToStandardErrorForStderr()
         {
-            var console = ConsoleFactory.Create(OutputStream.Stderr);
+            var console = ConsoleFactory.CreateAndInstall(OutputStream.Stderr);
 
             console.WriteLine(Marker);
 
@@ -58,9 +58,9 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
-        public void CreateWritesToStandardOutputForStdout()
+        public void CreateAndInstallWritesToStandardOutputForStdout()
         {
-            var console = ConsoleFactory.Create(OutputStream.Stdout);
+            var console = ConsoleFactory.CreateAndInstall(OutputStream.Stdout);
 
             console.WriteLine(Marker);
 
@@ -69,9 +69,9 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
-        public void CreateInstallsTheConsoleAsTheStaticConsole()
+        public void CreateAndInstallInstallsTheConsoleAsTheStaticConsole()
         {
-            var console = ConsoleFactory.Create(OutputStream.Stderr);
+            var console = ConsoleFactory.CreateAndInstall(OutputStream.Stderr);
 
             AnsiConsole.Console.Should().BeSameAs(console);
         }
@@ -81,7 +81,7 @@ namespace MSStore.CLI.UnitTests
         {
             // The apps/flights/info tables, the browser launcher and every ConsoleReader prompt write through
             // the static console, so it has to honour the selected stream too.
-            ConsoleFactory.Create(OutputStream.Stderr);
+            ConsoleFactory.CreateAndInstall(OutputStream.Stderr);
 
             AnsiConsole.WriteLine(Marker);
 
@@ -92,7 +92,7 @@ namespace MSStore.CLI.UnitTests
         [TestMethod]
         public void StaticWritesFollowStdout()
         {
-            ConsoleFactory.Create(OutputStream.Stdout);
+            ConsoleFactory.CreateAndInstall(OutputStream.Stdout);
 
             AnsiConsole.WriteLine(Marker);
 
