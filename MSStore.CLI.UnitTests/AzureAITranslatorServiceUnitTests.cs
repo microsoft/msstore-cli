@@ -17,6 +17,7 @@ namespace MSStore.CLI.UnitTests
         public TestContext TestContext { get; set; } = null!;
 
         private List<HttpRequestMessage> _requests = null!;
+        private List<string> _requestBodies = null!;
         private Queue<HttpResponseMessage> _responses = null!;
         private Mock<ICredentialManager> _credentialManager = null!;
         private Mock<IConfigurationManager<Configurations>> _configurationManager = null!;
@@ -27,6 +28,7 @@ namespace MSStore.CLI.UnitTests
         public void Init()
         {
             _requests = [];
+            _requestBodies = [];
             _responses = new Queue<HttpResponseMessage>();
 
             _credentialManager = new Mock<ICredentialManager>();
@@ -71,6 +73,23 @@ namespace MSStore.CLI.UnitTests
             uri.Should().Contain("api-version=3.0");
             uri.Should().Contain("to=en");
             uri.Should().NotContain("from=");
+        }
+
+        [TestMethod]
+        public async Task TranslateAsyncShouldSendTheDocumentedRequestBodyShape()
+        {
+            EnqueueJson(HttpStatusCode.OK, """[{"translations":[{"text":"hi","to":"en"}]}]""");
+
+            await CreateService().TranslateAsync(["olá"], "en", TestContext.CancellationToken);
+
+            // A bare JSON array whose elements carry the text under the name the Translator
+            // reference documents. Pinned so a change to the shared naming policy cannot
+            // silently alter the wire format.
+            var body = _requestBodies.Single();
+
+            body.Should().StartWith("[").And.EndWith("]");
+            body.Should().Contain("\"Text\":");
+            body.Should().Contain("ol\\u00E1");
         }
 
         [TestMethod]
@@ -359,7 +378,7 @@ namespace MSStore.CLI.UnitTests
 
         private AzureAITranslatorService CreateService()
         {
-            var handler = new StubHttpMessageHandler(_requests, _responses);
+            var handler = new StubHttpMessageHandler(_requests, _requestBodies, _responses);
 
             var httpClientFactory = new Mock<IHttpClientFactory>();
             httpClientFactory
@@ -377,15 +396,15 @@ namespace MSStore.CLI.UnitTests
                 NullLogger<AzureAITranslatorService>.Instance);
         }
 
-        private sealed class StubHttpMessageHandler(List<HttpRequestMessage> requests, Queue<HttpResponseMessage> responses) : HttpMessageHandler
+        private sealed class StubHttpMessageHandler(List<HttpRequestMessage> requests, List<string> requestBodies, Queue<HttpResponseMessage> responses) : HttpMessageHandler
         {
             protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
             {
-                // The body has to be buffered before the request is disposed by the caller.
-                if (request.Content != null)
-                {
-                    await request.Content.LoadIntoBufferAsync(cancellationToken);
-                }
+                // The body has to be read here: the caller disposes the request, and with it
+                // the content, as soon as the send completes.
+                requestBodies.Add(request.Content == null
+                    ? string.Empty
+                    : await request.Content.ReadAsStringAsync(cancellationToken));
 
                 requests.Add(request);
 
