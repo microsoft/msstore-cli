@@ -89,11 +89,13 @@ namespace MSStore.CLI.Commands.Settings
                         return await _telemetryClient.TrackCommandEventAsync<Handler>(-1, ct);
                     }
 
-                    _credentialManager.WriteCredential(AzureAITranslatorService.CredentialKeyName, key);
+                    // Keys and regions are frequently pasted or piped in with surrounding
+                    // whitespace, which is not valid in a request header.
+                    _credentialManager.WriteCredential(AzureAITranslatorService.CredentialKeyName, key.Trim());
 
                     if (!string.IsNullOrWhiteSpace(region))
                     {
-                        config.TranslatorRegion = region;
+                        config.TranslatorRegion = region.Trim();
                         await _configurationManager.SaveAsync(config, ct);
                     }
 

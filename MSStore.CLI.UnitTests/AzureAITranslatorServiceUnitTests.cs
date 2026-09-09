@@ -115,6 +115,55 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
+        public async Task TranslateAsyncShouldTrimEnvironmentSuppliedCredentials()
+        {
+            // A key pasted or piped in often carries a trailing newline, which is not valid
+            // in a header value and would otherwise throw before the request is sent.
+            _environmentInformationService
+                .Setup(x => x.GetEnvironmentVariable(AzureAITranslatorService.KeyEnvironmentVariable))
+                .Returns("  env-key\n");
+            _environmentInformationService
+                .Setup(x => x.GetEnvironmentVariable(AzureAITranslatorService.RegionEnvironmentVariable))
+                .Returns(" eastus \r\n");
+
+            EnqueueJson(HttpStatusCode.OK, """[{"translations":[{"text":"hi","to":"en"}]}]""");
+
+            await CreateService().TranslateAsync(["olá"], "en", TestContext.CancellationToken);
+
+            _requests.Single().Headers.GetValues("Ocp-Apim-Subscription-Key").Single().Should().Be("env-key");
+            _requests.Single().Headers.GetValues("Ocp-Apim-Subscription-Region").Single().Should().Be("eastus");
+        }
+
+        [TestMethod]
+        public async Task TranslateAsyncShouldTrimStoredCredentials()
+        {
+            _credentialManager
+                .Setup(x => x.ReadCredential(AzureAITranslatorService.CredentialKeyName))
+                .Returns($"{FakeKey}\n");
+            _configurations.TranslatorRegion = " westus2 ";
+
+            EnqueueJson(HttpStatusCode.OK, """[{"translations":[{"text":"hi","to":"en"}]}]""");
+
+            await CreateService().TranslateAsync(["olá"], "en", TestContext.CancellationToken);
+
+            _requests.Single().Headers.GetValues("Ocp-Apim-Subscription-Key").Single().Should().Be(FakeKey);
+            _requests.Single().Headers.GetValues("Ocp-Apim-Subscription-Region").Single().Should().Be("westus2");
+        }
+
+        [TestMethod]
+        public async Task TranslateAsyncShouldTreatWhitespaceOnlyKeyAsMissing()
+        {
+            _credentialManager
+                .Setup(x => x.ReadCredential(It.IsAny<string>()))
+                .Returns("   ");
+
+            var act = async () => await CreateService().TranslateAsync(["olá"], "en", TestContext.CancellationToken);
+
+            (await act.Should().ThrowAsync<TranslationException>())
+                .WithMessage("*MSSTORE_TRANSLATOR_KEY*set-translator-key*");
+        }
+
+        [TestMethod]
         public async Task TranslateAsyncShouldSkipEmptyEntriesButKeepPositions()
         {
             EnqueueJson(HttpStatusCode.OK, """

@@ -37,12 +37,14 @@ Provide the key through environment variables:
 | `MSSTORE_TRANSLATOR_KEY` | Yes | The Azure AI Translator resource key. |
 | `MSSTORE_TRANSLATOR_REGION` | Only for regional and multi-service resources | The resource region. Not needed for a global resource. |
 
-Or store them once in the OS secure store:
+Or store them once, so they persist between runs:
 
 ```
 msstore settings set-translator-key <key> --region <region>
 msstore settings set-translator-key --clear
 ```
+
+The key is held in the OS secure store; the region is not a secret and is saved in `settings.json`.
 
 Translation is billed per source character, per target language, against your own Azure subscription.
 

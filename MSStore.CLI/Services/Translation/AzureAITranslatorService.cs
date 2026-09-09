@@ -206,28 +206,39 @@ namespace MSStore.CLI.Services.Translation
             return backoff + TimeSpan.FromMilliseconds(Random.Shared.Next(0, 500));
         }
 
+        /// <summary>
+        /// Reads the Translator key, preferring the environment variable over the stored one.
+        /// </summary>
+        /// <remarks>
+        /// Values are trimmed because a key pasted or piped in often carries trailing
+        /// whitespace or a newline, and header values cannot contain either. An untrimmed
+        /// newline makes the request throw before it is ever sent, which surfaces as an
+        /// opaque failure rather than an authentication message.
+        /// </remarks>
+        /// <returns>The key, or null when none is configured.</returns>
         private string? GetKey()
         {
-            var fromEnvironment = _environmentInformationService.GetEnvironmentVariable(KeyEnvironmentVariable);
+            var fromEnvironment = _environmentInformationService.GetEnvironmentVariable(KeyEnvironmentVariable)?.Trim();
             if (!string.IsNullOrEmpty(fromEnvironment))
             {
                 return fromEnvironment;
             }
 
-            var stored = _credentialManager.ReadCredential(CredentialKeyName);
+            var stored = _credentialManager.ReadCredential(CredentialKeyName)?.Trim();
             return string.IsNullOrEmpty(stored) ? null : stored;
         }
 
         private async Task<string?> GetRegionAsync(CancellationToken ct)
         {
-            var fromEnvironment = _environmentInformationService.GetEnvironmentVariable(RegionEnvironmentVariable);
+            var fromEnvironment = _environmentInformationService.GetEnvironmentVariable(RegionEnvironmentVariable)?.Trim();
             if (!string.IsNullOrEmpty(fromEnvironment))
             {
                 return fromEnvironment;
             }
 
             var config = await _configurationManager.LoadAsync(ct: ct);
-            return string.IsNullOrEmpty(config.TranslatorRegion) ? null : config.TranslatorRegion;
+            var region = config.TranslatorRegion?.Trim();
+            return string.IsNullOrEmpty(region) ? null : region;
         }
 
         private async Task<Dictionary<string, TranslatorLanguage>?> GetSupportedLanguagesAsync(CancellationToken ct)
