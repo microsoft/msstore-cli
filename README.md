@@ -8,6 +8,46 @@ The Microsoft Store Developer Command Line Interface is a cross-platform (Window
 ## Helpful links
 * [Documentation](https://aka.ms/msstoredevcli/docs) - Microsoft's official documentation on regards to available commands, installation steps, how to properly setup CI/CD environments, and general guidance.
 
+## Reviews
+
+Read the Store reviews of a managed (MSIX) application:
+
+```
+msstore reviews list <productId>
+msstore reviews get <productId> <reviewId>
+```
+
+`list` renders a table and supports `--startDate`, `--endDate`, `--top`, `--skip`, `--rating` and `--market`. With no date options every review is returned; pass `--startDate`/`--endDate` to narrow the range. The `Id` column is the value `reviews get` takes.
+
+> Responding to reviews is not supported. Microsoft documents its [Store reviews API](https://learn.microsoft.com/windows/uwp/monetize/submit-responses-to-app-reviews) as "currently not in a working state", and points to [Partner Center](https://learn.microsoft.com/windows/apps/publish/analyze-msi-exe/ratings-reviews-performance) instead.
+
+### Translating reviews
+
+The Microsoft Store returns no translated text and no language information for reviews, so `--translate` uses [Azure AI Translator](https://learn.microsoft.com/azure/ai-services/translator/) with a key you supply:
+
+```
+msstore reviews list <productId> --translate      # translates into English
+msstore reviews list <productId> --translate pt   # translates into Portuguese
+```
+
+Provide the key through environment variables:
+
+| Variable | Required | Description |
+| --- | --- | --- |
+| `MSSTORE_TRANSLATOR_KEY` | Yes | The Azure AI Translator resource key. |
+| `MSSTORE_TRANSLATOR_REGION` | Only for regional and multi-service resources | The resource region. Not needed for a global resource. |
+
+Or store them once, so they persist between runs:
+
+```
+msstore settings set-translator-key <key> --region <region>
+msstore settings set-translator-key --clear
+```
+
+The key is held in the OS secure store; the region is not a secret and is saved in `settings.json`.
+
+Translation is billed per source character, per target language, against your own Azure subscription.
+
 ## Contributing
 
 This project welcomes contributions and suggestions.  Most contributions require you to agree to a
