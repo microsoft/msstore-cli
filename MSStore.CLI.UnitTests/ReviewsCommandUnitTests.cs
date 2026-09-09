@@ -113,6 +113,40 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
+        [DataRow("0")]
+        [DataRow("-5")]
+        public async Task ReviewsListCommandShouldRejectNonPositiveTop(string top)
+        {
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA",
+                    "--top",
+                    top
+                ],
+                -1);
+
+            result.Error.Should().Contain("--top must be at least 1.");
+        }
+
+        [TestMethod]
+        public async Task ReviewsListCommandShouldRejectNegativeSkip()
+        {
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA",
+                    "--skip",
+                    "-3"
+                ],
+                -1);
+
+            result.Error.Should().Contain("--skip cannot be negative.");
+        }
+
+        [TestMethod]
         public async Task ReviewsListCommandIsNotSupportedForUnpackagedApps()
         {
             var result = await ParseAndInvokeAsync(

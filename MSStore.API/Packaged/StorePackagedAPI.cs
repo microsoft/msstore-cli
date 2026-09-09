@@ -673,12 +673,24 @@ namespace MSStore.API.Packaged
 
         public async Task<PagedResponse<AppReview>> GetAppReviewsAsync(string productId, DateOnly? startDate = null, DateOnly? endDate = null, int? top = null, int? skip = null, string? filter = null, string? orderby = null, CancellationToken ct = default)
         {
-            AssertClientInitialized();
+            // Arguments are validated before the client state so that a bad value is always
+            // reported as such, rather than depending on initialization order.
+            if (top is < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(top), "The number of reviews to retrieve must be at least 1.");
+            }
 
             if (top is > MaxReviewsPerRequest)
             {
                 throw new ArgumentOutOfRangeException(nameof(top), $"The Microsoft Store analytics API accepts at most {MaxReviewsPerRequest} reviews per request.");
             }
+
+            if (skip is < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(skip), "The number of reviews to skip cannot be negative.");
+            }
+
+            AssertClientInitialized();
 
             var url = new StringBuilder(string.Format(
                 CultureInfo.InvariantCulture,

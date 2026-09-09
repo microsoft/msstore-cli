@@ -89,9 +89,21 @@ namespace MSStore.CLI.Commands.Reviews
                 }
 
                 var top = parseResult.GetValue(TopOption);
+                if (top is < 1)
+                {
+                    _ansiConsole.MarkupLine("[bold red]--top must be at least 1.[/]");
+                    return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, -1, ct);
+                }
+
                 if (top is > StorePackagedAPI.MaxReviewsPerRequest)
                 {
                     _ansiConsole.MarkupLine($"[bold red]--top cannot be greater than {StorePackagedAPI.MaxReviewsPerRequest}.[/]");
+                    return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, -1, ct);
+                }
+
+                if (parseResult.GetValue(SkipOption) is < 0)
+                {
+                    _ansiConsole.MarkupLine("[bold red]--skip cannot be negative.[/]");
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, -1, ct);
                 }
 
