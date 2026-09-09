@@ -990,12 +990,25 @@ namespace MSStore.CLI.UnitTests
         /// </remarks>
         /// <param name="value">The captured console output.</param>
         /// <returns>The output with escape sequences removed.</returns>
-        private static string StripAnsi(string? value)
+        internal static string StripAnsi(string? value)
         {
             return value == null ? string.Empty : AnsiEscapeSequence().Replace(value, string.Empty);
         }
 
-        [System.Text.RegularExpressions.GeneratedRegex("\u001b\\[[0-9;]*[A-Za-z]")]
+        /// <summary>
+        /// Matches ANSI escape sequences per ECMA-48.
+        /// </summary>
+        /// <remarks>
+        /// Covers more than the colour codes: CSI sequences may carry private parameters, as
+        /// in the cursor hide/show pair a status spinner emits, and OSC sequences carry the
+        /// hyperlinks produced by Spectre's link markup. Matching only digits and semicolons
+        /// would leave both in the captured output.
+        /// </remarks>
+        /// <returns>The compiled regular expression.</returns>
+        [System.Text.RegularExpressions.GeneratedRegex(
+            """
+            \u001b\[[0-?]*[ -/]*[@-~]|\u001b\][^\u0007\u001b]*(?:\u0007|\u001b\\)|\u001b[@-_]
+            """)]
         private static partial System.Text.RegularExpressions.Regex AnsiEscapeSequence();
 
         private OutputCapture RefreshAnsiConsole()
