@@ -168,7 +168,20 @@ namespace MSStore.CLI.Commands.Reviews
 
                 if (reviews.Count == 0)
                 {
-                    _ansiConsole.MarkupLine("This application has [bold][u]no[/] reviews[/] for the requested period.");
+                    // Only refer to a period or filters when the caller actually narrowed the
+                    // query. With no options the service returns reviews from every date, so
+                    // implying a range was applied would be misleading.
+                    var narrowedByDate = parseResult.NarrowedReviewsByDate();
+                    var narrowedByFilter = rating.HasValue || !string.IsNullOrWhiteSpace(parseResult.GetValue(MarketOption));
+
+                    _ansiConsole.MarkupLine((narrowedByDate, narrowedByFilter) switch
+                    {
+                        (true, true) => "This application has [bold][u]no[/] reviews[/] matching the requested period and filters.",
+                        (true, false) => "This application has [bold][u]no[/] reviews[/] for the requested period.",
+                        (false, true) => "This application has [bold][u]no[/] reviews[/] matching the requested filters.",
+                        (false, false) => "This application has [bold][u]no[/] reviews[/]."
+                    });
+
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, 0, ct);
                 }
 

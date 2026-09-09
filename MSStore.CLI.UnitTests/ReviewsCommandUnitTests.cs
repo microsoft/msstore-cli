@@ -138,7 +138,61 @@ namespace MSStore.CLI.UnitTests
                     "9PN3ABCDEFGA"
                 ]);
 
-            result.Error.Should().Contain("no");
+            result.Error.Should().Contain("This application has no reviews.");
+
+            // No date or filter option was passed, so the service returns reviews from every
+            // date. Referring to a period or filters here would misdirect the user.
+            result.Error.Should().NotContain("period");
+            result.Error.Should().NotContain("filters");
+        }
+
+        [TestMethod]
+        public async Task ReviewsListCommandShouldMentionThePeriodWhenNarrowedByDate()
+        {
+            FakeReviews.Clear();
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA",
+                    "--startDate",
+                    "2024-01-01"
+                ]);
+
+            result.Error.Should().Contain("for the requested period.");
+        }
+
+        [TestMethod]
+        public async Task ReviewsListCommandShouldMentionFiltersWhenNarrowedByFilter()
+        {
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA",
+                    "--market",
+                    "ZZ"
+                ]);
+
+            result.Error.Should().Contain("matching the requested filters.");
+        }
+
+        [TestMethod]
+        public async Task ReviewsListCommandShouldMentionBothWhenNarrowedByDateAndFilter()
+        {
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA",
+                    "--startDate",
+                    "2024-01-01",
+                    "--rating",
+                    "2"
+                ]);
+
+            result.Error.Should().Contain("matching the requested period and filters.");
         }
 
         [TestMethod]

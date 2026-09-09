@@ -123,13 +123,7 @@ namespace MSStore.CLI.Commands.Reviews
 
                 if (review == null)
                 {
-                    // Only mention the date range when the user actually narrowed it. Leaving
-                    // both options off sends no date parameters at all, and the service then
-                    // searches every review, so suggesting --startDate would be misleading.
-                    var narrowedByDate = parseResult.GetResult(ReviewsCommand.StartDateOption) != null
-                        || parseResult.GetResult(ReviewsCommand.EndDateOption) != null;
-
-                    _ansiConsole.MarkupLine(narrowedByDate
+                    _ansiConsole.MarkupLine(parseResult.NarrowedReviewsByDate()
                         ? $"Could not find review with ID '{reviewId.EscapeMarkup()}' within the requested date range. Try widening it with [bold]--startDate[/] and [bold]--endDate[/]."
                         : $"Could not find review with ID '{reviewId.EscapeMarkup()}'.");
 

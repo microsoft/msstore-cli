@@ -31,5 +31,21 @@ namespace MSStore.CLI.Helpers
 
             return string.IsNullOrWhiteSpace(language) ? ReviewsCommand.DefaultTranslateLanguage : language;
         }
+
+        /// <summary>
+        /// Indicates whether the caller narrowed the reviews query by date.
+        /// </summary>
+        /// <param name="parseResult">The parsed command line.</param>
+        /// <returns>True when --startDate or --endDate was supplied.</returns>
+        /// <remarks>
+        /// Leaving both options off sends no date parameters at all, and the service then
+        /// returns reviews from every date, so messages must not imply a date range was
+        /// applied in that case.
+        /// </remarks>
+        public static bool NarrowedReviewsByDate(this ParseResult parseResult)
+        {
+            return parseResult.GetResult(ReviewsCommand.StartDateOption) != null
+                || parseResult.GetResult(ReviewsCommand.EndDateOption) != null;
+        }
     }
 }
