@@ -146,6 +146,14 @@ namespace MSStore.CLI.Helpers
                 }
                 else if (string.Equals(arg, OptionName, StringComparison.Ordinal) && i + 1 < args.Count)
                 {
+                    // System.CommandLine treats a following `--` as the end-of-options marker rather than a
+                    // value, and reports the option's value as missing. Stop rather than consuming the marker
+                    // and carrying on past it, which would pick up a later literal the parser never accepts.
+                    if (string.Equals(args[i + 1], EndOfOptions, StringComparison.Ordinal))
+                    {
+                        break;
+                    }
+
                     value = args[i + 1];
                     i++;
                 }

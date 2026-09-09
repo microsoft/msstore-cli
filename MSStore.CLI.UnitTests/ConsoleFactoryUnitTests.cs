@@ -8,7 +8,8 @@ namespace MSStore.CLI.UnitTests
 {
     /// <summary>
     /// Covers the console that <see cref="Program"/> builds, including the static
-    /// <see cref="AnsiConsole.Console"/> assignment that the tables, prompts and browser launcher depend on.
+    /// <see cref="AnsiConsole.Console"/> assignment that the ConsoleReader prompts and the browser launcher
+    /// confirmation depend on.
     /// </summary>
     [TestClass]
     public class ConsoleFactoryUnitTests
@@ -79,8 +80,8 @@ namespace MSStore.CLI.UnitTests
         [TestMethod]
         public void StaticWritesFollowStderr()
         {
-            // The apps/flights/info tables, the browser launcher and every ConsoleReader prompt write through
-            // the static console, so it has to honour the selected stream too.
+            // The ConsoleReader prompts and the BrowserLauncher confirmation write through the static
+            // console, so it has to honour the selected stream too.
             ConsoleFactory.CreateAndInstall(OutputStream.Stderr);
 
             AnsiConsole.WriteLine(Marker);

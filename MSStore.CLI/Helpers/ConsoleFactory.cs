@@ -18,10 +18,10 @@ namespace MSStore.CLI.Helpers
         /// <param name="outputStream">The stream human-readable output should be written to.</param>
         /// <returns>The console, which is also registered in the service collection.</returns>
         /// <remarks>
-        /// A handful of call sites still reach for the static console — the apps, flights and info tables, the
-        /// browser launcher, and every <see cref="Services.ConsoleReader"/> prompt. Installing the same
-        /// instance keeps them on the selected stream instead of Spectre's default stdout console, and leaves
-        /// stdout to <see cref="StandardOutput"/>.
+        /// The <see cref="Services.ConsoleReader"/> prompts and the <see cref="Services.BrowserLauncher"/>
+        /// confirmation still reach for the static console. Installing the same instance keeps them on the
+        /// selected stream instead of Spectre's default stdout console, and leaves stdout to
+        /// <see cref="StandardOutput"/>.
         /// </remarks>
         public static IAnsiConsole CreateAndInstall(OutputStream outputStream)
         {

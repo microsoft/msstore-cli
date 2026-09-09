@@ -181,6 +181,28 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
+        public void ResolveDoesNotConsumeTheEndOfOptionsMarkerAsTheOptionValue()
+        {
+            // System.CommandLine reports a missing value here and treats the rest as literals, so the
+            // resolver must not take `--` as the value and then pick up the trailing token.
+            var (stream, _) = OutputStreamResolver.Resolve(
+                ["package", "--output-stream", "--", "--output-stream=stdout"],
+                null);
+
+            stream.Should().Be(OutputStream.Stderr);
+        }
+
+        [TestMethod]
+        public void ResolveKeepsAnEarlierValueWhenTheOptionLaterPrecedesTheEndOfOptionsMarker()
+        {
+            var (stream, _) = OutputStreamResolver.Resolve(
+                ["package", "--output-stream=stdout", "--output-stream", "--", "stderr"],
+                null);
+
+            stream.Should().Be(OutputStream.Stdout);
+        }
+
+        [TestMethod]
         public void ResolveReadsTheRealEnvironmentVariable()
         {
             Environment.SetEnvironmentVariable(EnvironmentInfo.OutputStreamEnvironmentVariable, "stdout");
