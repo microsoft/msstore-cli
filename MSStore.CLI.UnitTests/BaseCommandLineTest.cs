@@ -31,7 +31,10 @@ using Spectre.Console;
 
 namespace MSStore.CLI.UnitTests
 {
-    public class BaseCommandLineTest
+    /// <summary>
+    /// Shared host, mocks and console capture for command-line tests.
+    /// </summary>
+    public partial class BaseCommandLineTest
     {
         internal Mock<IConsoleReader> FakeConsole { get; private set; } = null!;
         internal Mock<IConfigurationManager<Configurations>> FakeConfigurationManager { get; private set; } = null!;
@@ -973,8 +976,27 @@ namespace MSStore.CLI.UnitTests
                 outputCapture.Captured.ToString().Should().NotContain("💥");
             }
 
-            return (Output: outputCapture.Captured.ToString() ?? string.Empty, Error: errorCapture.Captured.ToString() ?? string.Empty);
+            return (Output: StripAnsi(outputCapture.Captured.ToString()), Error: StripAnsi(errorCapture.Captured.ToString()));
         }
+
+        /// <summary>
+        /// Removes ANSI escape sequences so assertions can match the visible text.
+        /// </summary>
+        /// <remarks>
+        /// Spectre emits colour and style codes only when the underlying stream negotiates
+        /// ANSI support, which differs between a developer machine and CI. Without stripping,
+        /// an assertion on a string that spans a markup boundary (for example the "no reviews"
+        /// in "This application has [bold][u]no[/] reviews[/].") passes locally and fails on CI.
+        /// </remarks>
+        /// <param name="value">The captured console output.</param>
+        /// <returns>The output with escape sequences removed.</returns>
+        private static string StripAnsi(string? value)
+        {
+            return value == null ? string.Empty : AnsiEscapeSequence().Replace(value, string.Empty);
+        }
+
+        [System.Text.RegularExpressions.GeneratedRegex("\u001b\\[[0-9;]*[A-Za-z]")]
+        private static partial System.Text.RegularExpressions.Regex AnsiEscapeSequence();
 
         private OutputCapture RefreshAnsiConsole()
         {
