@@ -352,14 +352,21 @@ namespace MSStore.CLI.Services.Translation
                 // Fall through to the generic message below.
             }
 
-            if (response.Headers.TryGetValues("X-RequestId", out var requestIds))
-            {
-                _logger.LogError("Translator request failed. X-RequestId: {RequestId}. Body: {Body}", string.Join(',', requestIds), content);
-            }
-            else
-            {
-                _logger.LogError("Translator request failed with {StatusCode}. Body: {Body}", response.StatusCode, content);
-            }
+            var requestId = response.Headers.TryGetValues("X-RequestId", out var requestIds)
+                ? string.Join(',', requestIds)
+                : "(none)";
+
+            // The status, service error code and request id are enough to diagnose a failure
+            // and to raise a support case. The body is logged only at debug level because a
+            // failed request can echo back the submitted review text, which should not end up
+            // in CI logs collected at the default level.
+            _logger.LogError(
+                "Translator request failed with {StatusCode}. Service error code: {ErrorCode}. X-RequestId: {RequestId}.",
+                (int)response.StatusCode,
+                error?.Code,
+                requestId);
+
+            _logger.LogDebug("Translator error response body: {Body}", content);
 
             var message = error?.Code switch
             {
