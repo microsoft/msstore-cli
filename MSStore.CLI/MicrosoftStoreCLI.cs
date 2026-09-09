@@ -21,12 +21,36 @@ namespace MSStore.CLI
     {
         internal static Option<bool> VerboseOption { get; }
 
+        internal static Option<OutputStream> OutputStreamOption { get; }
+
         static MicrosoftStoreCLI()
         {
             VerboseOption = new Option<bool>("--verbose", "-v")
             {
                 DefaultValueFactory = _ => false,
                 Description = "Verbose output"
+            };
+
+            OutputStreamOption = new Option<OutputStream>(OutputStreamResolver.OptionName)
+            {
+                Description = $"The stream that human-readable progress and status output is written to. Defaults to '{nameof(OutputStream.Stderr)}', which keeps stdout for machine-readable payloads. Use '{nameof(OutputStream.Stdout)}' on Azure DevOps, which reports every stderr line as an error. Also settable through the {EnvironmentInfo.OutputStreamEnvironmentVariable} environment variable, which this option overrides.",
+
+                // The built-in enum converter also accepts the underlying numbers, which OutputStreamResolver
+                // rejects. That would let "--output-stream 1" parse as Stdout while the resolver, which is what
+                // actually selects the stream before the host is built, fell back to Stderr. Both sides share
+                // TryParse so there is a single contract. The arity is ExactlyOne, so a missing value fails to
+                // parse before this runs.
+                CustomParser = result =>
+                {
+                    var value = result.Tokens[0].Value;
+                    if (OutputStreamResolver.TryParse(value, out var outputStream))
+                    {
+                        return outputStream;
+                    }
+
+                    result.AddError($"Cannot parse argument '{value}' for option '{OutputStreamResolver.OptionName}'. Expected '{nameof(OutputStream.Stdout)}' or '{nameof(OutputStream.Stderr)}'.");
+                    return OutputStream.Stderr;
+                }
             };
         }
 

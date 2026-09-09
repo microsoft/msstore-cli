@@ -79,7 +79,7 @@ namespace MSStore.CLI.Commands.Flights
                         i++;
                     }
 
-                    AnsiConsole.Write(table);
+                    _ansiConsole.Write(table);
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(0, ct);
                 }
                 else
