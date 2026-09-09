@@ -385,7 +385,7 @@ namespace MSStore.API.Packaged
         {
             try
             {
-                return await GetAllPagesAsync<DevCenterFlight>((skip, top, ct) => GetFlightsAsync(productId, skip, top, ct), ct).ToListAsync(ct);
+                return await GetAllPagesAsync<DevCenterFlight>((skip, top, token) => GetFlightsAsync(productId, skip, top, token), ct).ToListAsync(ct);
             }
             catch (Exception error)
             {
@@ -667,21 +667,23 @@ namespace MSStore.API.Packaged
         private static async IAsyncEnumerable<T> GetAllPagesAsync<T>(Func<int, int, CancellationToken, Task<PagedResponse<T>>> pageFunc, [EnumeratorCancellation] CancellationToken ct = default)
         {
             int skip = 0;
-            const int top = 100;
+            const int top = 10;
             PagedResponse<T>? lastPage;
             do
             {
                 ct.ThrowIfCancellationRequested();
 
                 lastPage = await pageFunc(skip, top, ct);
-                skip += top;
+                skip += lastPage.Value?.Count ?? 0;
 
                 foreach (var item in lastPage.Value ?? [])
                 {
+                    ct.ThrowIfCancellationRequested();
+
                     yield return item;
                 }
             }
-            while (lastPage is { NextLink.Length: > 0, Value.Count: top });
+            while (!string.IsNullOrEmpty(lastPage.NextLink) && skip < lastPage.TotalCount);
         }
     }
 }
