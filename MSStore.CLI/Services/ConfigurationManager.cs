@@ -48,10 +48,30 @@ namespace MSStore.CLI.Services
                 // when neither XDG_DATA_HOME, nor HOME, nor the passwd entry are available). Falling back to a
                 // relative path would make the settings file depend on the current working directory, so a
                 // rooted, invocation-independent location is used instead.
-                localApplicationDataPath = Path.Combine(Path.GetTempPath(), $".msstore-cli-{Environment.UserName}");
+                localApplicationDataPath = Path.Combine(Path.GetTempPath(), GetTemporarySettingsFolderName());
             }
 
             return Path.GetFullPath(Path.Combine(localApplicationDataPath, "Microsoft", "MSStore.CLI"));
+        }
+
+        /// <summary>
+        /// Builds the name of the folder used, inside the temporary folder, when the local application data
+        /// folder cannot be resolved. The user name is appended, when it is usable as a folder name, so that
+        /// different users on the same machine do not share the same settings folder.
+        /// </summary>
+        /// <returns>The temporary settings folder name.</returns>
+        private static string GetTemporarySettingsFolderName()
+        {
+            const string FolderName = ".msstore-cli";
+
+            var userName = Environment.UserName;
+
+            if (string.IsNullOrWhiteSpace(userName) || userName.AsSpan().IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            {
+                return FolderName;
+            }
+
+            return $"{FolderName}-{userName}";
         }
 
         private static string GetSystemLocalApplicationDataPath()
