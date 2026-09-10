@@ -57,12 +57,18 @@ namespace MSStore.CLI.UnitTests
         [TestMethod]
         public void ConfigurationManager_ShouldIgnoreRelativeSettingsDirectoryEnvironmentVariable()
         {
-            Environment.SetEnvironmentVariable(ConfigurationManager<Configurations>.SettingsDirectoryEnvironmentVariable, Path.Combine("relative", "settings"));
+            var relativeSettingsDirectory = Path.Combine("relative", "settings");
+
+            Environment.SetEnvironmentVariable(ConfigurationManager<Configurations>.SettingsDirectoryEnvironmentVariable, relativeSettingsDirectory);
 
             var configurationManager = CreateConfigurationManager();
 
+            // The path that would have been used if the relative override had been honored, which is anchored
+            // at the current working directory and would therefore move with it.
+            var honoredOverridePath = Path.Combine(Path.GetFullPath(relativeSettingsDirectory), "settings.json");
+
             Path.IsPathRooted(configurationManager.ConfigPath).Should().BeTrue();
-            configurationManager.ConfigPath.Should().NotContain("relative");
+            configurationManager.ConfigPath.Should().NotBe(honoredOverridePath);
         }
 
         [TestMethod]
