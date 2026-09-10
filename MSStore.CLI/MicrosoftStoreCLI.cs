@@ -118,7 +118,7 @@ namespace MSStore.CLI
 
             if (config.SellerId == null)
             {
-                logger.LogCritical("SellerId is not set. No configuration was found at '{SettingsPath}'. Please, run the 'reconfigure' command.", configurationManager.ConfigPath);
+                logger.LogCritical("SellerId is not set. Settings file path: '{SettingsPath}'. Please, run the 'reconfigure' command.", configurationManager.ConfigPath);
                 return false;
             }
 
