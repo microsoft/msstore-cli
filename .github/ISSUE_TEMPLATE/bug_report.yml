@@ -1,0 +1,97 @@
+name: Bug report
+description: Report unexpected behavior or a crash in the Microsoft Store Developer CLI.
+title: "[Bug]: "
+labels:
+  - bug
+type: Bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve MSStore CLI.
+
+        Please search [existing issues](https://github.com/microsoft/msstore-cli/issues) before filing a new one.
+
+        **Do not paste secrets** (client secrets, certificates, tokens, or Partner Center credentials).
+        Security vulnerabilities must be reported privately — see [SECURITY.md](https://github.com/microsoft/msstore-cli/blob/main/SECURITY.md).
+  - type: dropdown
+    id: area
+    attributes:
+      label: Relevant command / area
+      description: Where did the problem show up?
+      multiple: true
+      options:
+        - init
+        - info
+        - reconfigure
+        - settings
+        - package
+        - publish
+        - apps
+        - submission
+        - flights
+        - other / not sure
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug
+      description: A clear and concise summary of what went wrong.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps someone else can follow.
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happened instead? Include error messages.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Output of `msstore --version` plus OS and how you installed the CLI.
+      render: shell
+      placeholder: |
+        msstore --version:
+        OS (Windows / macOS / Linux + version):
+        Install method (WinGet / dotnet tool / GitHub release / built from source):
+        Project type if relevant (MSIX, MSI/EXE, Flutter, PWA, Electron, …):
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Optional. Re-run with `--verbose` and paste the relevant output. Redact secrets.
+      render: shell
+    validations:
+      required: false
+  - type: checkboxes
+    id: search
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and this is not a duplicate
+          required: true
+        - label: This is not a security vulnerability (those go to MSRC, not GitHub)
+          required: true
