@@ -66,7 +66,7 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
-        public async Task ConfigurationManager_LoadShouldNotCreateSettingsDirectoryIfItDoesNotExist()
+        public async Task ConfigurationManager_LoadShouldNotWriteAnythingIfSettingsFileDoesNotExist()
         {
             var configurationManager = CreateConfigurationManager();
 
@@ -74,16 +74,6 @@ namespace MSStore.CLI.UnitTests
 
             config.SellerId.Should().BeNull();
             Directory.Exists(_settingsDirectory).Should().BeFalse();
-        }
-
-        [TestMethod]
-        public async Task ConfigurationManager_LoadShouldNotCreateSettingsFileIfItDoesNotExist()
-        {
-            var configurationManager = CreateConfigurationManager();
-
-            var config = await configurationManager.LoadAsync(false, CancellationToken.None);
-
-            config.SellerId.Should().BeNull();
             File.Exists(configurationManager.ConfigPath).Should().BeFalse();
         }
 
