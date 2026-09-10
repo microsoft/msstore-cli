@@ -21,8 +21,9 @@ namespace MSStore.CLI.Services
     {
         /// <summary>
         /// Environment variable that overrides the directory where the CLI stores its settings files.
-        /// Useful when the user's local application data folder cannot be resolved, or is not stable
-        /// between invocations (containers without a passwd entry, ephemeral <c>HOME</c> directories, etc).
+        /// Must be set to an absolute path. Useful when the user's local application data folder cannot be
+        /// resolved, or is not stable between invocations (containers without a passwd entry, ephemeral
+        /// <c>HOME</c> directories, etc).
         /// </summary>
         internal static readonly string SettingsDirectoryEnvironmentVariable = "MSSTORE_SETTINGS_DIRECTORY";
 
@@ -31,13 +32,25 @@ namespace MSStore.CLI.Services
         /// it can never be interpreted relative to the current working directory, which would make the settings
         /// files resolve to different locations depending on where the CLI happens to be invoked from.
         /// </summary>
+        /// <param name="logger">Logger used to report an unusable override.</param>
         /// <returns>The rooted settings directory path.</returns>
-        private static string GetSettingsDirectory()
+        private static string GetSettingsDirectory(ILogger? logger)
         {
             var settingsDirectoryOverride = Environment.GetEnvironmentVariable(SettingsDirectoryEnvironmentVariable);
             if (!string.IsNullOrWhiteSpace(settingsDirectoryOverride))
             {
-                return Path.GetFullPath(settingsDirectoryOverride);
+                // A relative override would put the settings files at a different place for each working
+                // directory the CLI is invoked from, which is exactly what this resolution avoids, so it is
+                // ignored rather than honored.
+                if (Path.IsPathRooted(settingsDirectoryOverride))
+                {
+                    return Path.GetFullPath(settingsDirectoryOverride);
+                }
+
+                logger?.LogWarning(
+                    "Ignoring the {EnvironmentVariable} environment variable: '{SettingsDirectory}' is not an absolute path.",
+                    SettingsDirectoryEnvironmentVariable,
+                    settingsDirectoryOverride);
             }
 
             var localApplicationDataPath = GetSystemLocalApplicationDataPath();
@@ -96,7 +109,7 @@ namespace MSStore.CLI.Services
             return Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         }
 
-        private readonly string _settingsPath = Path.Combine(GetSettingsDirectory(), fileName);
+        private readonly string _settingsPath = Path.Combine(GetSettingsDirectory(logger), fileName);
         private readonly JsonTypeInfo<T> _jsonTypeInfo = jsonTypeInfo ?? throw new ArgumentNullException(nameof(jsonTypeInfo));
         private readonly ILogger? _logger = logger;
 
@@ -106,7 +119,8 @@ namespace MSStore.CLI.Services
         {
             try
             {
-                EnsureDirectoryExists();
+                // No directory is created here on purpose: loading the configuration must not require write
+                // access, so that a missing settings file can always fall back to the default settings.
                 if (!File.Exists(_settingsPath))
                 {
                     _logger?.LogInformation("Settings file not found at '{SettingsPath}'. Using the default settings.", _settingsPath);

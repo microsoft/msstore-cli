@@ -55,6 +55,28 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
+        public void ConfigurationManager_ShouldIgnoreRelativeSettingsDirectoryEnvironmentVariable()
+        {
+            Environment.SetEnvironmentVariable(ConfigurationManager<Configurations>.SettingsDirectoryEnvironmentVariable, Path.Combine("relative", "settings"));
+
+            var configurationManager = CreateConfigurationManager();
+
+            Path.IsPathRooted(configurationManager.ConfigPath).Should().BeTrue();
+            configurationManager.ConfigPath.Should().NotContain("relative");
+        }
+
+        [TestMethod]
+        public async Task ConfigurationManager_LoadShouldNotCreateSettingsDirectoryIfItDoesNotExist()
+        {
+            var configurationManager = CreateConfigurationManager();
+
+            var config = await configurationManager.LoadAsync(false, CancellationToken.None);
+
+            config.SellerId.Should().BeNull();
+            Directory.Exists(_settingsDirectory).Should().BeFalse();
+        }
+
+        [TestMethod]
         public async Task ConfigurationManager_LoadShouldNotCreateSettingsFileIfItDoesNotExist()
         {
             var configurationManager = CreateConfigurationManager();
