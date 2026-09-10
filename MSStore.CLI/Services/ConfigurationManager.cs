@@ -19,7 +19,40 @@ namespace MSStore.CLI.Services
     internal class ConfigurationManager<T>(JsonTypeInfo<T> jsonTypeInfo, string fileName, ILogger<ConfigurationManager<T>>? logger) : IConfigurationManager<T>
         where T : new()
     {
-        private static readonly string SettingsDirectory = Path.Combine(GetSystemLocalApplicationDataPath(), "Microsoft", "MSStore.CLI");
+        /// <summary>
+        /// Environment variable that overrides the directory where the CLI stores its settings files.
+        /// Useful when the user's local application data folder cannot be resolved, or is not stable
+        /// between invocations (containers without a passwd entry, ephemeral <c>HOME</c> directories, etc).
+        /// </summary>
+        internal static readonly string SettingsDirectoryEnvironmentVariable = "MSSTORE_SETTINGS_DIRECTORY";
+
+        /// <summary>
+        /// Resolves the directory where the settings files live. The returned path is always rooted, so that
+        /// it can never be interpreted relative to the current working directory, which would make the settings
+        /// files resolve to different locations depending on where the CLI happens to be invoked from.
+        /// </summary>
+        /// <returns>The rooted settings directory path.</returns>
+        private static string GetSettingsDirectory()
+        {
+            var settingsDirectoryOverride = Environment.GetEnvironmentVariable(SettingsDirectoryEnvironmentVariable);
+            if (!string.IsNullOrWhiteSpace(settingsDirectoryOverride))
+            {
+                return Path.GetFullPath(settingsDirectoryOverride);
+            }
+
+            var localApplicationDataPath = GetSystemLocalApplicationDataPath();
+
+            if (string.IsNullOrEmpty(localApplicationDataPath) || !Path.IsPathRooted(localApplicationDataPath))
+            {
+                // The system could not tell us where the local application data folder is (for instance, on Unix,
+                // when neither XDG_DATA_HOME, nor HOME, nor the passwd entry are available). Falling back to a
+                // relative path would make the settings file depend on the current working directory, so a
+                // rooted, invocation-independent location is used instead.
+                localApplicationDataPath = Path.Combine(Path.GetTempPath(), $".msstore-cli-{Environment.UserName}");
+            }
+
+            return Path.GetFullPath(Path.Combine(localApplicationDataPath, "Microsoft", "MSStore.CLI"));
+        }
 
         private static string GetSystemLocalApplicationDataPath()
         {
@@ -43,7 +76,7 @@ namespace MSStore.CLI.Services
             return Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         }
 
-        private readonly string _settingsPath = Path.Combine(SettingsDirectory, fileName);
+        private readonly string _settingsPath = Path.Combine(GetSettingsDirectory(), fileName);
         private readonly JsonTypeInfo<T> _jsonTypeInfo = jsonTypeInfo ?? throw new ArgumentNullException(nameof(jsonTypeInfo));
         private readonly ILogger? _logger = logger;
 
@@ -56,7 +89,9 @@ namespace MSStore.CLI.Services
                 EnsureDirectoryExists();
                 if (!File.Exists(_settingsPath))
                 {
-                    return await ClearAsync(ct);
+                    _logger?.LogInformation("Settings file not found at '{SettingsPath}'. Using the default settings.", _settingsPath);
+
+                    return new T();
                 }
 
                 using var file = File.Open(_settingsPath, FileMode.Open);
@@ -88,6 +123,7 @@ namespace MSStore.CLI.Services
 
         public async Task SaveAsync(T config, CancellationToken ct)
         {
+            EnsureDirectoryExists();
             using var file = File.Open(_settingsPath, FileMode.OpenOrCreate);
             file.SetLength(0);
             file.Position = 0;
@@ -96,14 +132,16 @@ namespace MSStore.CLI.Services
 
         private void EnsureDirectoryExists()
         {
-            if (Directory.Exists(SettingsDirectory))
+            var settingsDirectory = Path.GetDirectoryName(_settingsPath)!;
+
+            if (Directory.Exists(settingsDirectory))
             {
                 return;
             }
 
-            _logger?.LogInformation("Creating settings directory: {SettingsDirectory}", SettingsDirectory);
+            _logger?.LogInformation("Creating settings directory: {SettingsDirectory}", settingsDirectory);
 
-            _ = Directory.CreateDirectory(SettingsDirectory);
+            _ = Directory.CreateDirectory(settingsDirectory);
         }
     }
 }

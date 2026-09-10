@@ -8,6 +8,12 @@ The Microsoft Store Developer Command Line Interface is a cross-platform (Window
 ## Helpful links
 * [Documentation](https://aka.ms/msstoredevcli/docs) - Microsoft's official documentation on regards to available commands, installation steps, how to properly setup CI/CD environments, and general guidance.
 
+## Settings location
+
+The CLI stores its (non-secret) configuration in a `settings.json` file, inside the `Microsoft/MSStore.CLI` folder of the user's local application data folder (`%LOCALAPPDATA%` on Windows, `~/Library/Application Support` on MacOS, and `$XDG_DATA_HOME`/`~/.local/share` on Linux). Secrets are never stored in this file, they always go to the operating system's credential store.
+
+If that folder cannot be resolved, or is not stable between invocations (containers without a `passwd` entry, or CI setups that use an ephemeral `HOME`, for example), set the `MSSTORE_SETTINGS_DIRECTORY` environment variable to an absolute path, and the CLI will read and write its settings files there.
+
 ## Contributing
 
 This project welcomes contributions and suggestions.  Most contributions require you to agree to a
