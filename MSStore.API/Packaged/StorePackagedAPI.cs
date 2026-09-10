@@ -683,7 +683,7 @@ namespace MSStore.API.Packaged
                     yield return item;
                 }
             }
-            while (!string.IsNullOrEmpty(lastPage.NextLink) && lastPage.Value?.Count > 0 && skip < lastPage.TotalCount);
+            while (!string.IsNullOrEmpty(lastPage.NextLink) && lastPage.Value?.Count > 0 && (lastPage.TotalCount <= 0 || skip < lastPage.TotalCount));
         }
     }
 }
