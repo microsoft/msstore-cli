@@ -7,8 +7,12 @@ using Spectre.Console;
 namespace MSStore.CLI.Helpers
 {
     /// <summary>
-    /// Builds the console that every human-readable write goes through.
+    /// Builds the console that application output goes through.
     /// </summary>
+    /// <remarks>
+    /// System.CommandLine's help and parse diagnostics do not use this console. They go through
+    /// <c>InvocationConfiguration</c>, which <see cref="Program"/> deliberately leaves at its defaults.
+    /// </remarks>
     internal static class ConsoleFactory
     {
         /// <summary>

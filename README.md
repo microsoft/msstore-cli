@@ -23,19 +23,21 @@ Two things sit outside the option's scope on purpose, matching the behavior of o
 * `--help` is always written to stdout, so that `msstore --help | more` works, and command line parse errors are always written to stderr, because they accompany a non-zero exit code.
 
 > [!WARNING]
-> **Behavior change.** Human-readable output previously went to stdout. It now defaults to stderr,
-> including the `apps list`, `flights list` and `info` tables, prompts, and status messages. Scripts
-> that piped or captured that output, such as `msstore apps list | grep ...` or
+> **Behavior change.** The `apps list`, `flights list` and `info` tables, the interactive prompts and
+> the browser confirmation used to go to stdout. They now go to stderr with everything else meant for
+> a human. Scripts that piped or captured them, such as `msstore apps list | grep ...` or
 > `msstore info > file`, will see nothing on stdout — with a zero exit code and no diagnostic.
 >
 > Either of these restores a working script:
 >
-> * `--output-stream stdout`, or `MSSTORE_OUTPUT_STREAM=stdout` for a whole job, which is a complete
->   one-flag rollback to the previous routing, or
-> * `2>&1`, to merge the two streams.
+> * `2>&1`, to merge the two streams, or
+> * `--output-stream stdout`, or `MSSTORE_OUTPUT_STREAM=stdout` for a whole job, which puts **all**
+>   human-readable output on stdout. Note that this is not the old routing: progress, status and
+>   verbose logging already went to stderr before this change, so a script will now also receive that
+>   text alongside the table it was after.
 >
 > Machine-readable payloads (`submission get`, `apps get`, `package`) were already on stdout and are
-> unaffected.
+> unaffected either way.
 
 ### Azure DevOps
 
