@@ -28,12 +28,13 @@ namespace MSStore.CLI.Commands
             };
         }
 
-        public SettingsCommand(SetPublisherDisplayNameCommand setPublisherDisplayNameCommand)
+        public SettingsCommand(SetPublisherDisplayNameCommand setPublisherDisplayNameCommand, SetTranslatorKeyCommand setTranslatorKeyCommand)
             : base("settings", "Change settings of the Microsoft Store Developer CLI.")
         {
             Options.Add(EnableTelemetryOption);
 
             Subcommands.Add(setPublisherDisplayNameCommand);
+            Subcommands.Add(setTranslatorKeyCommand);
         }
 
         public class Handler(TelemetryClient telemetryClient, IConfigurationManager<TelemetryConfigurations> telemetryConfigurationManager, IConfigurationManager<Configurations> configurationManager, ILogger<SettingsCommand.Handler> logger) : AsynchronousCommandLineAction

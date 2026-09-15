@@ -17,6 +17,7 @@ namespace MSStore.CLI
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ReconfigureCommand.Handler))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(SettingsCommand.Handler))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Commands.Settings.SetPublisherDisplayNameCommand.Handler))]
+        [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Commands.Settings.SetTranslatorKeyCommand.Handler))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Commands.Apps.ListCommand.Handler))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Commands.Apps.GetCommand.Handler))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Commands.Submission.StatusCommand.Handler))]
@@ -45,6 +46,8 @@ namespace MSStore.CLI
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Commands.Flights.Submission.Rollout.UpdateCommand.Handler))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Commands.Flights.Submission.Rollout.HaltCommand.Handler))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Commands.Flights.Submission.Rollout.FinalizeCommand.Handler))]
+        [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Commands.Reviews.ListCommand.Handler))]
+        [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Commands.Reviews.GetCommand.Handler))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(PackageCommand.Handler))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(PublishCommand.Handler))]
         [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(MicrosoftStoreCLI.Handler))]
@@ -59,6 +62,7 @@ namespace MSStore.CLI
                         .UseCommandHandler<ReconfigureCommand, ReconfigureCommand.Handler>()
                         .UseCommandHandler<SettingsCommand, SettingsCommand.Handler>()
                         .UseCommandHandler<Commands.Settings.SetPublisherDisplayNameCommand, Commands.Settings.SetPublisherDisplayNameCommand.Handler>()
+                        .UseCommandHandler<Commands.Settings.SetTranslatorKeyCommand, Commands.Settings.SetTranslatorKeyCommand.Handler>()
                         .UseCommandHandler<PackageCommand, PackageCommand.Handler>()
                         .UseCommandHandler<PublishCommand, PublishCommand.Handler>()
                         .ConfigureCommand<AppsCommand>()
@@ -95,6 +99,9 @@ namespace MSStore.CLI
                         .UseCommandHandler<Commands.Flights.Submission.Rollout.UpdateCommand, Commands.Flights.Submission.Rollout.UpdateCommand.Handler>()
                         .UseCommandHandler<Commands.Flights.Submission.Rollout.HaltCommand, Commands.Flights.Submission.Rollout.HaltCommand.Handler>()
                         .UseCommandHandler<Commands.Flights.Submission.Rollout.FinalizeCommand, Commands.Flights.Submission.Rollout.FinalizeCommand.Handler>()
+                        .ConfigureCommand<ReviewsCommand>()
+                        .UseCommandHandler<Commands.Reviews.ListCommand, Commands.Reviews.ListCommand.Handler>()
+                        .UseCommandHandler<Commands.Reviews.GetCommand, Commands.Reviews.GetCommand.Handler>()
                         .UseCommandHandler<MicrosoftStoreCLI, MicrosoftStoreCLI.Handler>();
                 });
         }

@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,5 +33,6 @@ namespace MSStore.API.Packaged
         Task<PackageRollout> UpdatePackageRolloutPercentageAsync(string productId, string submissionId, string? flightId, float percentage, CancellationToken ct = default);
         Task<PackageRollout> HaltPackageRolloutAsync(string productId, string submissionId, string? flightId, CancellationToken ct = default);
         Task<PackageRollout> FinalizePackageRolloutAsync(string productId, string submissionId, string? flightId, CancellationToken ct = default);
+        Task<PagedResponse<AppReview>> GetAppReviewsAsync(string productId, DateOnly? startDate = null, DateOnly? endDate = null, int? top = null, int? skip = null, string? filter = null, string? orderby = null, CancellationToken ct = default);
     }
 }

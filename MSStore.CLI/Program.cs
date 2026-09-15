@@ -28,6 +28,7 @@ using MSStore.CLI.Services.PartnerCenter;
 using MSStore.CLI.Services.PWABuilder;
 using MSStore.CLI.Services.Telemetry;
 using MSStore.CLI.Services.TokenManager;
+using MSStore.CLI.Services.Translation;
 using OpenTelemetry;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Resources;
@@ -110,6 +111,7 @@ namespace MSStore.CLI
                         .AddScoped<IElectronManifestManager, ElectronManifestManager>()
                         .AddScoped<INuGetPackageManager, NuGetPackageManager>()
                         .AddScoped<IAppXManifestManager, AppXManifestManager>()
+                        .AddScoped<ITranslationService, AzureAITranslatorService>()
                         .AddSingleton<IEnvironmentInformationService, EnvironmentInformationService>()
                         .AddSingleton(telemetryClient);
 
@@ -161,6 +163,22 @@ namespace MSStore.CLI
                         })
                         .ConfigurePrimaryHttpMessageHandler(() =>
                         {
+                            return new HttpClientHandler
+                            {
+                                CheckCertificateRevocationList = true
+                            };
+                        });
+
+                    services
+                        .AddHttpClient(nameof(AzureAITranslatorService), client =>
+                        {
+                            client.BaseAddress = new Uri("https://api.cognitive.microsofttranslator.com");
+                        })
+                        .ConfigurePrimaryHttpMessageHandler(() =>
+                        {
+                            // Deliberately not RetryAfterHttpHandler: it retries 429s forever
+                            // with no attempt cap, and Translator does not document a
+                            // Retry-After header. AzureAITranslatorService backs off itself.
                             return new HttpClientHandler
                             {
                                 CheckCertificateRevocationList = true

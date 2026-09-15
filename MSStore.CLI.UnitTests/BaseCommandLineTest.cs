@@ -3,6 +3,7 @@
 
 using System.CommandLine;
 using System.CommandLine.Invocation;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -25,11 +26,15 @@ using MSStore.CLI.Services.PartnerCenter;
 using MSStore.CLI.Services.PWABuilder;
 using MSStore.CLI.Services.Telemetry;
 using MSStore.CLI.Services.TokenManager;
+using MSStore.CLI.Services.Translation;
 using Spectre.Console;
 
 namespace MSStore.CLI.UnitTests
 {
-    public class BaseCommandLineTest
+    /// <summary>
+    /// Shared host, mocks and console capture for command-line tests.
+    /// </summary>
+    public partial class BaseCommandLineTest
     {
         internal Mock<IConsoleReader> FakeConsole { get; private set; } = null!;
         internal Mock<IConfigurationManager<Configurations>> FakeConfigurationManager { get; private set; } = null!;
@@ -46,6 +51,7 @@ namespace MSStore.CLI.UnitTests
         internal Mock<INuGetPackageManager> NuGetPackageManager { get; private set; } = null!;
         internal Mock<IZipFileManager> ZipFileManager { get; private set; } = null!;
         internal Mock<IEnvironmentInformationService> EnvironmentInformationService { get; private set; } = null!;
+        internal Mock<ITranslationService> FakeTranslationService { get; private set; } = null!;
         internal List<string> UserNames { get; } = [];
         internal List<string> Secrets { get; } = [];
 
@@ -84,6 +90,43 @@ namespace MSStore.CLI.UnitTests
                 {
                     FlightId = "632B6A77-0E18-4B41-9033-3614D2174F2D",
                     FriendlyName = "FakeFlight2"
+                }
+            ];
+
+        protected List<AppReview> FakeReviews { get; } =
+            [
+                new AppReview
+                {
+                    Id = "6BE543FF-1C9C-4534-ACED-AF8B4FBE0316",
+                    Date = "3/5/2021 12:48:33 PM",
+                    Market = "US",
+                    Rating = 5,
+                    ReviewerName = "FakeReviewer1",
+                    ReviewTitle = "Great app",
+                    ReviewText = "This app is great",
+                    HelpfulCount = 3,
+                    NotHelpfulCount = 0
+                },
+                new AppReview
+                {
+                    Id = "7CF654AA-2D8D-4645-BDFE-B09C5FCA1427",
+                    Date = "3/6/2021 09:12:01 AM",
+                    Market = "BR",
+                    Rating = 4,
+                    ReviewerName = "FakeReviewer2",
+                    ReviewTitle = "Um jogo fantástico",
+                    ReviewText = "Gostei muito",
+                    ResponseDate = "3/7/2021 10:00:00 AM",
+                    ResponseText = "Obrigado!"
+                },
+
+                // The analytics API omits fields entirely rather than returning them as null,
+                // so at least one fixture has to be sparse.
+                new AppReview
+                {
+                    Id = "8DA765BB-3E7E-4756-CEAF-C1AD6FDB2538",
+                    Date = "3/7/2021 08:00:00 PM",
+                    Rating = 1
                 }
             ];
 
@@ -271,6 +314,11 @@ namespace MSStore.CLI.UnitTests
 
             TokenManager = new Mock<ITokenManager>();
 
+            FakeTranslationService = new Mock<ITranslationService>();
+            FakeTranslationService
+                .Setup(x => x.ResolveLanguageAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((string language, CancellationToken ct) => language);
+
             _hostBuilder = Host.CreateDefaultBuilder(null)
                 .UseEnvironment("CLI")
                 .ConfigureServices((hostContext, services) =>
@@ -310,7 +358,8 @@ namespace MSStore.CLI.UnitTests
                         .AddScoped(sp => PWAAppInfoManager.Object)
                         .AddScoped<IElectronManifestManager>(sp => ElectronManifestManager.Object)
                         .AddScoped(sp => NuGetPackageManager.Object)
-                        .AddScoped<IAppXManifestManager>(sp => AppXManifestManager.Object);
+                        .AddScoped<IAppXManifestManager>(sp => AppXManifestManager.Object)
+                        .AddScoped(sp => FakeTranslationService.Object);
 
                     services.AddLogging(builder =>
                     {
@@ -508,6 +557,71 @@ namespace MSStore.CLI.UnitTests
             FakeStorePackagedAPI
                 .Setup(x => x.GetApplicationAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((string productId, CancellationToken ct) => FakeApps.First(a => a.Id == productId));
+        }
+
+        protected void AddFakeReviews()
+        {
+            FakeStorePackagedAPI
+                .Setup(x => x.GetAppReviewsAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<DateOnly?>(),
+                    It.IsAny<DateOnly?>(),
+                    It.IsAny<int?>(),
+                    It.IsAny<int?>(),
+                    It.IsAny<string?>(),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync((string productId, DateOnly? startDate, DateOnly? endDate, int? top, int? skip, string? filter, string? orderby, CancellationToken ct) =>
+                {
+                    var reviews = FakeReviews.AsEnumerable();
+
+                    // Mirrors the subset of the analytics API's filter syntax that the CLI emits.
+                    if (filter != null)
+                    {
+                        var idMatch = System.Text.RegularExpressions.Regex.Match(filter, @"id eq '([^']*)'");
+                        if (idMatch.Success)
+                        {
+                            reviews = reviews.Where(r => string.Equals(r.Id, idMatch.Groups[1].Value, StringComparison.OrdinalIgnoreCase));
+                        }
+
+                        var ratingMatch = System.Text.RegularExpressions.Regex.Match(filter, @"rating eq (\d+)");
+                        if (ratingMatch.Success)
+                        {
+                            var rating = double.Parse(ratingMatch.Groups[1].Value, CultureInfo.InvariantCulture);
+                            reviews = reviews.Where(r => r.Rating == rating);
+                        }
+
+                        var marketMatch = System.Text.RegularExpressions.Regex.Match(filter, @"market eq '([^']*)'");
+                        if (marketMatch.Success)
+                        {
+                            reviews = reviews.Where(r => string.Equals(r.Market, marketMatch.Groups[1].Value, StringComparison.OrdinalIgnoreCase));
+                        }
+                    }
+
+                    var value = reviews.Skip(skip ?? 0).Take(top ?? int.MaxValue).ToList();
+
+                    return new PagedResponse<AppReview>
+                    {
+                        Value = value,
+                        TotalCount = value.Count
+                    };
+                });
+        }
+
+        /// <summary>
+        /// Makes the fake translation service echo each text back prefixed with the target
+        /// language, so tests can assert that translated content reached the output.
+        /// </summary>
+        protected void AddFakeTranslations(string detectedLanguage = "pt")
+        {
+            FakeTranslationService
+                .Setup(x => x.TranslateAsync(It.IsAny<IReadOnlyList<string?>>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((IReadOnlyList<string?> texts, string targetLanguage, CancellationToken ct) =>
+                    texts
+                        .Select(t => string.IsNullOrWhiteSpace(t)
+                            ? null
+                            : new TranslationResult($"[{targetLanguage}] {t}", detectedLanguage))
+                        .ToList());
         }
 
         protected void AddFakeFlights()
@@ -862,8 +976,40 @@ namespace MSStore.CLI.UnitTests
                 outputCapture.Captured.ToString().Should().NotContain("💥");
             }
 
-            return (Output: outputCapture.Captured.ToString() ?? string.Empty, Error: errorCapture.Captured.ToString() ?? string.Empty);
+            return (Output: StripAnsi(outputCapture.Captured.ToString()), Error: StripAnsi(errorCapture.Captured.ToString()));
         }
+
+        /// <summary>
+        /// Removes ANSI escape sequences so assertions can match the visible text.
+        /// </summary>
+        /// <remarks>
+        /// Spectre emits colour and style codes only when the underlying stream negotiates
+        /// ANSI support, which differs between a developer machine and CI. Without stripping,
+        /// an assertion on a string that spans a markup boundary (for example the "no reviews"
+        /// in "This application has [bold][u]no[/] reviews[/].") passes locally and fails on CI.
+        /// </remarks>
+        /// <param name="value">The captured console output.</param>
+        /// <returns>The output with escape sequences removed.</returns>
+        internal static string StripAnsi(string? value)
+        {
+            return value == null ? string.Empty : AnsiEscapeSequence().Replace(value, string.Empty);
+        }
+
+        /// <summary>
+        /// Matches ANSI escape sequences per ECMA-48.
+        /// </summary>
+        /// <remarks>
+        /// Covers more than the colour codes: CSI sequences may carry private parameters, as
+        /// in the cursor hide/show pair a status spinner emits, and OSC sequences carry the
+        /// hyperlinks produced by Spectre's link markup. Matching only digits and semicolons
+        /// would leave both in the captured output.
+        /// </remarks>
+        /// <returns>The compiled regular expression.</returns>
+        [System.Text.RegularExpressions.GeneratedRegex(
+            """
+            \u001b\[[0-?]*[ -/]*[@-~]|\u001b\][^\u0007\u001b]*(?:\u0007|\u001b\\)|\u001b[@-_]
+            """)]
+        private static partial System.Text.RegularExpressions.Regex AnsiEscapeSequence();
 
         private OutputCapture RefreshAnsiConsole()
         {
