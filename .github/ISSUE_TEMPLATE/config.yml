@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://aka.ms/msstoredevcli/docs
+    about: Commands, installation, and CI/CD setup
+  - name: Questions and usage help
+    url: https://github.com/microsoft/msstore-cli/discussions
+    about: Ask how to use the CLI (not a bug or feature request)
+  - name: Report a security vulnerability
+    url: https://aka.ms/opensource/security/create-report
+    about: Do not file security issues on GitHub — report them privately to MSRC
