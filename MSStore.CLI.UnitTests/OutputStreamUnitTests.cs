@@ -56,14 +56,30 @@ namespace MSStore.CLI.UnitTests
             warning.Should().BeNull();
         }
 
+        [DataRow("stdout", "stderr")]
+        [DataRow("stderr", "stdout")]
         [TestMethod]
-        public void ResolveUsesTheLastOccurrenceWhenTheOptionIsRepeated()
+        public void ResolveFallsBackWhenTheOptionIsRepeated(string first, string second)
         {
-            var (stream, _) = OutputStreamResolver.Resolve(
-                ["publish", "--output-stream", "stdout", "--output-stream", "stderr"],
+            // System.CommandLine rejects a repeated single-valued option ("expects a single argument but 2
+            // were provided"), so the command fails. The resolver must not guess a stream from a command line
+            // the parser refuses; both orderings therefore fall back rather than taking the last occurrence.
+            var (stream, warning) = OutputStreamResolver.Resolve(
+                ["publish", "--output-stream", first, "--output-stream", second],
                 null);
 
             stream.Should().Be(OutputStream.Stderr);
+            warning.Should().BeNull();
+        }
+
+        [TestMethod]
+        public void ResolveFallsBackToTheEnvironmentVariableWhenTheOptionIsRepeated()
+        {
+            var (stream, _) = OutputStreamResolver.Resolve(
+                ["publish", "--output-stream", "stderr", "--output-stream", "stderr"],
+                "stdout");
+
+            stream.Should().Be(OutputStream.Stdout);
         }
 
         [TestMethod]
@@ -162,7 +178,7 @@ namespace MSStore.CLI.UnitTests
         [TestMethod]
         public void ResolveStopsScanningAtTheEndOfOptionsMarker(string arg, string? value)
         {
-            // System.CommandLine treats everything after `--` as a literal argument, so the resolver must too.
+            // Everything after `--` is a literal argument, never the option.
             string[] args = value == null ? ["package", "--", arg] : ["package", "--", arg, value];
 
             var (stream, _) = OutputStreamResolver.Resolve(args, null);
@@ -183,8 +199,8 @@ namespace MSStore.CLI.UnitTests
         [TestMethod]
         public void ResolveDoesNotConsumeTheEndOfOptionsMarkerAsTheOptionValue()
         {
-            // System.CommandLine reports a missing value here and treats the rest as literals, so the
-            // resolver must not take `--` as the value and then pick up the trailing token.
+            // `--` is the end-of-options marker, not a value, so the option's value is missing here and the
+            // trailing token is a literal. Routing must not be taken from a command line the parser rejects.
             var (stream, _) = OutputStreamResolver.Resolve(
                 ["package", "--output-stream", "--", "--output-stream=stdout"],
                 null);
@@ -197,6 +213,29 @@ namespace MSStore.CLI.UnitTests
         {
             var (stream, _) = OutputStreamResolver.Resolve(
                 ["package", "--output-stream=stdout", "--output-stream", "--", "stderr"],
+                null);
+
+            stream.Should().Be(OutputStream.Stdout);
+        }
+
+        [TestMethod]
+        public void ResolveHonoursTheOptionDespiteAnUnrelatedParseError()
+        {
+            // A mistake elsewhere on the command line must not discard a valid --output-stream, or the
+            // diagnostics reporting that mistake would go to the stream the user was trying to move them off.
+            var (stream, warning) = OutputStreamResolver.Resolve(
+                ["--output-stream", "stdout", "--not-a-real-option"],
+                null);
+
+            stream.Should().Be(OutputStream.Stdout);
+            warning.Should().BeNull();
+        }
+
+        [TestMethod]
+        public void ResolveIgnoresSubcommandsAndPositionalArguments()
+        {
+            var (stream, _) = OutputStreamResolver.Resolve(
+                ["package", "C:\\some\\path", "--output-stream", "stdout"],
                 null);
 
             stream.Should().Be(OutputStream.Stdout);
@@ -241,8 +280,7 @@ namespace MSStore.CLI.UnitTests
         [TestMethod]
         public async Task InlineOutputStreamOptionFormsAreAcceptedByCommands(string arg)
         {
-            // OutputStreamResolver accepts both inline separators, so the parser has to as well. This is
-            // asserted here rather than in the process tests because those pass --help, which takes
+            // Asserted here rather than in the process tests because those pass --help, which takes
             // precedence over parse errors and would mask an unrecognized token. ParseAndInvokeAsync
             // asserts an exit code of 0, so a rejected spelling fails.
             var appId = FakeApps[2].Id!;

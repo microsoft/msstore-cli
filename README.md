@@ -22,6 +22,21 @@ Two things sit outside the option's scope on purpose, matching the behavior of o
 * Machine-readable payloads are always written to stdout, so they are never affected by the option.
 * `--help` is always written to stdout, so that `msstore --help | more` works, and command line parse errors are always written to stderr, because they accompany a non-zero exit code.
 
+> [!WARNING]
+> **Behavior change.** Human-readable output previously went to stdout. It now defaults to stderr,
+> including the `apps list`, `flights list` and `info` tables, prompts, and status messages. Scripts
+> that piped or captured that output, such as `msstore apps list | grep ...` or
+> `msstore info > file`, will see nothing on stdout — with a zero exit code and no diagnostic.
+>
+> Either of these restores a working script:
+>
+> * `--output-stream stdout`, or `MSSTORE_OUTPUT_STREAM=stdout` for a whole job, which is a complete
+>   one-flag rollback to the previous routing, or
+> * `2>&1`, to merge the two streams.
+>
+> Machine-readable payloads (`submission get`, `apps get`, `package`) were already on stdout and are
+> unaffected.
+
 ### Azure DevOps
 
 Azure DevOps reports every stderr line as `##[error]`, even when the command succeeded and even when the task sets `failOnStderr: false`. A successful `msstore publish` therefore shows up as a failed or partially failed stage.

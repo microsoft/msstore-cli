@@ -33,7 +33,7 @@ namespace MSStore.CLI
 
             OutputStreamOption = new Option<OutputStream>(OutputStreamResolver.OptionName)
             {
-                Description = $"The stream that human-readable progress and status output is written to. Defaults to '{nameof(OutputStream.Stderr)}', which keeps stdout for machine-readable payloads. Use '{nameof(OutputStream.Stdout)}' on Azure DevOps, which reports every stderr line as an error. Also settable through the {EnvironmentInfo.OutputStreamEnvironmentVariable} environment variable, which this option overrides.",
+                Description = $"Stream for human-readable output: '{nameof(OutputStream.Stderr)}' (default) or '{nameof(OutputStream.Stdout)}'. Overrides {EnvironmentInfo.OutputStreamEnvironmentVariable}.",
 
                 // The built-in enum converter also accepts the underlying numbers, which OutputStreamResolver
                 // rejects. That would let "--output-stream 1" parse as Stdout while the resolver, which is what
