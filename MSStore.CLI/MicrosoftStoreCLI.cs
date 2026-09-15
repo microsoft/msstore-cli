@@ -33,7 +33,7 @@ namespace MSStore.CLI
 
             OutputStreamOption = new Option<OutputStream>(OutputStreamResolver.OptionName)
             {
-                Description = $"Stream for human-readable output: '{nameof(OutputStream.Stderr)}' (default) or '{nameof(OutputStream.Stdout)}'. Overrides {EnvironmentInfo.OutputStreamEnvironmentVariable}.",
+                Description = $"Stream for progress and status output: '{nameof(OutputStream.Stderr)}' (default) or '{nameof(OutputStream.Stdout)}'. Overrides {EnvironmentInfo.OutputStreamEnvironmentVariable}.",
 
                 // The built-in enum converter also accepts the underlying numbers, which OutputStreamResolver
                 // rejects. That would let "--output-stream 1" parse as Stdout while the resolver, which is what
