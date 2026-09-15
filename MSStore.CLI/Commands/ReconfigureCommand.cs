@@ -118,7 +118,7 @@ namespace MSStore.CLI.Commands
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(
                     (reset == true
-                        ? await _cliConfigurator.ResetAsync(ct: ct)
+                        ? await _cliConfigurator.ResetAsync(_ansiConsole, ct: ct)
                         : await _cliConfigurator.ConfigureAsync(
                             _ansiConsole,
                             askConfirmation,
