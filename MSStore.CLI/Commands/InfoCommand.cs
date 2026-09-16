@@ -21,9 +21,10 @@ namespace MSStore.CLI.Commands
         {
         }
 
-        public class Handler(IConfigurationManager<Configurations> configurationManager, TelemetryClient telemetryClient, ILogger<InfoCommand.Handler> logger) : AsynchronousCommandLineAction
+        public class Handler(IConfigurationManager<Configurations> configurationManager, IAnsiConsole ansiConsole, TelemetryClient telemetryClient, ILogger<InfoCommand.Handler> logger) : AsynchronousCommandLineAction
         {
             private readonly IConfigurationManager<Configurations> _configurationManager = configurationManager ?? throw new ArgumentNullException(nameof(configurationManager));
+            private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
@@ -79,7 +80,7 @@ namespace MSStore.CLI.Commands
                     _logger.LogInformation("Settings File Path: {@SettingsFilePath}", _configurationManager.ConfigPath);
                 }
 
-                AnsiConsole.Write(table);
+                _ansiConsole.Write(table);
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(0, ct);
             }

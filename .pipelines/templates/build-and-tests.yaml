@@ -39,6 +39,7 @@ steps:
   displayName: 'Tests net10.0'
   env:
     DISPLAY: :0.0
+    MSSTORE_RUN_PROCESS_TESTS: 'true'
   inputs:
     command: 'run'
     projects: '**/*[Tt]est*/*.csproj'
@@ -48,6 +49,7 @@ steps:
   condition: startsWith(variables.AgentOS, 'Windows_NT')
   env:
     DISPLAY: :0.0
+    MSSTORE_RUN_PROCESS_TESTS: 'true'
   inputs:
     command: 'run'
     projects: '**/*[Tt]est*/*.csproj'

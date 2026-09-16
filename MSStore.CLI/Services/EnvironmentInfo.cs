@@ -28,6 +28,9 @@ namespace MSStore.CLI.Services
         // Environment variable for client assertion file path, used for authentication.
         public static readonly string ClientAssertionFileEnvironmentVariable = "MSSTORE_CLIENT_ASSERTION_FILE";
 
+        // Environment variable that selects the standard stream used for human-readable output.
+        public static readonly string OutputStreamEnvironmentVariable = "MSSTORE_OUTPUT_STREAM";
+
         // Cached environment information, loaded only once
         private static readonly Lazy<string> _cachedEnvironmentInfo = new Lazy<string>(ComputeEnvironmentInfo);
 

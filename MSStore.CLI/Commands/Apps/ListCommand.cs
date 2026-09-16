@@ -67,11 +67,11 @@ namespace MSStore.CLI.Commands.Apps
                         i++;
                     }
 
-                    AnsiConsole.Write(table);
+                    _ansiConsole.Write(table);
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(0, ct);
                 }
 
-                AnsiConsole.MarkupLine("Your account has [bold][u]no[/] Managed apps[/].");
+                _ansiConsole.MarkupLine("Your account has [bold][u]no[/] Managed apps[/].");
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(-1, ct);
             }
         }
