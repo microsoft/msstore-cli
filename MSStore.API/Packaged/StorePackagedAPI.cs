@@ -5,7 +5,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Linq;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
@@ -219,8 +221,7 @@ namespace MSStore.API.Packaged
         {
             try
             {
-                var devCenterApplicationsResponse = await GetDevCenterApplicationsAsync(0, 100, ct); // TODO: pagination
-                return devCenterApplicationsResponse.Value ?? [];
+                return await GetAllPagesAsync<DevCenterApplication>(GetDevCenterApplicationsAsync, ct).ToListAsync(ct);
             }
             catch (Exception error)
             {
@@ -384,8 +385,7 @@ namespace MSStore.API.Packaged
         {
             try
             {
-                var devCenterFlightsResponse = await GetFlightsAsync(productId, 0, 100, ct); // TODO: pagination
-                return devCenterFlightsResponse.Value ?? [];
+                return await GetAllPagesAsync<DevCenterFlight>((skip, top, token) => GetFlightsAsync(productId, skip, top, token), ct).ToListAsync(ct);
             }
             catch (Exception error)
             {
@@ -662,6 +662,28 @@ namespace MSStore.API.Packaged
                 null,
                 SourceGenerationContext.GetCustom().PackageRollout,
                 ct);
+        }
+
+        private static async IAsyncEnumerable<T> GetAllPagesAsync<T>(Func<int, int, CancellationToken, Task<PagedResponse<T>>> pageFunc, [EnumeratorCancellation] CancellationToken ct = default)
+        {
+            int skip = 0;
+            const int top = 100;
+            PagedResponse<T>? lastPage;
+            do
+            {
+                ct.ThrowIfCancellationRequested();
+
+                lastPage = await pageFunc(skip, top, ct);
+                skip += lastPage.Value?.Count ?? 0;
+
+                foreach (var item in lastPage.Value ?? [])
+                {
+                    ct.ThrowIfCancellationRequested();
+
+                    yield return item;
+                }
+            }
+            while (!string.IsNullOrEmpty(lastPage.NextLink) && lastPage.Value?.Count > 0 && (lastPage.TotalCount <= 0 || skip < lastPage.TotalCount));
         }
     }
 }
