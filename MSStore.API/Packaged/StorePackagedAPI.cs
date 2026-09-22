@@ -664,7 +664,7 @@ namespace MSStore.API.Packaged
                 ct);
         }
 
-        private static async IAsyncEnumerable<T> GetAllPagesAsync<T>(Func<int, int, CancellationToken, Task<PagedResponse<T>>> pageFunc, [EnumeratorCancellation] CancellationToken ct = default)
+        internal static async IAsyncEnumerable<T> GetAllPagesAsync<T>(Func<int, int, CancellationToken, Task<PagedResponse<T>>> pageFunc, [EnumeratorCancellation] CancellationToken ct = default)
         {
             int skip = 0;
             const int top = 100;
