@@ -81,26 +81,29 @@ namespace MSStore.CLI.Commands.Settings
 
             private async Task<int> ClearAsync(CancellationToken ct)
             {
-                var keyRemoved = false;
+                var regionCleared = false;
 
                 try
                 {
-                    // ClearCredentials is best-effort on every platform, so the removal is confirmed
-                    // rather than assumed: reporting success while the key survives would leave it in
-                    // use. The key goes first, so a failure to remove it changes nothing else.
-                    _credentialManager.ClearCredentials(AzureAITranslatorService.CredentialKeyName);
+                    // settings.json goes first, as in the reconfigure flow: removing the key cannot
+                    // be undone, so it only happens once the rest of the change has been saved, and
+                    // a failure to save leaves the key where it was.
+                    var config = await _configurationManager.LoadAsync(ct: ct);
+                    var previousRegion = config.TranslatorRegion;
+                    config.TranslatorRegion = null;
+                    await _configurationManager.SaveAsync(config, ct);
+                    regionCleared = true;
 
-                    if (!string.IsNullOrEmpty(_credentialManager.ReadCredential(AzureAITranslatorService.CredentialKeyName)))
+                    if (!TryRemoveKey())
                     {
+                        // The key is still there, so the region it goes with is put back.
+                        config.TranslatorRegion = previousRegion;
+                        await _configurationManager.SaveAsync(config, ct);
+                        regionCleared = false;
+
                         _ansiConsole.MarkupLine("[bold red]The Azure AI Translator key could not be removed from the credential store.[/] Remove it manually.");
                         return await _telemetryClient.TrackCommandEventAsync<Handler>(-1, ct);
                     }
-
-                    keyRemoved = true;
-
-                    var config = await _configurationManager.LoadAsync(ct: ct);
-                    config.TranslatorRegion = null;
-                    await _configurationManager.SaveAsync(config, ct);
 
                     _ansiConsole.MarkupLine("Azure AI Translator key and region [bold green]cleared[/].");
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(0, ct);
@@ -108,10 +111,33 @@ namespace MSStore.CLI.Commands.Settings
                 catch (Exception err)
                 {
                     _logger.LogError(err, "Error while clearing the Azure AI Translator key.");
-                    _ansiConsole.MarkupLine(keyRemoved
-                        ? "[bold red]The Azure AI Translator key was removed, but the region could not be cleared from settings.json.[/]"
+                    _ansiConsole.MarkupLine(regionCleared
+                        ? "[bold red]The region was cleared from settings.json, but the Azure AI Translator key could not be removed.[/] Remove it manually."
                         : "[bold red]Could not clear the Azure AI Translator key.[/]");
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(-1, ct);
+                }
+            }
+
+            /// <summary>
+            /// Removes the stored key and confirms it is actually gone.
+            /// </summary>
+            /// <remarks>
+            /// ClearCredentials is best-effort on every platform, so the removal is checked rather
+            /// than assumed, as CLIConfigurator.TryClearCredentials does for the client secret. A
+            /// credential store that cannot be read counts as not confirmed.
+            /// </remarks>
+            /// <returns>True when no key remains.</returns>
+            private bool TryRemoveKey()
+            {
+                try
+                {
+                    _credentialManager.ClearCredentials(AzureAITranslatorService.CredentialKeyName);
+                    return string.IsNullOrEmpty(_credentialManager.ReadCredential(AzureAITranslatorService.CredentialKeyName));
+                }
+                catch (Exception err)
+                {
+                    _logger.LogError(err, "Could not confirm the Azure AI Translator key was removed.");
+                    return false;
                 }
             }
 

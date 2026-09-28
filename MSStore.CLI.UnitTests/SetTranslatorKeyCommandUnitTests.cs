@@ -225,6 +225,8 @@ namespace MSStore.CLI.UnitTests
         {
             // ClearCredentials is best-effort on every platform and can fail silently, so a key
             // that is still readable afterwards must be reported rather than called "cleared".
+            UseStoredRegion("eastus");
+            var savedRegions = CaptureSavedRegions();
             CredentialManager
                 .Setup(x => x.ClearCredentials(It.IsAny<string>()));
             CredentialManager
@@ -242,10 +244,77 @@ namespace MSStore.CLI.UnitTests
             result.Error.Should().Contain("could not be removed from the credential store");
             result.Error.Should().NotContain("cleared.");
 
-            // Nothing else is changed when the key could not be removed.
-            FakeConfigurationManager.Verify(
-                x => x.SaveAsync(It.IsAny<Configurations>(), It.IsAny<CancellationToken>()),
-                Times.Never);
+            // The key is still there, so the region that goes with it is put back.
+            savedRegions.Should().Equal(null, "eastus");
+        }
+
+        [TestMethod]
+        public async Task SetTranslatorKeyClearShouldKeepTheKeyWhenSettingsCannotBeSaved()
+        {
+            // settings.json is saved before the key is removed, so a failure there must leave
+            // the key untouched: removing it cannot be undone.
+            FakeConfigurationManager
+                .Setup(x => x.SaveAsync(It.IsAny<Configurations>(), It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new IOException("The disk is full."));
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "settings",
+                    "set-translator-key",
+                    "--clear"
+                ],
+                -1);
+
+            result.Error.Should().Contain("Could not clear the Azure AI Translator key.");
+            CredentialManager.Verify(x => x.ClearCredentials(It.IsAny<string>()), Times.Never);
+        }
+
+        [TestMethod]
+        public async Task SetTranslatorKeyClearShouldRestoreTheRegionWhenTheStoreCannotBeRead()
+        {
+            // A credential store that cannot be read, such as a locked keyring, means the removal
+            // cannot be confirmed, which is treated like a key that survived.
+            UseStoredRegion("eastus");
+            var savedRegions = CaptureSavedRegions();
+            CredentialManager
+                .Setup(x => x.ReadCredential(AzureAITranslatorService.CredentialKeyName))
+                .Throws(new InvalidOperationException("The keyring is locked."));
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "settings",
+                    "set-translator-key",
+                    "--clear"
+                ],
+                -1);
+
+            result.Error.Should().Contain("could not be removed from the credential store");
+            savedRegions.Should().Equal(null, "eastus");
+        }
+
+        [TestMethod]
+        public async Task SetTranslatorKeyClearShouldSayWhenTheRegionCouldNotBeRestored()
+        {
+            UseStoredRegion("eastus");
+            var saves = 0;
+            FakeConfigurationManager
+                .Setup(x => x.SaveAsync(It.IsAny<Configurations>(), It.IsAny<CancellationToken>()))
+                .Returns(() => ++saves == 1 ? Task.CompletedTask : Task.FromException(new IOException("The disk is full.")));
+            CredentialManager
+                .Setup(x => x.ClearCredentials(It.IsAny<string>()));
+            CredentialManager
+                .Setup(x => x.ReadCredential(AzureAITranslatorService.CredentialKeyName))
+                .Returns("still-here");
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "settings",
+                    "set-translator-key",
+                    "--clear"
+                ],
+                -1);
+
+            result.Error.Should().Contain("The region was cleared from settings.json, but the Azure AI Translator key could not be removed.");
         }
 
         [TestMethod]
