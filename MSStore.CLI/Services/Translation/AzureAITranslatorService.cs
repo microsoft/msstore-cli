@@ -416,7 +416,7 @@ namespace MSStore.CLI.Services.Translation
                 >= 401000 and < 402000 => $"Azure AI Translator rejected the credentials. Check the {KeyEnvironmentVariable} value, and set {RegionEnvironmentVariable} if your Translator resource is regional or multi-service rather than global.",
                 403001 => "The Azure AI Translator subscription has exceeded its free quota.",
                 >= 403000 and < 404000 => "Azure AI Translator refused the operation. This usually means the resource region is wrong or missing.",
-                >= 429000 and < 430000 => "Azure AI Translator is throttling this request. The free tier allows 2 million characters per hour, consumed evenly, so a large burst of reviews can be rejected. Try a smaller --top value.",
+                >= 429000 and < 430000 => "Azure AI Translator is throttling requests. Wait a minute and try again. Every tier limits the characters translated per hour, and expects them spread evenly (2 million per hour on the free tier), so translating many reviews at once can be rejected; with 'reviews list', a smaller --top sends fewer at a time.",
                 400019 or 400036 => "Azure AI Translator does not support the requested target language.",
                 400050 => "A review is longer than the maximum length Azure AI Translator accepts.",
                 _ => null
