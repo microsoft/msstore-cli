@@ -312,13 +312,29 @@ namespace MSStore.CLI.Services.Translation
                         _logger.LogInformation("Translator billed characters for this request: {MeteredUsage}.", string.Join(',', usage));
                     }
 
-                    var items = JsonSerializer.Deserialize(
-                        await response.Content.ReadAsStringAsync(ct),
-                        TranslationSourceGenerationContext.GetCustom().ListTranslateResultItem);
+                    List<TranslateResultItem>? items;
+                    try
+                    {
+                        items = JsonSerializer.Deserialize(
+                            await response.Content.ReadAsStringAsync(ct),
+                            TranslationSourceGenerationContext.GetCustom().ListTranslateResultItem);
+                    }
+                    catch (JsonException err)
+                    {
+                        throw new TranslationException("The translation service returned an unreadable response.", err);
+                    }
 
                     if (items == null)
                     {
                         throw new TranslationException("The translation service returned an unreadable response.");
+                    }
+
+                    // Results are matched to their inputs by position, so a response with a
+                    // different number of items cannot be mapped safely: every translation after
+                    // a missing one would be shown against the wrong review.
+                    if (items.Count != texts.Count)
+                    {
+                        throw new TranslationException($"The translation service returned {items.Count} translations for {texts.Count} texts.");
                     }
 
                     return [.. items.Select(item =>

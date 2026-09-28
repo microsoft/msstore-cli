@@ -183,6 +183,30 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
+        public async Task TranslateAsyncShouldRejectAResponseWithTheWrongNumberOfItems()
+        {
+            // Results are matched to inputs by position, so a missing item would shift every
+            // later translation onto the wrong review. Failing is safer than guessing.
+            EnqueueJson(HttpStatusCode.OK, """[{"translations":[{"text":"one","to":"en"}]}]""");
+
+            var act = async () => await CreateService().TranslateAsync(["um", "dois"], "en", TestContext.CancellationToken);
+
+            (await act.Should().ThrowAsync<TranslationException>())
+                .WithMessage("*returned 1 translations for 2 texts*");
+        }
+
+        [TestMethod]
+        public async Task TranslateAsyncShouldReportAnUnreadableSuccessResponse()
+        {
+            EnqueueJson(HttpStatusCode.OK, "<html>not json</html>");
+
+            var act = async () => await CreateService().TranslateAsync(["olá"], "en", TestContext.CancellationToken);
+
+            (await act.Should().ThrowAsync<TranslationException>())
+                .WithMessage("*unreadable response*");
+        }
+
+        [TestMethod]
         public async Task TranslateAsyncShouldSkipEmptyEntriesButKeepPositions()
         {
             EnqueueJson(HttpStatusCode.OK, """
