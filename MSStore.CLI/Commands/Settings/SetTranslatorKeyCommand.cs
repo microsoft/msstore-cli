@@ -18,16 +18,18 @@ namespace MSStore.CLI.Commands.Settings
 {
     internal class SetTranslatorKeyCommand : Command
     {
-        internal static readonly Argument<string> KeyArgument;
+        internal static readonly Option<bool> KeyFromStandardInputOption;
         internal static readonly Option<string> RegionOption;
         internal static readonly Option<bool> ClearOption;
 
         static SetTranslatorKeyCommand()
         {
-            KeyArgument = new Argument<string>("key")
+            // The key is deliberately not accepted as an argument or option value: anything on
+            // the command line is recorded in shell history and visible in process listings.
+            KeyFromStandardInputOption = new Option<bool>("--key-stdin")
             {
-                Description = "The Azure AI Translator resource key. Used by the --translate option of the reviews commands.",
-                Arity = ArgumentArity.ZeroOrOne
+                DefaultValueFactory = _ => false,
+                Description = "Read the key from standard input instead of prompting for it, for example when piping it from a secret store."
             };
 
             RegionOption = new Option<string>("--region", "-r")
@@ -43,9 +45,9 @@ namespace MSStore.CLI.Commands.Settings
         }
 
         public SetTranslatorKeyCommand()
-            : base("set-translator-key", "Store the Azure AI Translator key used by the reviews '--translate' option.")
+            : base("set-translator-key", "Store the Azure AI Translator key used by the reviews '--translate' option. Prompts for the key without echoing it, or reads it from standard input with --key-stdin.")
         {
-            Arguments.Add(KeyArgument);
+            Options.Add(KeyFromStandardInputOption);
             Options.Add(RegionOption);
             Options.Add(ClearOption);
         }
@@ -54,18 +56,22 @@ namespace MSStore.CLI.Commands.Settings
             ILogger<SetTranslatorKeyCommand.Handler> logger,
             ICredentialManager credentialManager,
             IConfigurationManager<Configurations> configurationManager,
+            IConsoleReader consoleReader,
+            IEnvironmentInformationService environmentInformationService,
             IAnsiConsole ansiConsole,
             TelemetryClient telemetryClient) : AsynchronousCommandLineAction
         {
             private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             private readonly ICredentialManager _credentialManager = credentialManager ?? throw new ArgumentNullException(nameof(credentialManager));
             private readonly IConfigurationManager<Configurations> _configurationManager = configurationManager ?? throw new ArgumentNullException(nameof(configurationManager));
+            private readonly IConsoleReader _consoleReader = consoleReader ?? throw new ArgumentNullException(nameof(consoleReader));
+            private readonly IEnvironmentInformationService _environmentInformationService = environmentInformationService ?? throw new ArgumentNullException(nameof(environmentInformationService));
             private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
             private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
 
             public override async Task<int> InvokeAsync(ParseResult parseResult, CancellationToken ct = default)
             {
-                var key = parseResult.GetValue(KeyArgument);
+                var keyFromStandardInput = parseResult.GetValue(KeyFromStandardInputOption);
                 var region = parseResult.GetValue(RegionOption);
                 var clear = parseResult.GetValue(ClearOption);
 
@@ -83,15 +89,40 @@ namespace MSStore.CLI.Commands.Settings
                         return await _telemetryClient.TrackCommandEventAsync<Handler>(0, ct);
                     }
 
-                    if (string.IsNullOrWhiteSpace(key))
+                    string? key;
+                    if (keyFromStandardInput)
                     {
-                        _ansiConsole.MarkupLine("[bold red]A key is required.[/] Pass the Azure AI Translator resource key, or use [bold]--clear[/] to remove the stored one.");
+                        if (!_consoleReader.IsInputRedirected)
+                        {
+                            _ansiConsole.MarkupLine("[bold red]--key-stdin reads the key from a pipe, but standard input is not redirected.[/] Pipe the key in, or leave out [bold]--key-stdin[/] to be prompted for it.");
+                            return await _telemetryClient.TrackCommandEventAsync<Handler>(-1, ct);
+                        }
+
+                        // The user has stated a key is coming, so there is no deadline on it: a
+                        // producer such as a secret store lookup can take a while to write.
+                        key = await _consoleReader.ReadAllStandardInputAsync(null, ct);
+                    }
+                    else if (_consoleReader.IsInputRedirected || _environmentInformationService.IsRunningOnCI)
+                    {
+                        _ansiConsole.MarkupLine($"[bold red]Cannot prompt for the key in a non-interactive session.[/] Pipe it in with [bold]--key-stdin[/], or set the [bold]{AzureAITranslatorService.KeyEnvironmentVariable}[/] environment variable instead of storing a key.");
                         return await _telemetryClient.TrackCommandEventAsync<Handler>(-1, ct);
+                    }
+                    else
+                    {
+                        key = await _consoleReader.RequestStringAsync("Azure AI Translator key", true, ct);
                     }
 
                     // Keys and regions are frequently pasted or piped in with surrounding
                     // whitespace, which is not valid in a request header.
-                    _credentialManager.WriteCredential(AzureAITranslatorService.CredentialKeyName, key.Trim());
+                    key = key?.Trim();
+
+                    if (string.IsNullOrEmpty(key))
+                    {
+                        _ansiConsole.MarkupLine("[bold red]A key is required.[/] Provide the Azure AI Translator resource key, or use [bold]--clear[/] to remove the stored one.");
+                        return await _telemetryClient.TrackCommandEventAsync<Handler>(-1, ct);
+                    }
+
+                    _credentialManager.WriteCredential(AzureAITranslatorService.CredentialKeyName, key);
 
                     if (!string.IsNullOrWhiteSpace(region))
                     {

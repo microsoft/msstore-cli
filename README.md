@@ -105,11 +105,16 @@ Provide the key through environment variables:
 Or store them once, so they persist between runs:
 
 ```
-msstore settings set-translator-key <key> --region <region>
+# Prompts for the key without echoing it
+msstore settings set-translator-key --region <region>
+
+# Reads the key from standard input, for scripted setup
+az keyvault secret show --vault-name <vault> --name <secret> --query value -o tsv | msstore settings set-translator-key --key-stdin
+
 msstore settings set-translator-key --clear
 ```
 
-The key is held in the OS secure store; the region is not a secret and is saved in `settings.json`.
+The key is deliberately not accepted as a command-line argument, where it would be recorded in shell history and visible in process listings. It is held in the OS secure store; the region is not a secret and is saved in `settings.json`. In CI, use the environment variables instead of storing a key.
 
 Translation is billed per source character, per target language, against your own Azure subscription.
 
