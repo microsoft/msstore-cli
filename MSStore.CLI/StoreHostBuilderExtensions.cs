@@ -116,6 +116,7 @@ namespace MSStore.CLI
                 {
                     var command = ActivatorUtilities.CreateInstance<TCommand>(sp);
                     command.Options.Add(MicrosoftStoreCLI.VerboseOption);
+                    command.Options.Add(MicrosoftStoreCLI.OutputStreamOption);
                     command.SetAction((parseResult, ct) => sp.GetRequiredService<THandler>().InvokeAsync(parseResult, ct));
                     return command;
                 });
@@ -129,6 +130,7 @@ namespace MSStore.CLI
                 {
                     var command = ActivatorUtilities.CreateInstance<TCommand>(sp);
                     command.Options.Add(MicrosoftStoreCLI.VerboseOption);
+                    command.Options.Add(MicrosoftStoreCLI.OutputStreamOption);
                     return command;
                 });
         }

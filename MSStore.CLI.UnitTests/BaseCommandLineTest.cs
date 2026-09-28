@@ -170,6 +170,21 @@ namespace MSStore.CLI.UnitTests
             }
         }
 
+        /// <summary>
+        /// Reduces captured console output to plain text: strips the ANSI escape sequences
+        /// Spectre.Console emits for styling, and collapses the line breaks it inserts when
+        /// wrapping to the console width. Without this, an assertion on message text depends on
+        /// both the width and the colour support of whatever terminal the test ran under, which
+        /// differs between local runs and CI.
+        /// </summary>
+        /// <param name="text">The captured console output.</param>
+        /// <returns>The text without styling, with every run of whitespace collapsed to one space.</returns>
+        protected static string PlainConsoleText(string text)
+        {
+            var withoutAnsi = System.Text.RegularExpressions.Regex.Replace(text, @"\x1B\[[0-9;]*[a-zA-Z]", string.Empty);
+            return System.Text.RegularExpressions.Regex.Replace(withoutAnsi, @"\s+", " ");
+        }
+
         private readonly List<string> _temporaryPayloadFiles = [];
 
         /// <summary>
@@ -459,13 +474,17 @@ namespace MSStore.CLI.UnitTests
                 });
         }
 
-        protected void AddDefaultFakeSubmission(string listingDescription = "BaseListingDescription")
+        protected void AddDefaultFakeSubmission(string listingDescription = "BaseListingDescription", Pricing? pricing = null, bool withoutPricing = false)
         {
             var fakeSubmission = new DevCenterSubmission
             {
                 Id = "123456789",
                 ApplicationCategory = DevCenterApplicationCategory.NotSet,
                 FileUploadUrl = "https://azureblob.com/fileupload",
+
+                // Every real app submission comes back carrying a pricing object, so that is what
+                // the fixtures model. 'withoutPricing' exists only to cover the degenerate case.
+                Pricing = withoutPricing ? null : pricing ?? new Pricing { PriceId = PriceIds.Free },
                 ApplicationPackages =
                     [
                         new ApplicationPackage
@@ -687,9 +706,9 @@ namespace MSStore.CLI.UnitTests
                 });
         }
 
-        protected void AddDefaultFakeSuccessfulSubmission()
+        protected void AddDefaultFakeSuccessfulSubmission(Pricing? pricing = null, bool withoutPricing = false)
         {
-            AddDefaultFakeSubmission();
+            AddDefaultFakeSubmission(pricing: pricing, withoutPricing: withoutPricing);
             InitDefaultSubmissionStatusResponseQueue();
 
             FakeStorePackagedAPI
@@ -916,8 +935,9 @@ namespace MSStore.CLI.UnitTests
             var outputCapture = new OutputCapture(Console.Out);
             var errorCapture = RefreshAnsiConsole();
 
-            // Only stdout is redirected: the error capture is reached exclusively through
-            // ErrorAnsiConsole, mirroring how Program.cs keeps the two streams apart.
+            // Only stdout is redirected: it is reserved for StandardOutput payloads. Human-readable writes
+            // reach the error capture through either ErrorAnsiConsole or the static console, mirroring how
+            // Program.cs points both at the same instance.
             Console.SetOut(outputCapture);
 
             AnsiConsole.Console = AnsiConsole.Create(new AnsiConsoleSettings
@@ -925,7 +945,7 @@ namespace MSStore.CLI.UnitTests
                 Ansi = AnsiSupport.Yes,
                 ColorSystem = ColorSystemSupport.TrueColor,
                 Interactive = InteractionSupport.No,
-                Out = new CustomAnsiConsoleOutput(outputCapture),
+                Out = new CustomAnsiConsoleOutput(errorCapture),
                 Enrichment = new ProfileEnrichment
                 {
                     UseDefaultEnrichers = false

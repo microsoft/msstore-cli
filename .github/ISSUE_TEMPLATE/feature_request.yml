@@ -1,0 +1,67 @@
+name: Feature request
+description: Suggest a new command, option, or improvement.
+title: "[Feature]: "
+labels:
+  - enhancement
+type: Feature
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea. Please search [existing issues](https://github.com/microsoft/msstore-cli/issues) first, and add a 👍 on a duplicate instead of opening another request.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Relevant command / area
+      description: What part of the CLI would this change?
+      multiple: true
+      options:
+        - init
+        - info
+        - reconfigure
+        - settings
+        - package
+        - publish
+        - apps
+        - submission
+        - flights
+        - docs / developer experience
+        - other / not sure
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What problem are you trying to solve? Who is affected?
+      placeholder: As a developer publishing to the Store, I need …
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: What would you like the CLI to do? Include example commands if you can.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches you tried or considered (Partner Center UI, scripts, another tool).
+    validations:
+      required: false
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Docs links, screenshots, or related issues.
+    validations:
+      required: false
+  - type: checkboxes
+    id: search
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and this is not a duplicate
+          required: true

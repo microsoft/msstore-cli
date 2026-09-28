@@ -12,9 +12,16 @@ namespace MSStore.CLI.Helpers
         /// </summary>
         /// <param name="value">The text to write.</param>
         /// <remarks>
+        /// <para>
         /// This deliberately bypasses Spectre.Console's <see cref="Spectre.Console.AnsiConsole"/>: its renderer
         /// word-wraps at the console width (falling back to 80 columns when stdout is redirected), which injects
         /// raw newline characters inside JSON string values and produces invalid JSON.
+        /// </para>
+        /// <para>
+        /// Machine-readable payloads always go to stdout, regardless of <c>--output-stream</c>. Pass
+        /// <c>--output-stream stderr</c> on these commands when a pipeline-wide
+        /// <c>MSSTORE_OUTPUT_STREAM=stdout</c> would otherwise interleave human-readable output with the payload.
+        /// </para>
         /// </remarks>
         public static void WriteLine(string value)
         {

@@ -44,9 +44,13 @@ jobs:
     - name: Build
       run: dotnet build MSStore.CLI.sln --no-restore /p:Configuration=Release
     - name: Test net10.0
+      env:
+        MSSTORE_RUN_PROCESS_TESTS: 'true'
       run: dotnet run --project MSStore.CLI.UnitTests -f net10.0 --no-build -c Release --coverage --coverage-output-format cobertura --report-trx --results-directory ./TestResults
     - name: Test net10.0-windows10.0.17763.0
       if: ${{ matrix.os == 'windows-latest' }}
+      env:
+        MSSTORE_RUN_PROCESS_TESTS: 'true'
       run: dotnet run --project MSStore.CLI.UnitTests -f net10.0-windows10.0.17763.0 --no-build -c Release --coverage --coverage-output-format cobertura --report-trx --results-directory ./TestResults
     - name: Publish test results
       if: ${{ !cancelled() }}

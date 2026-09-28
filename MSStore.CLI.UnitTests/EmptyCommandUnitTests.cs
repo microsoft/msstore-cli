@@ -47,7 +47,7 @@ namespace MSStore.CLI.UnitTests
 
             var result = await ParseAndInvokeAsync(["info"]);
 
-            result.Output.Should().Contain("Current Config");
+            result.Error.Should().Contain("Current Config");
         }
 
         [TestMethod]
@@ -57,7 +57,7 @@ namespace MSStore.CLI.UnitTests
 
             var result = await ParseAndInvokeAsync(["info"]);
 
-            result.Output.Should().Contain("Current Config");
+            result.Error.Should().Contain("Current Config");
         }
     }
 }

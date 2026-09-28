@@ -25,8 +25,8 @@ namespace MSStore.CLI.UnitTests
                     FakeApps[0].Id!
                 ]);
 
-            result.Output.Should().ContainAll(FakeFlights.Select(a => a.FlightId));
-            result.Output.Should().ContainAll(FakeFlights.Select(a => a.FriendlyName));
+            result.Error.Should().ContainAll(FakeFlights.Select(a => a.FlightId));
+            result.Error.Should().ContainAll(FakeFlights.Select(a => a.FriendlyName));
         }
 
         [TestMethod]

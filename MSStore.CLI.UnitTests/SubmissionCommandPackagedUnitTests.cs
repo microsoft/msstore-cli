@@ -46,8 +46,8 @@ namespace MSStore.CLI.UnitTests
                     FakeApps[0].Id!
                 ]);
 
-            result.Error.Should().Contain("Code1");
-            result.Error.Should().Contain("Detail1");
+            PlainConsoleText(result.Error).Should().Contain("Code1");
+            PlainConsoleText(result.Error).Should().Contain("Detail1");
         }
 
         [TestMethod]
@@ -131,6 +131,7 @@ namespace MSStore.CLI.UnitTests
                     FakeApps[0].Id!,
                     @"
 {
+""Pricing"": { ""PriceId"": ""Free"" },
 ""ApplicationPackages"":
     [
         {
@@ -140,8 +141,160 @@ namespace MSStore.CLI.UnitTests
 }"
                 ]);
 
-            result.Error.Should().Contain("Updating submission product");
+            PlainConsoleText(result.Error).Should().Contain("Updating submission product");
             result.Output.Should().Contain("\"FileUploadUrl\": \"https://azureblob.com/fileupload\"");
+        }
+
+        [TestMethod]
+        public async Task PackagedSubmissionUpdateCommandShouldAcceptAPayloadCarryingARealTier()
+        {
+            // A per-market priced product can only be updated by naming a real tier in the
+            // payload. Blocking on the *current* submission's price would reject this.
+            FakeApps[0].PendingApplicationSubmission = new ApplicationSubmissionInfo
+            {
+                Id = "123456789"
+            };
+
+            AddDefaultFakeSubmission(pricing: new Pricing { PriceId = "Base" });
+
+            DevCenterSubmission? sent = null;
+            FakeStorePackagedAPI
+                .Setup(x => x.UpdateSubmissionAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<DevCenterSubmission>(),
+                    It.IsAny<CancellationToken>()))
+                .Callback<string, string, DevCenterSubmission, CancellationToken>((_, _, s, _) => sent = s)
+                .ReturnsAsync((string _, string _, DevCenterSubmission s, CancellationToken _) => s);
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "submission",
+                    "update",
+                    FakeApps[0].Id!,
+                    @"
+{
+""Pricing"": { ""PriceId"": ""Tier1012"" },
+""ApplicationPackages"":
+    [
+        {
+            ""FileName"":""C:\\temp\\installer.msix""
+        }
+    ]
+}"
+                ]);
+
+            PlainConsoleText(result.Error).Should().Contain("Updating submission product");
+            sent!.Pricing!.PriceId.Should().Be("Tier1012");
+        }
+
+        [TestMethod]
+        public async Task PackagedSubmissionUpdateCommandShouldRejectAPayloadThatWouldResetThePrice()
+        {
+            // "Base" is what the API hands back for a per-market priced product, and sending it
+            // straight back is rejected with "'Base' is not a valid PriceId for base price."
+            var result = await ParseAndInvokeAsync(
+                [
+                    "submission",
+                    "update",
+                    FakeApps[0].Id!,
+                    @"{ ""Pricing"": { ""PriceId"": ""Base"" } }"
+                ], -1);
+
+            PlainConsoleText(result.Error).Should().Contain("sets 'Pricing.PriceId' to 'Base'");
+            PlainConsoleText(result.Error).Should().Contain("which the submission API rejects");
+            PlainConsoleText(result.Error).Should().NotContain("only for Free products");
+
+            FakeStorePackagedAPI
+                .Verify(
+                    x => x.UpdateSubmissionAsync(
+                        It.IsAny<string>(),
+                        It.IsAny<string>(),
+                        It.IsAny<DevCenterSubmission>(),
+                        It.IsAny<CancellationToken>()),
+                    Times.Never);
+        }
+
+        [TestMethod]
+        public async Task PackagedSubmissionUpdateCommandShouldRejectAPayloadWithAnEmptyPrice()
+        {
+            // An empty price is the dangerous one: the API answers 200 OK and silently resets
+            // the product to free.
+            var result = await ParseAndInvokeAsync(
+                [
+                    "submission",
+                    "update",
+                    FakeApps[0].Id!,
+                    @"{ ""Pricing"": { ""TrialPeriod"": ""NoFreeTrial"" } }"
+                ], -1);
+
+            PlainConsoleText(result.Error).Should().Contain("does not set 'Pricing.PriceId'");
+            PlainConsoleText(result.Error).Should().Contain("silently reset the product to Free");
+
+            FakeStorePackagedAPI
+                .Verify(
+                    x => x.UpdateSubmissionAsync(
+                        It.IsAny<string>(),
+                        It.IsAny<string>(),
+                        It.IsAny<DevCenterSubmission>(),
+                        It.IsAny<CancellationToken>()),
+                    Times.Never);
+        }
+
+        [TestMethod]
+        public async Task PackagedSubmissionUpdateCommandShouldRejectAPayloadWithNoPricingObject()
+        {
+            // An update replaces the whole submission, so a payload without pricing is rejected
+            // outright ("Pricing data was not provided in the request."). Stopping here also
+            // avoids stranding the draft this command just created.
+            var result = await ParseAndInvokeAsync(
+                [
+                    "submission",
+                    "update",
+                    FakeApps[0].Id!,
+                    @"{ ""ApplicationPackages"": [ { ""FileName"": ""test.msix"" } ] }"
+                ], -1);
+
+            PlainConsoleText(result.Error).Should().Contain("has no 'Pricing' object");
+
+            FakeStorePackagedAPI
+                .Verify(
+                    x => x.UpdateSubmissionAsync(
+                        It.IsAny<string>(),
+                        It.IsAny<string>(),
+                        It.IsAny<DevCenterSubmission>(),
+                        It.IsAny<CancellationToken>()),
+                    Times.Never);
+
+            // The draft was created by this command, so it must not be left behind.
+            FakeStorePackagedAPI
+                .Verify(
+                    x => x.DeleteSubmissionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+                    Times.Once);
+        }
+
+        [TestMethod]
+        public async Task PackagedSubmissionUpdateCommandShouldNotDeleteADraftItDidNotCreate()
+        {
+            FakeApps[0].PendingApplicationSubmission = new ApplicationSubmissionInfo
+            {
+                Id = "123456789"
+            };
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "submission",
+                    "update",
+                    FakeApps[0].Id!,
+                    @"{ ""Pricing"": { ""PriceId"": ""Base"" } }"
+                ], -1);
+
+            PlainConsoleText(result.Error).Should().Contain("which the submission API rejects");
+
+            FakeStorePackagedAPI
+                .Verify(
+                    x => x.DeleteSubmissionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+                    Times.Never);
         }
 
         [TestMethod]
@@ -150,6 +303,7 @@ namespace MSStore.CLI.UnitTests
             var payloadFilePath = CreateTemporaryPayloadFile(
                 @"
 {
+""Pricing"": { ""PriceId"": ""Free"" },
 ""ApplicationPackages"":
     [
         {
@@ -167,7 +321,7 @@ namespace MSStore.CLI.UnitTests
                     payloadFilePath
                 ]);
 
-            result.Error.Should().Contain("Updating submission product");
+            PlainConsoleText(result.Error).Should().Contain("Updating submission product");
             result.Output.Should().Contain("\"FileUploadUrl\": \"https://azureblob.com/fileupload\"");
         }
 
@@ -177,6 +331,7 @@ namespace MSStore.CLI.UnitTests
             var payloadFilePath = CreateTemporaryPayloadFile(
                 @"
 {
+""Pricing"": { ""PriceId"": ""Free"" },
 ""ApplicationPackages"":
     [
         {
@@ -193,7 +348,7 @@ namespace MSStore.CLI.UnitTests
                     payloadFilePath
                 ]);
 
-            result.Error.Should().Contain("Updating submission product");
+            PlainConsoleText(result.Error).Should().Contain("Updating submission product");
             result.Output.Should().Contain("\"FileUploadUrl\": \"https://azureblob.com/fileupload\"");
         }
 
@@ -205,6 +360,7 @@ namespace MSStore.CLI.UnitTests
                 .ReturnsAsync(
                     @"
 {
+""Pricing"": { ""PriceId"": ""Free"" },
 ""ApplicationPackages"":
     [
         {
@@ -221,7 +377,7 @@ namespace MSStore.CLI.UnitTests
                     "-"
                 ]);
 
-            result.Error.Should().Contain("Updating submission product");
+            PlainConsoleText(result.Error).Should().Contain("Updating submission product");
             result.Output.Should().Contain("\"FileUploadUrl\": \"https://azureblob.com/fileupload\"");
         }
 
@@ -236,6 +392,7 @@ namespace MSStore.CLI.UnitTests
                 .ReturnsAsync(
                     @"
 {
+""Pricing"": { ""PriceId"": ""Free"" },
 ""ApplicationPackages"":
     [
         {
@@ -251,7 +408,7 @@ namespace MSStore.CLI.UnitTests
                     FakeApps[0].Id!
                 ]);
 
-            result.Error.Should().Contain("Updating submission product");
+            PlainConsoleText(result.Error).Should().Contain("Updating submission product");
             result.Output.Should().Contain("\"FileUploadUrl\": \"https://azureblob.com/fileupload\"");
         }
 
@@ -265,7 +422,7 @@ namespace MSStore.CLI.UnitTests
                     FakeApps[0].Id!
                 ], 1);
 
-            result.Error.Should().Contain("No 'product' was provided.");
+            PlainConsoleText(result.Error).Should().Contain("No 'product' was provided.");
         }
 
         [TestMethod]
@@ -279,7 +436,7 @@ namespace MSStore.CLI.UnitTests
                     "this-file-does-not-exist.json"
                 ], 1);
 
-            result.Error.Should().Contain("is neither a JSON payload nor a path to an existing file");
+            PlainConsoleText(result.Error).Should().Contain("is neither a JSON payload nor a path to an existing file");
         }
 
         [TestMethod]
@@ -288,6 +445,7 @@ namespace MSStore.CLI.UnitTests
             var payloadFilePath = CreateTemporaryPayloadFile(
                 @"
 {
+""Pricing"": { ""PriceId"": ""Free"" },
 ""ApplicationPackages"":
     [
         {
@@ -306,7 +464,7 @@ namespace MSStore.CLI.UnitTests
                     payloadFilePath
                 ], 1);
 
-            result.Error.Should().Contain("Use only one of them.");
+            PlainConsoleText(result.Error).Should().Contain("Use only one of them.");
         }
 
         [TestMethod]
@@ -319,6 +477,7 @@ namespace MSStore.CLI.UnitTests
             var payloadFilePath = CreateTemporaryPayloadFile(
                 @"
 {
+""Pricing"": { ""PriceId"": ""Free"" },
 ""Listings"":
     {
         ""en-us"":
@@ -348,7 +507,7 @@ namespace MSStore.CLI.UnitTests
                     It.IsAny<CancellationToken>()),
                 Times.Once);
 
-            result.Error.Should().Contain("Updating submission product");
+            PlainConsoleText(result.Error).Should().Contain("Updating submission product");
             result.Output.Should().Contain("\"FileUploadUrl\": \"https://azureblob.com/fileupload\"");
         }
 
@@ -362,6 +521,7 @@ namespace MSStore.CLI.UnitTests
                     FakeApps[0].Id!,
                     @"
 {
+""Pricing"": { ""PriceId"": ""Free"" },
 ""Listings"":
     {
         ""en-us"":
@@ -375,7 +535,7 @@ namespace MSStore.CLI.UnitTests
 }"
                 ]);
 
-            result.Error.Should().Contain("Updating submission product");
+            PlainConsoleText(result.Error).Should().Contain("Updating submission product");
             result.Output.Should().Contain("\"FileUploadUrl\": \"https://azureblob.com/fileupload\"");
         }
 
@@ -385,6 +545,7 @@ namespace MSStore.CLI.UnitTests
             var payloadFilePath = CreateTemporaryPayloadFile(
                 @"
 {
+""Pricing"": { ""PriceId"": ""Free"" },
 ""Listings"":
     {
         ""en-us"":
@@ -406,7 +567,7 @@ namespace MSStore.CLI.UnitTests
                     payloadFilePath
                 ]);
 
-            result.Error.Should().Contain("Updating submission product");
+            PlainConsoleText(result.Error).Should().Contain("Updating submission product");
             result.Output.Should().Contain("\"FileUploadUrl\": \"https://azureblob.com/fileupload\"");
         }
 
@@ -432,7 +593,7 @@ namespace MSStore.CLI.UnitTests
                     FakeApps[0].Id!
                 ]);
 
-            result.Error.Should().Contain("Submission Committed with status");
+            PlainConsoleText(result.Error).Should().Contain("Submission Committed with status");
         }
 
         [TestMethod]
@@ -452,7 +613,7 @@ namespace MSStore.CLI.UnitTests
                     FakeApps[0].Id!
                 ]);
 
-            result.Error.Should().Contain("Submission commit success!");
+            PlainConsoleText(result.Error).Should().Contain("Submission commit success!");
         }
 
         [TestMethod]
@@ -476,8 +637,8 @@ namespace MSStore.CLI.UnitTests
 
             FakeConsole.Verify(x => x.YesNoConfirmationAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
 
-            result.Error.Should().Contain($"Found Pending Submission with Id '{FakeApps[0].PendingApplicationSubmission!.Id}'");
-            result.Error.Should().Contain("Existing submission deleted!");
+            PlainConsoleText(result.Error).Should().Contain($"Found Pending Submission with Id '{FakeApps[0].PendingApplicationSubmission!.Id}'");
+            PlainConsoleText(result.Error).Should().Contain("Existing submission deleted!");
         }
     }
 }
