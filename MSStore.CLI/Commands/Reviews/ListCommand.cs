@@ -261,25 +261,27 @@ namespace MSStore.CLI.Commands.Reviews
 
                 foreach (var review in reviews)
                 {
-                    var title = (translated ? review.TranslatedReviewTitle ?? review.ReviewTitle : review.ReviewTitle) ?? string.Empty;
-                    var text = (translated ? review.TranslatedReviewText ?? review.ReviewText : review.ReviewText) ?? string.Empty;
+                    var title = translated ? review.TranslatedReviewTitle ?? review.ReviewTitle : review.ReviewTitle;
+                    var text = translated ? review.TranslatedReviewText ?? review.ReviewText : review.ReviewText;
 
+                    // Every value here comes from the service, and the reviewer name, title and
+                    // text are written by customers, so each one is sanitized before display.
                     var cells = new List<string>
                     {
-                        (review.Id ?? string.Empty).EscapeMarkup(),
-                        (review.Date ?? string.Empty).EscapeMarkup(),
+                        TerminalText.Sanitize(review.Id).EscapeMarkup(),
+                        TerminalText.Sanitize(review.Date).EscapeMarkup(),
                         FormatRating(review.Rating),
-                        (review.Market ?? string.Empty).EscapeMarkup(),
+                        TerminalText.Sanitize(review.Market).EscapeMarkup(),
                     };
 
                     if (translated)
                     {
-                        cells.Add((review.DetectedLanguage ?? string.Empty).EscapeMarkup());
+                        cells.Add(TerminalText.Sanitize(review.DetectedLanguage).EscapeMarkup());
                     }
 
-                    cells.Add((review.ReviewerName ?? string.Empty).EscapeMarkup());
-                    cells.Add(Truncate(title).EscapeMarkup());
-                    cells.Add(Truncate(text).EscapeMarkup());
+                    cells.Add(TerminalText.Sanitize(review.ReviewerName).EscapeMarkup());
+                    cells.Add(Truncate(TerminalText.Sanitize(title)).EscapeMarkup());
+                    cells.Add(Truncate(TerminalText.Sanitize(text)).EscapeMarkup());
                     cells.Add(string.IsNullOrEmpty(review.ResponseText) ? string.Empty : "yes");
 
                     table.AddRow([.. cells]);
@@ -303,9 +305,6 @@ namespace MSStore.CLI.Commands.Reviews
 
             private static string Truncate(string value)
             {
-                // Reviews are free-form and can contain newlines, which would break the row layout.
-                value = value.ReplaceLineEndings(" ");
-
                 return value.Length <= MaxTextLengthInTable
                     ? value
                     : string.Concat(value.AsSpan(0, MaxTextLengthInTable), "...");

@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+using MSStore.API.Packaged.Models;
 using MSStore.CLI.Services.Translation;
 
 namespace MSStore.CLI.UnitTests
@@ -225,6 +226,40 @@ namespace MSStore.CLI.UnitTests
                 ]);
 
             result.Error.Should().NotContain("Showing reviews");
+        }
+
+        [TestMethod]
+        public async Task ReviewsListCommandShouldNeutralizeControlCharactersInReviews()
+        {
+            // Reviews are written by customers, and Spectre escapes only its own markup, so
+            // control characters would otherwise reach the terminal: an OSC sequence retitles
+            // the window, backspaces overprint earlier output, and U+009B is a one-byte CSI.
+            FakeReviews.Clear();
+            FakeReviews.Add(new AppReview
+            {
+                Id = "9EB876CC-4F8F-4867-DFB0-D2BE7AEC3649",
+                Date = "3/8/2021 10:00:00 AM",
+                Rating = 1,
+                ReviewerName = "Evil\u001b]0;pwned\u0007Reviewer",
+                ReviewTitle = "Title\u0008\u0008\u0008Fake",
+                ReviewText = "Text\u009b2JMore"
+            });
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA"
+                ]);
+
+            result.Error.Should().NotContain("\u0007");
+            result.Error.Should().NotContain("\u0008");
+            result.Error.Should().NotContain("\u009b");
+
+            // The escape was replaced rather than interpreted, so the rest of the sequence is
+            // shown as inert text. Had the sequence reached the output intact, the harness would
+            // have stripped all of it and this text would be missing.
+            result.Error.Should().Contain("Evil ]0;pwned Reviewer");
         }
 
         [TestMethod]
