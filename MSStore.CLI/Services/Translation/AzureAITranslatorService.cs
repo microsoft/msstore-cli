@@ -402,12 +402,15 @@ namespace MSStore.CLI.Services.Translation
                 return new TranslationException(message);
             }
 
-            // The service's own message and reason phrase are quoted from the response, so they
-            // are sanitized before becoming part of a message that is displayed and logged.
+            // The service's own message is not quoted: a failed request can echo back the text
+            // that was submitted, and this message is displayed, captured in CI output, and
+            // logged in full with --verbose. The status, service error code and request id are
+            // what identifies the failure for a support case, and none of them carries content.
+            var requestReference = $"X-RequestId: {TerminalText.Sanitize(requestId)}.";
             return new TranslationException(
-                error?.Message is { Length: > 0 } serviceMessage
-                    ? $"Azure AI Translator returned an error: {TerminalText.Sanitize(serviceMessage)}"
-                    : $"Azure AI Translator returned {(int)response.StatusCode} {TerminalText.Sanitize(response.ReasonPhrase)}.");
+                error?.Code is int code and not 0
+                    ? $"Azure AI Translator returned an error (HTTP {(int)response.StatusCode}, code {code}). {requestReference}"
+                    : $"Azure AI Translator returned HTTP {(int)response.StatusCode} {TerminalText.Sanitize(response.ReasonPhrase)}. {requestReference}");
         }
     }
 }

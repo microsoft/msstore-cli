@@ -198,15 +198,38 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
-        public async Task TranslateAsyncShouldSanitizeTheQuotedServiceMessage()
+        public async Task TranslateAsyncShouldNotQuoteTheServiceMessageForUnmappedErrors()
         {
-            EnqueueJson(HttpStatusCode.BadRequest, """{"error":{"code":400005,"message":"bad\u0008\u0008input"}}""");
+            // A failed request can echo back submitted review text, and this message is shown,
+            // captured in CI output, and logged in full with --verbose. Only identifiers go in.
+            var response = new HttpResponseMessage(HttpStatusCode.BadRequest)
+            {
+                Content = new StringContent("""{"error":{"code":400005,"message":"echo: private review text"}}""", System.Text.Encoding.UTF8, "application/json")
+            };
+            response.Headers.Add("X-RequestId", "req-123");
+            _responses.Enqueue(response);
 
             var act = async () => await CreateService().TranslateAsync(["olá"], "en", TestContext.CancellationToken);
 
             var error = (await act.Should().ThrowAsync<TranslationException>()).Which;
-            error.Message.Should().NotContain("\u0008");
-            error.Message.Should().Be("Azure AI Translator returned an error: bad  input");
+            error.Message.Should().Be("Azure AI Translator returned an error (HTTP 400, code 400005). X-RequestId: req-123.");
+            error.Message.Should().NotContain("private review text");
+        }
+
+        [TestMethod]
+        public async Task TranslateAsyncShouldDescribeAnErrorWithoutAServiceCode()
+        {
+            // 404 is not retried, so the message is built from this exact response.
+            _responses.Enqueue(new HttpResponseMessage(HttpStatusCode.NotFound)
+            {
+                ReasonPhrase = "Not\u0007Found",
+                Content = new StringContent("<html>upstream failure</html>", System.Text.Encoding.UTF8, "text/html")
+            });
+
+            var act = async () => await CreateService().TranslateAsync(["olá"], "en", TestContext.CancellationToken);
+
+            var error = (await act.Should().ThrowAsync<TranslationException>()).Which;
+            error.Message.Should().Be("Azure AI Translator returned HTTP 404 Not Found. X-RequestId: (none).");
         }
 
         [TestMethod]

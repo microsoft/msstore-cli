@@ -541,7 +541,7 @@ namespace MSStore.CLI.UnitTests
         {
             FakeTranslationService
                 .Setup(x => x.ResolveLanguageAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .ThrowsAsync(new TranslationException("Azure AI Translator returned an error: bad\u0008\u0008input"));
+                .ThrowsAsync(new TranslationException("Translation failed: bad\u0008\u0008input"));
 
             var result = await ParseAndInvokeAsync(
                 [
@@ -553,9 +553,9 @@ namespace MSStore.CLI.UnitTests
                 ],
                 -1);
 
-            var errorLine = result.Error.Split('\n').Single(l => l.Contains('\ud83d') && l.Contains("returned an error"));
+            var errorLine = result.Error.Split('\n').Single(l => l.Contains('\ud83d') && l.Contains("Translation failed"));
             errorLine.Should().NotContain("\u0008");
-            errorLine.Should().Contain("Azure AI Translator returned an error: bad  input");
+            errorLine.Should().Contain("Translation failed: bad  input");
         }
 
         [TestMethod]
