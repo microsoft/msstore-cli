@@ -283,8 +283,8 @@ namespace MSStore.CLI.Commands.Reviews
                     }
 
                     cells.Add(TerminalText.Sanitize(review.ReviewerName).EscapeMarkup());
-                    cells.Add(Truncate(TerminalText.Sanitize(title)).EscapeMarkup());
-                    cells.Add(Truncate(TerminalText.Sanitize(text)).EscapeMarkup());
+                    cells.Add(TerminalText.Truncate(TerminalText.Sanitize(title), MaxTextLengthInTable).EscapeMarkup());
+                    cells.Add(TerminalText.Truncate(TerminalText.Sanitize(text), MaxTextLengthInTable).EscapeMarkup());
                     cells.Add(string.IsNullOrEmpty(review.ResponseText) ? string.Empty : "yes");
 
                     table.AddRow([.. cells]);
@@ -304,13 +304,6 @@ namespace MSStore.CLI.Commands.Reviews
                 stars = Math.Clamp(stars, 0, 5);
 
                 return $"{new string('*', stars)}{new string('-', 5 - stars)} ({rating.Value.ToString("0.#", CultureInfo.InvariantCulture)})";
-            }
-
-            private static string Truncate(string value)
-            {
-                return value.Length <= MaxTextLengthInTable
-                    ? value
-                    : string.Concat(value.AsSpan(0, MaxTextLengthInTable), "...");
             }
         }
     }

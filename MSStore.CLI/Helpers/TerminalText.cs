@@ -1,6 +1,9 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+using System;
+using System.Globalization;
+
 namespace MSStore.CLI.Helpers
 {
     /// <summary>
@@ -37,6 +40,42 @@ namespace MSStore.CLI.Helpers
                     span[i] = char.IsControl(source[i]) ? ' ' : source[i];
                 }
             });
+        }
+
+        /// <summary>
+        /// Shortens text to at most <paramref name="maxLength"/> UTF-16 units, followed by an
+        /// ellipsis, without cutting a character in half.
+        /// </summary>
+        /// <remarks>
+        /// The cut is made on a text element boundary, so a surrogate pair (most emoji) or a
+        /// letter with combining marks is kept whole or dropped whole. Cutting at a fixed index
+        /// could leave half a surrogate pair, which is not a valid character.
+        /// </remarks>
+        /// <param name="value">The text to shorten.</param>
+        /// <param name="maxLength">The maximum length before the ellipsis.</param>
+        /// <returns>The text unchanged if it fits, otherwise its longest whole-character prefix and "...".</returns>
+        public static string Truncate(string value, int maxLength)
+        {
+            ArgumentNullException.ThrowIfNull(value);
+
+            if (value.Length <= maxLength)
+            {
+                return value;
+            }
+
+            var length = 0;
+            while (length < value.Length)
+            {
+                var next = StringInfo.GetNextTextElementLength(value, length);
+                if (length + next > maxLength)
+                {
+                    break;
+                }
+
+                length += next;
+            }
+
+            return string.Concat(value.AsSpan(0, length), "...");
         }
     }
 }

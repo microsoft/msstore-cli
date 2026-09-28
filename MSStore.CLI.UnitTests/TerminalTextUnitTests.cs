@@ -47,5 +47,45 @@ namespace MSStore.CLI.UnitTests
         {
             TerminalText.Sanitize(input).Should().BeEmpty();
         }
+
+        [TestMethod]
+        public void TruncateShouldLeaveTextThatFitsUntouched()
+        {
+            TerminalText.Truncate("short", 10).Should().Be("short");
+            TerminalText.Truncate("exactly10!", 10).Should().Be("exactly10!");
+        }
+
+        [TestMethod]
+        public void TruncateShouldAddAnEllipsisToLongText()
+        {
+            TerminalText.Truncate("abcdefghij", 4).Should().Be("abcd...");
+        }
+
+        [TestMethod]
+        public void TruncateShouldNotSplitASurrogatePair()
+        {
+            // The emoji is two UTF-16 units and would straddle the limit; cutting at the index
+            // would leave half of it, which is not a valid character.
+            var text = new string('a', 9) + "\ud83d\udc4d" + "tail";
+
+            TerminalText.Truncate(text, 10).Should().Be(new string('a', 9) + "...");
+        }
+
+        [TestMethod]
+        public void TruncateShouldKeepACharacterThatFitsExactly()
+        {
+            var text = new string('a', 8) + "\ud83d\udc4d" + "tail";
+
+            TerminalText.Truncate(text, 10).Should().Be(new string('a', 8) + "\ud83d\udc4d...");
+        }
+
+        [TestMethod]
+        public void TruncateShouldNotSeparateACombiningMark()
+        {
+            // "e" followed by a combining acute accent is one character on screen.
+            var text = "aaaa" + "e\u0301" + "tail";
+
+            TerminalText.Truncate(text, 5).Should().Be("aaaa...");
+        }
     }
 }
