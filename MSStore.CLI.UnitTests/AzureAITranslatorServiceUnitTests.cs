@@ -300,6 +300,22 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
+        [DataRow("""[null]""")]
+        [DataRow("""[{"translations":[]}]""")]
+        [DataRow("""[{"translations":[{"to":"en"}]}]""")]
+        public async Task TranslateAsyncShouldRejectAnItemWithoutATranslation(string payload)
+        {
+            // A null item would otherwise crash with a NullReferenceException, and an empty one
+            // would quietly leave that review untranslated.
+            EnqueueJson(HttpStatusCode.OK, payload);
+
+            var act = async () => await CreateService().TranslateAsync(["olá"], "en", TestContext.CancellationToken);
+
+            (await act.Should().ThrowAsync<TranslationException>())
+                .WithMessage("*incomplete response*");
+        }
+
+        [TestMethod]
         public async Task TranslateAsyncShouldRejectAResponseWithTheWrongNumberOfItems()
         {
             // Results are matched to inputs by position, so a missing item would shift every

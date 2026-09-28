@@ -352,11 +352,22 @@ namespace MSStore.CLI.Services.Translation
                         throw new TranslationException($"The translation service returned {items.Count} translations for {texts.Count} texts.");
                     }
 
-                    return [.. items.Select(item =>
+                    // Each item must carry the one translation that was asked for. A null item, or
+                    // one without a translation, is a malformed response: failing is safer than
+                    // crashing on it, or quietly showing that review untranslated.
+                    var translated = new List<TranslationResult?>(items.Count);
+                    foreach (var item in items)
                     {
-                        var text = item.Translations?.FirstOrDefault()?.Text;
-                        return text == null ? null : new TranslationResult(text, item.DetectedLanguage?.Language);
-                    })];
+                        var translation = item?.Translations?.FirstOrDefault()?.Text;
+                        if (translation == null)
+                        {
+                            throw new TranslationException("The translation service returned an incomplete response.");
+                        }
+
+                        translated.Add(new TranslationResult(translation, item!.DetectedLanguage?.Language));
+                    }
+
+                    return translated;
                 }
 
                 if (IsTransient(response.StatusCode) && attempt < MaxRetryAttempts && GetRetryDelay(response, attempt) is TimeSpan delay)
