@@ -394,9 +394,11 @@ namespace MSStore.CLI.Services.Translation
                 // Fall through to the generic message below.
             }
 
-            var requestId = response.Headers.TryGetValues("X-RequestId", out var requestIds)
+            // The request id comes from a response header, so it is sanitized once here and the
+            // clean value is used both in the log and in the message shown to the user.
+            var requestId = TerminalText.Sanitize(response.Headers.TryGetValues("X-RequestId", out var requestIds)
                 ? string.Join(',', requestIds)
-                : "(none)";
+                : "(none)");
 
             // The status, service error code and request id are enough to diagnose a failure
             // and to raise a support case. The body is deliberately not logged at any level: a
@@ -429,7 +431,7 @@ namespace MSStore.CLI.Services.Translation
             // that was submitted, and this message is displayed, captured in CI output, and
             // logged in full with --verbose. The status, service error code and request id are
             // what identifies the failure for a support case, and none of them carries content.
-            var requestReference = $"X-RequestId: {TerminalText.Sanitize(requestId)}.";
+            var requestReference = $"X-RequestId: {requestId}.";
             return new TranslationException(
                 error?.Code is int code and not 0
                     ? $"Azure AI Translator returned an error (HTTP {(int)response.StatusCode}, code {code}). {requestReference}"

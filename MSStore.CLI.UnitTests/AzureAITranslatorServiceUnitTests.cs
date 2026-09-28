@@ -285,6 +285,27 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
+        public async Task TranslateAsyncShouldSanitizeTheRequestIdEverywhereItAppears()
+        {
+            // The request id comes from a response header and appears both in the log and in
+            // the message shown to the user, so neither may carry control characters from it.
+            var logger = new CapturingLogger();
+            var response = new HttpResponseMessage(HttpStatusCode.BadRequest)
+            {
+                Content = new StringContent("""{"error":{"code":400005,"message":"x"}}""", System.Text.Encoding.UTF8, "application/json")
+            };
+            response.Headers.TryAddWithoutValidation("X-RequestId", "req\u0007id");
+            _responses.Enqueue(response);
+
+            var act = async () => await CreateService(logger).TranslateAsync(["olá"], "en", TestContext.CancellationToken);
+
+            var error = (await act.Should().ThrowAsync<TranslationException>()).Which;
+            error.Message.Should().Contain("X-RequestId: req id.");
+            logger.Messages.Should().Contain(m => m.Contains("X-RequestId: req id."));
+            logger.Messages.Should().NotContain(m => m.Contains('\u0007'));
+        }
+
+        [TestMethod]
         public async Task TranslateAsyncShouldNeverLogTheErrorResponseBody()
         {
             // A failed request can echo back review text, so the body must stay out of the logs
