@@ -219,5 +219,82 @@ namespace MSStore.CLI.UnitTests
                 x => x.ClearCredentials(AzureAITranslatorService.CredentialKeyName),
                 Times.Once);
         }
+
+        [TestMethod]
+        public async Task SetTranslatorKeyClearShouldReportAKeyThatSurvivesTheClear()
+        {
+            // ClearCredentials is best-effort on every platform and can fail silently, so a key
+            // that is still readable afterwards must be reported rather than called "cleared".
+            CredentialManager
+                .Setup(x => x.ClearCredentials(It.IsAny<string>()));
+            CredentialManager
+                .Setup(x => x.ReadCredential(AzureAITranslatorService.CredentialKeyName))
+                .Returns("still-here");
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "settings",
+                    "set-translator-key",
+                    "--clear"
+                ],
+                -1);
+
+            result.Error.Should().Contain("could not be removed from the credential store");
+            result.Error.Should().NotContain("cleared.");
+
+            // Nothing else is changed when the key could not be removed.
+            FakeConfigurationManager.Verify(
+                x => x.SaveAsync(It.IsAny<Configurations>(), It.IsAny<CancellationToken>()),
+                Times.Never);
+        }
+
+        [TestMethod]
+        public async Task SetTranslatorKeyShouldNotOverwriteTheKeyWhenSavingSettingsFails()
+        {
+            // settings.json is saved first, so a failure there leaves the working key in place.
+            FakeConsole
+                .Setup(x => x.RequestStringAsync(It.IsAny<string>(), true, It.IsAny<CancellationToken>()))
+                .ReturnsAsync("new-key");
+            FakeConfigurationManager
+                .Setup(x => x.SaveAsync(It.IsAny<Configurations>(), It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new IOException("The disk is full."));
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "settings",
+                    "set-translator-key",
+                    "--region",
+                    "westus2"
+                ],
+                -1);
+
+            result.Error.Should().Contain("Could not store the Azure AI Translator key.");
+
+            CredentialManager.Verify(
+                x => x.WriteCredential(AzureAITranslatorService.CredentialKeyName, It.IsAny<string>()),
+                Times.Never);
+        }
+
+        [TestMethod]
+        public async Task SetTranslatorKeyShouldSayTheRegionWasSavedWhenOnlyTheKeyFails()
+        {
+            FakeConsole
+                .Setup(x => x.RequestStringAsync(It.IsAny<string>(), true, It.IsAny<CancellationToken>()))
+                .ReturnsAsync("new-key");
+            CredentialManager
+                .Setup(x => x.WriteCredential(AzureAITranslatorService.CredentialKeyName, It.IsAny<string>()))
+                .Throws(new InvalidOperationException("The keyring is unavailable."));
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "settings",
+                    "set-translator-key",
+                    "--region",
+                    "westus2"
+                ],
+                -1);
+
+            result.Error.Should().Contain("The region was saved, but the Azure AI Translator key could not be stored.");
+        }
     }
 }

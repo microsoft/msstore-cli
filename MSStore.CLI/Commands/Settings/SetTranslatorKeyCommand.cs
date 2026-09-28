@@ -71,23 +71,59 @@ namespace MSStore.CLI.Commands.Settings
 
             public override async Task<int> InvokeAsync(ParseResult parseResult, CancellationToken ct = default)
             {
-                var keyFromStandardInput = parseResult.GetValue(KeyFromStandardInputOption);
-                var region = parseResult.GetValue(RegionOption);
-                var clear = parseResult.GetValue(ClearOption);
+                if (parseResult.GetValue(ClearOption))
+                {
+                    return await ClearAsync(ct);
+                }
+
+                return await StoreAsync(parseResult.GetValue(KeyFromStandardInputOption), parseResult.GetValue(RegionOption), ct);
+            }
+
+            private async Task<int> ClearAsync(CancellationToken ct)
+            {
+                var keyRemoved = false;
 
                 try
                 {
-                    var config = await _configurationManager.LoadAsync(ct: ct);
+                    // ClearCredentials is best-effort on every platform, so the removal is confirmed
+                    // rather than assumed: reporting success while the key survives would leave it in
+                    // use. The key goes first, so a failure to remove it changes nothing else.
+                    _credentialManager.ClearCredentials(AzureAITranslatorService.CredentialKeyName);
 
-                    if (clear)
+                    if (!string.IsNullOrEmpty(_credentialManager.ReadCredential(AzureAITranslatorService.CredentialKeyName)))
                     {
-                        _credentialManager.ClearCredentials(AzureAITranslatorService.CredentialKeyName);
-                        config.TranslatorRegion = null;
-                        await _configurationManager.SaveAsync(config, ct);
-
-                        _ansiConsole.MarkupLine("Azure AI Translator key and region [bold green]cleared[/].");
-                        return await _telemetryClient.TrackCommandEventAsync<Handler>(0, ct);
+                        _ansiConsole.MarkupLine("[bold red]The Azure AI Translator key could not be removed from the credential store.[/] Remove it manually.");
+                        return await _telemetryClient.TrackCommandEventAsync<Handler>(-1, ct);
                     }
+
+                    keyRemoved = true;
+
+                    var config = await _configurationManager.LoadAsync(ct: ct);
+                    config.TranslatorRegion = null;
+                    await _configurationManager.SaveAsync(config, ct);
+
+                    _ansiConsole.MarkupLine("Azure AI Translator key and region [bold green]cleared[/].");
+                    return await _telemetryClient.TrackCommandEventAsync<Handler>(0, ct);
+                }
+                catch (Exception err)
+                {
+                    _logger.LogError(err, "Error while clearing the Azure AI Translator key.");
+                    _ansiConsole.MarkupLine(keyRemoved
+                        ? "[bold red]The Azure AI Translator key was removed, but the region could not be cleared from settings.json.[/]"
+                        : "[bold red]Could not clear the Azure AI Translator key.[/]");
+                    return await _telemetryClient.TrackCommandEventAsync<Handler>(-1, ct);
+                }
+            }
+
+            private async Task<int> StoreAsync(bool keyFromStandardInput, string? region, CancellationToken ct)
+            {
+                var regionSaved = false;
+
+                try
+                {
+                    // Loaded before asking for the key, so a broken settings file fails the command
+                    // before the user has typed a secret.
+                    var config = await _configurationManager.LoadAsync(ct: ct);
 
                     string? key;
                     if (keyFromStandardInput)
@@ -122,17 +158,21 @@ namespace MSStore.CLI.Commands.Settings
                         return await _telemetryClient.TrackCommandEventAsync<Handler>(-1, ct);
                     }
 
-                    _credentialManager.WriteCredential(AzureAITranslatorService.CredentialKeyName, key);
-
+                    // settings.json is saved before the credential is overwritten, following the
+                    // reconfigure flow: if saving it fails, the stored key is still the one that
+                    // worked before this command ran.
                     if (!string.IsNullOrWhiteSpace(region))
                     {
                         config.TranslatorRegion = region.Trim();
                         await _configurationManager.SaveAsync(config, ct);
+                        regionSaved = true;
                     }
+
+                    _credentialManager.WriteCredential(AzureAITranslatorService.CredentialKeyName, key);
 
                     _ansiConsole.MarkupLine("Azure AI Translator key [bold green]stored[/].");
 
-                    if (string.IsNullOrWhiteSpace(region) && string.IsNullOrWhiteSpace(config.TranslatorRegion))
+                    if (string.IsNullOrWhiteSpace(config.TranslatorRegion))
                     {
                         _ansiConsole.MarkupLine("No region is set. That is correct for a [bold]global[/] Translator resource, but regional and multi-service resources need one - re-run with [bold]--region[/].");
                     }
@@ -142,7 +182,9 @@ namespace MSStore.CLI.Commands.Settings
                 catch (Exception err)
                 {
                     _logger.LogError(err, "Error while storing the Azure AI Translator key.");
-                    _ansiConsole.MarkupLine("[bold red]Could not store the Azure AI Translator key.[/]");
+                    _ansiConsole.MarkupLine(regionSaved
+                        ? "[bold red]The region was saved, but the Azure AI Translator key could not be stored.[/]"
+                        : "[bold red]Could not store the Azure AI Translator key.[/]");
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(-1, ct);
                 }
             }
