@@ -76,12 +76,10 @@ The expanded pricing model uses the following US-market retail prices. Tier rang
 | `Tier1403` - `Tier1414` | $449.99 - $999.99 | $50.00 |
 | `Tier1415` - `Tier1424` | $1,099.99 - $1,999.99 | $100.00 |
 
-Source: [pricing-tier guidance in PR #175](https://github.com/microsoft/msstore-cli/pull/175#issuecomment-5791491206), published September 23, 2026. Table checked against that source on September 28, 2026; not independently verified against live Partner Center prices.
-
 For example, `Tier1012` corresponds to $0.99, `Tier1052` to $4.99, and `Tier1102` to $9.99 in this reference. To find a tier within a row, start at its first tier and advance one tier for each listed price increment. Do not extrapolate across row boundaries or use these mappings for legacy tiers.
 
 > [!IMPORTANT]
-> This table is a dated USD reference, not a guarantee of current prices for your account or other markets. Confirm the intended price and any market-specific overrides in Partner Center before committing.
+> This table is a USD reference, not a guarantee of current prices for your account or other markets. Confirm the intended price and any market-specific overrides in Partner Center before committing.
 
 ### Confirm prices in Partner Center
 
