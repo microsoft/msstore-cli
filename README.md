@@ -8,70 +8,34 @@ The Microsoft Store Developer Command Line Interface is a cross-platform (Window
 ## Helpful links
 * [Documentation](https://aka.ms/msstoredevcli/docs) - Microsoft's official documentation on regards to available commands, installation steps, how to properly setup CI/CD environments, and general guidance.
 
-## Standard output vs. standard error
+## Updating paid apps
 
-By default the CLI splits its output as follows:
+For packaged (MSIX) apps, publish an update normally to preserve the existing price when the Store returns a usable price ID:
 
-* **stdout** carries the command's result — machine-readable payloads such as the JSON emitted by `submission get`, `apps get` and `submission rollout get`, the package path printed by `package`, and `--help` text. This keeps `msstore submission get ... | ConvertFrom-Json` and `$(msstore package ...)` reliable.
-* **stderr** carries everything else meant for a human — progress, status, success messages, tables, prompts and verbose logging.
+```powershell
+msstore publish .\MyApp.msix --appId YOUR_APP_ID
+```
 
-`--output-stream stdout` deliberately breaks that separation: it moves the human-readable half onto stdout, where it is interleaved with any payload.
+If the CLI stops because it cannot preserve the price (for example, the Store returns `Base`), publish through Partner Center or explicitly choose a base tier:
 
-Two things sit outside the option's scope on purpose, matching the behavior of other CLIs:
+```powershell
+msstore publish .\MyApp.msix --appId YOUR_APP_ID --priceId Tier1012 --noCommit
+```
 
-* Machine-readable payloads are always written to stdout, so they are never affected by the option.
-* `--help` is always written to stdout, so that `msstore --help | more` works, and command line parse errors are always written to stderr, because they accompany a non-zero exit code.
+Replace the package path and `YOUR_APP_ID` with your own values. `Tier1012` is an example, not a price recommendation. `--noCommit` uploads and updates a draft without committing it; it is **not a dry run**.
 
 > [!WARNING]
-> **Behavior change.** The `apps list`, `flights list` and `info` tables, the interactive prompts and
-> the browser confirmation used to go to stdout. They now go to stderr with everything else meant for
-> a human. Scripts that piped or captured them, such as `msstore apps list | grep ...` or
-> `msstore info > file`, will see nothing on stdout — with a zero exit code and no diagnostic.
->
-> Either of these restores a working script:
->
-> * `2>&1`, to merge the two streams, or
-> * `--output-stream stdout`, or `MSSTORE_OUTPUT_STREAM=stdout` for a whole job, which puts **all**
->   human-readable output on stdout. Note that this is not the old routing: progress, status and
->   verbose logging already went to stderr before this change, so a script will now also receive that
->   text alongside the table it was after.
->
-> Machine-readable payloads (`submission get`, `apps get`, `package`) were already on stdout and are
-> unaffected either way.
+> `--priceId` overrides the base price and does not guarantee preservation of per-market pricing. Confirm the intended tier and review the draft's pricing before committing. Publishing through Partner Center is safer for apps priced per market.
 
-### Azure DevOps
+See [paid-app updates and price tiers](docs/paid-apps.md), including the [USD tier mapping table](docs/paid-apps.md#usd-tier-mapping-table).
 
-Azure DevOps reports every stderr line as `##[error]`, even when the command succeeded and even when the task sets `failOnStderr: false`. A successful `msstore publish` therefore shows up as a failed or partially failed stage.
+## Standard output vs. standard error
 
-To avoid this, move the human-readable output to stdout:
+Results (including JSON and package paths) and help text go to **stdout**; human-readable messages, tables, and prompts go to **stderr**.
 
-```yaml
-- script: msstore publish ./MyApp --output-stream stdout
-  displayName: Publish to the Microsoft Store
-```
+Scripts that previously captured `apps list`, `flights list`, or `info` tables from stdout need `--output-stream stdout` or `2>&1`. These also include human-readable messages, so do not use them when capturing clean JSON.
 
-Or set it once for a whole job, so that every `msstore` call picks it up:
-
-```yaml
-variables:
-  MSSTORE_OUTPUT_STREAM: stdout
-```
-
-> [!IMPORTANT]
-> Machine-readable payloads always go to stdout. When `MSSTORE_OUTPUT_STREAM` is set for a whole job, the human-readable output is interleaved with the payload, which breaks capturing it. Pass `--output-stream stderr` on those specific calls to opt back out — the option always overrides the environment variable:
->
-> ```yaml
-> variables:
->   MSSTORE_OUTPUT_STREAM: stdout
->
-> steps:
-> - script: msstore publish ./MyApp                                   # human-readable output on stdout
-> - script: msstore submission get $(AppId) --output-stream stderr    # clean JSON on stdout
-> ```
-
-### GitHub Actions
-
-No change is needed. GitHub Actions fails a step based on its exit code alone and never turns stderr into an error annotation, so the default is already correct.
+See [output streams and CI configuration](docs/output-streams.md) for migration details, environment-variable settings, and Azure DevOps/GitHub Actions guidance.
 
 ## Contributing
 
