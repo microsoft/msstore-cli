@@ -617,12 +617,16 @@ namespace MSStore.CLI.UnitTests
                         }
                     }
 
-                    var value = reviews.Skip(skip ?? 0).Take(top ?? int.MaxValue).ToList();
+                    var matches = reviews.ToList();
+                    var value = matches.Skip(skip ?? 0).Take(top ?? int.MaxValue).ToList();
 
+                    // Mirrors the analytics API, verified against the live service: the total
+                    // counts every match rather than just this page, but drops to 0 once --skip
+                    // is past the end.
                     return new PagedResponse<AppReview>
                     {
                         Value = value,
-                        TotalCount = value.Count
+                        TotalCount = value.Count == 0 ? 0 : matches.Count
                     };
                 });
         }

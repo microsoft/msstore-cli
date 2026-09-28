@@ -82,7 +82,7 @@ msstore reviews list <productId>
 msstore reviews get <productId> <reviewId>
 ```
 
-`list` renders a table and supports `--startDate`, `--endDate`, `--top`, `--skip`, `--rating` and `--market`. With no date options every review is returned; pass `--startDate`/`--endDate` to narrow the range. The `Id` column is the value `reviews get` takes.
+`list` renders a table and supports `--startDate`, `--endDate`, `--top`, `--skip`, `--rating` and `--market`. With no date options, reviews from every date are included; pass `--startDate`/`--endDate` to narrow the range. Results come back one page at a time, of up to 10,000 reviews or the `--top` value; when more remain, `list` prints the `--skip` value that shows the next page. The `Id` column is the value `reviews get` takes.
 
 > Responding to reviews is not supported. Microsoft documents its [Store reviews API](https://learn.microsoft.com/windows/uwp/monetize/submit-responses-to-app-reviews) as "currently not in a working state", and points to [Partner Center](https://learn.microsoft.com/windows/apps/publish/analyze-msi-exe/ratings-reviews-performance) instead.
 

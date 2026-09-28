@@ -115,6 +115,8 @@ namespace MSStore.CLI.Commands.Reviews
                 }
 
                 var translateLanguage = parseResult.GetTranslateLanguage();
+                var skip = parseResult.GetValue(SkipOption) ?? 0;
+                var totalCount = 0;
 
                 var reviews = await _ansiConsole.Status().StartAsync("Retrieving Reviews", async ctx =>
                 {
@@ -133,6 +135,7 @@ namespace MSStore.CLI.Commands.Reviews
                             ct);
 
                         var reviews = response.Value ?? [];
+                        totalCount = response.TotalCount;
 
                         if (translateLanguage != null && reviews.Count > 0)
                         {
@@ -180,6 +183,15 @@ namespace MSStore.CLI.Commands.Reviews
 
                 if (reviews.Count == 0)
                 {
+                    // An empty page is not the same as no reviews. Once --skip is past the end the
+                    // service reports a total of 0, so an empty page after a skip cannot tell the
+                    // two apart, and must not claim the application has no reviews.
+                    if (skip > 0)
+                    {
+                        _ansiConsole.MarkupLine($"No reviews on this page. [bold]--skip {skip}[/] may be past the end of the results.");
+                        return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, 0, ct);
+                    }
+
                     // Only refer to a period or filters when the caller actually narrowed the
                     // query. With no options the service returns reviews from every date, so
                     // implying a range was applied would be misleading.
@@ -198,6 +210,14 @@ namespace MSStore.CLI.Commands.Reviews
                 }
 
                 _ansiConsole.Write(BuildTable(reviews, translateLanguage));
+
+                // The service caps a page at --top (10,000 when omitted), so a partial page is
+                // otherwise indistinguishable from the full result set.
+                var shownThrough = skip + reviews.Count;
+                if (totalCount > shownThrough)
+                {
+                    _ansiConsole.MarkupLine($"Showing reviews {skip + 1}-{shownThrough} of {totalCount}. Re-run with [bold]--skip {shownThrough}[/] to see the next page.");
+                }
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, 0, ct);
             }

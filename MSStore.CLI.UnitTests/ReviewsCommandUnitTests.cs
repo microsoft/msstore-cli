@@ -147,6 +147,105 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
+        public async Task ReviewsListCommandShouldSayWhenMoreReviewsExist()
+        {
+            // Without this, a page cut short by --top is indistinguishable from the full set.
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA",
+                    "--top",
+                    "1"
+                ]);
+
+            result.Error.Should().Contain("Showing reviews 1-1 of 3. Re-run with --skip 1 to see the next page.");
+        }
+
+        [TestMethod]
+        public async Task ReviewsListCommandShouldPointToTheFollowingPage()
+        {
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA",
+                    "--top",
+                    "1",
+                    "--skip",
+                    "1"
+                ]);
+
+            result.Error.Should().Contain("Showing reviews 2-2 of 3. Re-run with --skip 2 to see the next page.");
+        }
+
+        [TestMethod]
+        public async Task ReviewsListCommandShouldNotSayMoreExistOnTheLastPage()
+        {
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA",
+                    "--top",
+                    "1",
+                    "--skip",
+                    "2"
+                ]);
+
+            result.Error.Should().NotContain("Showing reviews");
+        }
+
+        [TestMethod]
+        public async Task ReviewsListCommandShouldNotSayMoreExistWhenEverythingIsShown()
+        {
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA"
+                ]);
+
+            result.Error.Should().NotContain("Showing reviews");
+        }
+
+        [TestMethod]
+        public async Task ReviewsListCommandShouldCountOnlyReviewsMatchingTheFilters()
+        {
+            // One fixture review is from BR, so a one-review page is already the whole result.
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA",
+                    "--market",
+                    "BR",
+                    "--top",
+                    "1"
+                ]);
+
+            result.Error.Should().NotContain("Showing reviews");
+        }
+
+        [TestMethod]
+        public async Task ReviewsListCommandShouldNotClaimNoReviewsWhenSkipIsPastTheEnd()
+        {
+            // The service reports a total of 0 once --skip is past the end, so this empty page
+            // must not be presented as the application having no reviews.
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA",
+                    "--skip",
+                    "5"
+                ]);
+
+            result.Error.Should().Contain("No reviews on this page. --skip 5 may be past the end of the results.");
+            result.Error.Should().NotContain("This application has no reviews");
+        }
+
+        [TestMethod]
         public async Task ReviewsListCommandIsNotSupportedForUnpackagedApps()
         {
             var result = await ParseAndInvokeAsync(
