@@ -282,6 +282,69 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
+        [DataRow(System.Net.HttpStatusCode.Unauthorized)]
+        [DataRow(System.Net.HttpStatusCode.Forbidden)]
+        public async Task ReviewsListCommandShouldExplainAProductItCannotRead(System.Net.HttpStatusCode status)
+        {
+            // The live analytics API answers an unknown product ID, and one owned by another
+            // account, with a 401 and this body. The body means it is not an MSStoreHttpException.
+            FakeStorePackagedAPI
+                .Setup(x => x.GetAppReviewsAsync(It.IsAny<string>(), It.IsAny<DateOnly?>(), It.IsAny<DateOnly?>(), It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new MSStore.API.MSStoreException("""{"error":"User Unauthorized due to AMS call failure."}""") { StatusCode = status });
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA"
+                ],
+                -1);
+
+            result.Error.Should().Contain("Could not read the reviews for this product. Check that the product ID is correct and that it belongs to this account.");
+            result.Error.Should().NotContain("Error!");
+        }
+
+        [TestMethod]
+        public async Task ReviewsGetCommandShouldExplainAProductItCannotRead()
+        {
+            // A bodiless failure arrives as MSStoreHttpException instead, and must read the same.
+            FakeStorePackagedAPI
+                .Setup(x => x.GetAppReviewsAsync(It.IsAny<string>(), It.IsAny<DateOnly?>(), It.IsAny<DateOnly?>(), It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new MSStore.API.MSStoreHttpException(new HttpResponseMessage(System.Net.HttpStatusCode.Forbidden)));
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "get",
+                    "9PN3ABCDEFGA",
+                    FakeReviews[0].Id!
+                ],
+                -1);
+
+            result.Error.Should().Contain("Could not read the reviews for this product.");
+            result.Error.Should().NotContain("Could not find review with ID");
+        }
+
+        [TestMethod]
+        public async Task ReviewsListCommandShouldReportOtherServiceFailuresGenerically()
+        {
+            FakeStorePackagedAPI
+                .Setup(x => x.GetAppReviewsAsync(It.IsAny<string>(), It.IsAny<DateOnly?>(), It.IsAny<DateOnly?>(), It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new MSStore.API.MSStoreException("""{"error":"Internal failure"}""") { StatusCode = System.Net.HttpStatusCode.InternalServerError });
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA"
+                ],
+                -1);
+
+            result.Error.Should().Contain("Error while retrieving Reviews.");
+            result.Error.Should().NotContain("Check that the product ID");
+        }
+
+        [TestMethod]
         public async Task ReviewsListCommandShouldNotClaimNoReviewsWhenSkipIsPastTheEnd()
         {
             // The service reports a total of 0 once --skip is past the end, so this empty page

@@ -156,19 +156,10 @@ namespace MSStore.CLI.Commands.Reviews
                         ctx.ErrorStatus(_ansiConsole, TerminalText.Sanitize(err.Message));
                         return null;
                     }
-                    catch (MSStoreHttpException err)
+                    catch (MSStoreException err) when (ReviewsFailure.GetStatusCode(err) is not null)
                     {
-                        _logger.LogError(err, "Error while retrieving Reviews.");
-
-                        if (err.Response.StatusCode == System.Net.HttpStatusCode.Forbidden)
-                        {
-                            ctx.ErrorStatus(_ansiConsole, "Could not find the Application. Please check the ProductId.");
-                        }
-                        else
-                        {
-                            ctx.ErrorStatus(_ansiConsole, "Error while retrieving Reviews.");
-                        }
-
+                        _logger.LogError(err, "Error while retrieving Reviews. HTTP status: {StatusCode}.", ReviewsFailure.GetStatusCode(err));
+                        ctx.ErrorStatus(_ansiConsole, ReviewsFailure.Describe(err));
                         return null;
                     }
                     catch (Exception err)

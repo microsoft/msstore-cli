@@ -105,6 +105,21 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
+        public async Task GetAppReviewsAsyncShouldCarryTheStatusOfAFailureWithABody()
+        {
+            // The analytics API's authorization failures have a body, so without the status
+            // on the exception a caller cannot tell them apart from any other error.
+            var handler = new CapturingHandler("""{"error":"User Unauthorized due to AMS call failure."}""", HttpStatusCode.Unauthorized);
+            using var api = CreateInitializedApi(handler);
+
+            var act = async () => await api.GetAppReviewsAsync("9ZZZZZZZZZZZ", ct: TestContext.CancellationToken);
+
+            var error = (await act.Should().ThrowAsync<MSStoreException>()).Which;
+            error.Should().NotBeOfType<MSStoreHttpException>();
+            error.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        }
+
+        [TestMethod]
         public async Task GetAppReviewsAsyncShouldReadTheAnalyticsResponseShape()
         {
             // Field names as the service sends them: camelCase, the review id as "id", the title
@@ -231,7 +246,7 @@ namespace MSStore.CLI.UnitTests
                 .WithParameterName("skip");
         }
 
-        private sealed class CapturingHandler(string responseJson) : HttpMessageHandler
+        private sealed class CapturingHandler(string responseJson, HttpStatusCode status = HttpStatusCode.OK) : HttpMessageHandler
         {
             public List<Uri> RequestUris { get; } = [];
 
@@ -239,7 +254,7 @@ namespace MSStore.CLI.UnitTests
             {
                 RequestUris.Add(request.RequestUri!);
 
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                return Task.FromResult(new HttpResponseMessage(status)
                 {
                     Content = new StringContent(responseJson, Encoding.UTF8, "application/json")
                 });

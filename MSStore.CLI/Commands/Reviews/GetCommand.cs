@@ -101,19 +101,10 @@ namespace MSStore.CLI.Commands.Reviews
                         ctx.ErrorStatus(_ansiConsole, TerminalText.Sanitize(err.Message));
                         return false;
                     }
-                    catch (MSStoreHttpException err)
+                    catch (MSStoreException err) when (ReviewsFailure.GetStatusCode(err) is not null)
                     {
-                        _logger.LogError(err, "Error while retrieving Review.");
-
-                        if (err.Response.StatusCode == System.Net.HttpStatusCode.Forbidden)
-                        {
-                            ctx.ErrorStatus(_ansiConsole, "Could not find the Application. Please check the ProductId.");
-                        }
-                        else
-                        {
-                            ctx.ErrorStatus(_ansiConsole, "Error while retrieving Review.");
-                        }
-
+                        _logger.LogError(err, "Error while retrieving Review. HTTP status: {StatusCode}.", ReviewsFailure.GetStatusCode(err));
+                        ctx.ErrorStatus(_ansiConsole, ReviewsFailure.Describe(err));
                         return false;
                     }
                     catch (Exception err)
