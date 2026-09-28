@@ -276,8 +276,40 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
-        public async Task SetTranslatorKeyShouldSayTheRegionWasSavedWhenOnlyTheKeyFails()
+        public async Task SetTranslatorKeyShouldRestoreTheRegionWhenTheKeyCannotBeStored()
         {
+            // The region is saved before the key, so a key that then fails to store must not
+            // leave the new region paired with the old key.
+            UseStoredRegion("eastus");
+            var savedRegions = CaptureSavedRegions();
+            FakeConsole
+                .Setup(x => x.RequestStringAsync(It.IsAny<string>(), true, It.IsAny<CancellationToken>()))
+                .ReturnsAsync("new-key");
+            CredentialManager
+                .Setup(x => x.WriteCredential(AzureAITranslatorService.CredentialKeyName, It.IsAny<string>()))
+                .Throws(new InvalidOperationException("The keyring is unavailable."));
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "settings",
+                    "set-translator-key",
+                    "--region",
+                    "westus2"
+                ],
+                -1);
+
+            result.Error.Should().Contain("Could not store the Azure AI Translator key.");
+            savedRegions.Should().Equal("westus2", "eastus");
+        }
+
+        [TestMethod]
+        public async Task SetTranslatorKeyShouldSayWhenTheRegionCouldNotBeRestored()
+        {
+            UseStoredRegion("eastus");
+            var saves = 0;
+            FakeConfigurationManager
+                .Setup(x => x.SaveAsync(It.IsAny<Configurations>(), It.IsAny<CancellationToken>()))
+                .Returns(() => ++saves == 1 ? Task.CompletedTask : Task.FromException(new IOException("The disk is full.")));
             FakeConsole
                 .Setup(x => x.RequestStringAsync(It.IsAny<string>(), true, It.IsAny<CancellationToken>()))
                 .ReturnsAsync("new-key");
@@ -295,6 +327,48 @@ namespace MSStore.CLI.UnitTests
                 -1);
 
             result.Error.Should().Contain("The region was saved, but the Azure AI Translator key could not be stored.");
+        }
+
+        [TestMethod]
+        public async Task SetTranslatorKeyShouldSayWhenAnEarlierRegionIsKept()
+        {
+            // A new key may be for a different resource, so reusing the stored region is
+            // reported rather than done silently.
+            UseStoredRegion("westus2");
+            FakeConsole
+                .Setup(x => x.RequestStringAsync(It.IsAny<string>(), true, It.IsAny<CancellationToken>()))
+                .ReturnsAsync("new-key");
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "settings",
+                    "set-translator-key"
+                ]);
+
+            result.Error.Should().Contain("Using the region 'westus2' stored earlier.");
+        }
+
+        private void UseStoredRegion(string region)
+        {
+            FakeConfigurationManager
+                .Setup(x => x.LoadAsync(It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Configurations
+                {
+                    SellerId = 1,
+                    TenantId = new Guid("41261775-DB6D-4B44-9A36-7EB8565C7D22"),
+                    ClientId = new Guid("3F0BCAEF-6334-48CF-837F-81CB0F1F2C45"),
+                    TranslatorRegion = region
+                });
+        }
+
+        private List<string?> CaptureSavedRegions()
+        {
+            var regions = new List<string?>();
+            FakeConfigurationManager
+                .Setup(x => x.SaveAsync(It.IsAny<Configurations>(), It.IsAny<CancellationToken>()))
+                .Callback((Configurations c, CancellationToken ct) => regions.Add(c.TranslatorRegion))
+                .Returns(Task.CompletedTask);
+            return regions;
         }
     }
 }

@@ -159,8 +159,11 @@ namespace MSStore.CLI.Commands.Settings
                     }
 
                     // settings.json is saved before the credential is overwritten, following the
-                    // reconfigure flow: if saving it fails, the stored key is still the one that
-                    // worked before this command ran.
+                    // reconfigure flow, so a failure saving it leaves the stored key untouched. If
+                    // writing the key then fails, the region is put back, so a command that fails
+                    // leaves the configuration as it found it.
+                    var previousRegion = config.TranslatorRegion;
+
                     if (!string.IsNullOrWhiteSpace(region))
                     {
                         config.TranslatorRegion = region.Trim();
@@ -168,13 +171,32 @@ namespace MSStore.CLI.Commands.Settings
                         regionSaved = true;
                     }
 
-                    _credentialManager.WriteCredential(AzureAITranslatorService.CredentialKeyName, key);
+                    try
+                    {
+                        _credentialManager.WriteCredential(AzureAITranslatorService.CredentialKeyName, key);
+                    }
+                    catch (Exception writeError) when (regionSaved)
+                    {
+                        _logger.LogError(writeError, "Error while storing the Azure AI Translator key.");
+
+                        config.TranslatorRegion = previousRegion;
+                        await _configurationManager.SaveAsync(config, ct);
+
+                        _ansiConsole.MarkupLine("[bold red]Could not store the Azure AI Translator key.[/]");
+                        return await _telemetryClient.TrackCommandEventAsync<Handler>(-1, ct);
+                    }
 
                     _ansiConsole.MarkupLine("Azure AI Translator key [bold green]stored[/].");
 
                     if (string.IsNullOrWhiteSpace(config.TranslatorRegion))
                     {
                         _ansiConsole.MarkupLine("No region is set. That is correct for a [bold]global[/] Translator resource, but regional and multi-service resources need one - re-run with [bold]--region[/].");
+                    }
+                    else if (string.IsNullOrWhiteSpace(region))
+                    {
+                        // A new key may belong to a different resource, so keeping the earlier
+                        // region is said out loud rather than done silently.
+                        _ansiConsole.MarkupLine($"Using the region '{config.TranslatorRegion.EscapeMarkup()}' stored earlier. Pass [bold]--region[/] to change it, or run [bold]--clear[/] first if the new key is for a global resource.");
                     }
 
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(0, ct);
