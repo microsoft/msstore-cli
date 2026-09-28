@@ -233,6 +233,58 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
+        public async Task TranslateAsyncShouldNotWaitOutAnUnreasonableRetryAfter()
+        {
+            // An hour-long Retry-After would leave the command hanging silently; it should fail
+            // straight away with the throttling message instead.
+            var response = new HttpResponseMessage(HttpStatusCode.TooManyRequests)
+            {
+                Content = new StringContent("""{"error":{"code":429001,"message":"Too many requests."}}""", System.Text.Encoding.UTF8, "application/json")
+            };
+            response.Headers.RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(TimeSpan.FromHours(1));
+            _responses.Enqueue(response);
+
+            var act = async () => await CreateService().TranslateAsync(["olá"], "en", TestContext.CancellationToken);
+
+            (await act.Should().ThrowAsync<TranslationException>())
+                .WithMessage("*throttling*");
+            _requests.Should().HaveCount(1);
+        }
+
+        [TestMethod]
+        public async Task TranslateAsyncShouldNotWaitUntilAFarOffRetryAfterDate()
+        {
+            var response = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+            {
+                Content = new StringContent("{}", System.Text.Encoding.UTF8, "application/json")
+            };
+            response.Headers.RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(DateTimeOffset.UtcNow.AddDays(1));
+            _responses.Enqueue(response);
+
+            var act = async () => await CreateService().TranslateAsync(["olá"], "en", TestContext.CancellationToken);
+
+            await act.Should().ThrowAsync<TranslationException>();
+            _requests.Should().HaveCount(1);
+        }
+
+        [TestMethod]
+        public async Task TranslateAsyncShouldHonourAShortRetryAfter()
+        {
+            var throttled = new HttpResponseMessage(HttpStatusCode.TooManyRequests)
+            {
+                Content = new StringContent("""{"error":{"code":429001,"message":"Too many requests."}}""", System.Text.Encoding.UTF8, "application/json")
+            };
+            throttled.Headers.RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(TimeSpan.FromMilliseconds(10));
+            _responses.Enqueue(throttled);
+            EnqueueJson(HttpStatusCode.OK, """[{"translations":[{"text":"hi","to":"en"}]}]""");
+
+            var results = await CreateService().TranslateAsync(["olá"], "en", TestContext.CancellationToken);
+
+            _requests.Should().HaveCount(2);
+            results[0]!.Text.Should().Be("hi");
+        }
+
+        [TestMethod]
         public async Task TranslateAsyncShouldNeverLogTheErrorResponseBody()
         {
             // A failed request can echo back review text, so the body must stay out of the logs

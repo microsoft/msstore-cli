@@ -58,6 +58,11 @@ namespace MSStore.CLI.Services.Translation
 
         private const int MaxRetryAttempts = 3;
 
+        /// <summary>
+        /// The longest Retry-After the CLI will wait out before giving up on a request.
+        /// </summary>
+        private static readonly TimeSpan MaxRetryDelay = TimeSpan.FromSeconds(30);
+
         private readonly IHttpClientFactory _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
         private readonly ICredentialManager _credentialManager = credentialManager ?? throw new ArgumentNullException(nameof(credentialManager));
         private readonly IConfigurationManager<Configurations> _configurationManager = configurationManager ?? throw new ArgumentNullException(nameof(configurationManager));
@@ -187,22 +192,29 @@ namespace MSStore.CLI.Services.Translation
         /// </summary>
         /// <param name="response">The throttled or failed response.</param>
         /// <param name="attempt">The 1-based attempt number that just failed.</param>
-        /// <returns>How long to wait before retrying.</returns>
-        private static TimeSpan GetRetryDelay(HttpResponseMessage response, int attempt)
+        /// <returns>
+        /// How long to wait before retrying, or null when the service asks for longer than
+        /// <see cref="MaxRetryDelay"/>, in which case the request fails instead of waiting.
+        /// </returns>
+        private static TimeSpan? GetRetryDelay(HttpResponseMessage response, int attempt)
         {
             var retryAfter = response.Headers.RetryAfter;
+            TimeSpan? requested = null;
+
             if (retryAfter?.Delta is TimeSpan delta && delta > TimeSpan.Zero)
             {
-                return delta;
+                requested = delta;
+            }
+            else if (retryAfter?.Date is DateTimeOffset date && date - DateTimeOffset.UtcNow > TimeSpan.Zero)
+            {
+                requested = date - DateTimeOffset.UtcNow;
             }
 
-            if (retryAfter?.Date is DateTimeOffset date)
+            if (requested is TimeSpan wait)
             {
-                var until = date - DateTimeOffset.UtcNow;
-                if (until > TimeSpan.Zero)
-                {
-                    return until;
-                }
+                // The service's delay is honoured, but never an unbounded one: a command that
+                // silently waits for minutes is worse than one that fails with a clear message.
+                return wait <= MaxRetryDelay ? wait : null;
             }
 
             var backoff = TimeSpan.FromSeconds(Math.Pow(2, attempt));
@@ -347,9 +359,9 @@ namespace MSStore.CLI.Services.Translation
                     })];
                 }
 
-                if (IsTransient(response.StatusCode) && attempt < MaxRetryAttempts)
+                if (IsTransient(response.StatusCode) && attempt < MaxRetryAttempts && GetRetryDelay(response, attempt) is TimeSpan delay)
                 {
-                    await Task.Delay(GetRetryDelay(response, attempt), ct);
+                    await Task.Delay(delay, ct);
                     continue;
                 }
 
