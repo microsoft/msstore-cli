@@ -131,7 +131,7 @@ namespace MSStore.CLI.UnitTests
                     { "date": "6/22/2016 6:55:33 PM", "applicationId": "9NBLGGH0MTF4", "market": "BR", "rating": 1, "reviewerName": "Elayne", "reviewTitle": "Tosco", "reviewText": "Não cumpre o que promete", "id": "5c92b8e3-fe2c-4e4c-8b2f-000000000001", "siloId": null },
                     { "date": "1/27/2016 11:51:59 AM", "rating": 5, "id": "5230c1c2-fe2c-4e4c-8b2f-000000000002" }
                   ],
-                  "@nextLink": null,
+                  "@nextLink": "reviews?applicationId=9NBLGGH0MTF4&top=2&skip=2",
                   "TotalCount": 2
                 }
                 """;
@@ -141,6 +141,9 @@ namespace MSStore.CLI.UnitTests
 
             page.TotalCount.Should().Be(2);
             page.Value.Should().HaveCount(2);
+
+            // The service names it "@nextLink", which the naming policy cannot produce.
+            page.NextLink.Should().Be("reviews?applicationId=9NBLGGH0MTF4&top=2&skip=2");
 
             var first = page.Value![0];
             first.Id.Should().Be("5c92b8e3-fe2c-4e4c-8b2f-000000000001");
