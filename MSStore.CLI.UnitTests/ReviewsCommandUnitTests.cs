@@ -263,6 +263,25 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
+        public async Task ReviewsGetCommandShouldSanitizeTheEchoedReviewId()
+        {
+            // The ID is echoed back in the not-found message, so control characters in it must
+            // not reach the terminal either.
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "get",
+                    "9PN3ABCDEFGA",
+                    "bad\u0007id\u0008x"
+                ],
+                -1);
+
+            result.Error.Should().NotContain("\u0007");
+            result.Error.Should().NotContain("\u0008");
+            result.Error.Should().Contain("Could not find review with ID 'bad id x'.");
+        }
+
+        [TestMethod]
         public async Task ReviewsListCommandShouldNotClaimNoReviewsWhenSkipIsPastTheEnd()
         {
             // The service reports a total of 0 once --skip is past the end, so this empty page

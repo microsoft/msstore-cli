@@ -123,9 +123,13 @@ namespace MSStore.CLI.Commands.Reviews
 
                 if (review == null)
                 {
+                    // The ID is echoed back, so it is sanitized like any other text the CLI did not
+                    // produce: a script may well pass along an ID it took from elsewhere.
+                    var displayedId = TerminalText.Sanitize(reviewId).EscapeMarkup();
+
                     _ansiConsole.MarkupLine(parseResult.NarrowedReviewsByDate()
-                        ? $"Could not find review with ID '{reviewId.EscapeMarkup()}' within the requested date range. Try widening it with [bold]--startDate[/] and [bold]--endDate[/]."
-                        : $"Could not find review with ID '{reviewId.EscapeMarkup()}'.");
+                        ? $"Could not find review with ID '{displayedId}' within the requested date range. Try widening it with [bold]--startDate[/] and [bold]--endDate[/]."
+                        : $"Could not find review with ID '{displayedId}'.");
 
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, -1, ct);
                 }
