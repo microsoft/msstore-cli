@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Net;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using MSStore.CLI.Services;
 using MSStore.CLI.Services.CredentialManager;
@@ -180,6 +181,47 @@ namespace MSStore.CLI.UnitTests
 
             (await act.Should().ThrowAsync<TranslationException>())
                 .WithMessage("*MSSTORE_TRANSLATOR_KEY*set-translator-key*");
+        }
+
+        [TestMethod]
+        public async Task ResolveLanguageAsyncShouldSanitizeTheQuotedLanguage()
+        {
+            // The message is displayed and logged as-is, so text it quotes is sanitized when the
+            // message is built rather than left to every place that shows it.
+            EnqueueJson(HttpStatusCode.OK, """{"translation":{"en":{"name":"English"}}}""");
+
+            var act = async () => await CreateService().ResolveLanguageAsync("x\u0007y", TestContext.CancellationToken);
+
+            var error = (await act.Should().ThrowAsync<TranslationException>()).Which;
+            error.Message.Should().NotContain("\u0007");
+            error.Message.Should().Contain("'x y' is not a language supported");
+        }
+
+        [TestMethod]
+        public async Task TranslateAsyncShouldSanitizeTheQuotedServiceMessage()
+        {
+            EnqueueJson(HttpStatusCode.BadRequest, """{"error":{"code":400005,"message":"bad\u0008\u0008input"}}""");
+
+            var act = async () => await CreateService().TranslateAsync(["olá"], "en", TestContext.CancellationToken);
+
+            var error = (await act.Should().ThrowAsync<TranslationException>()).Which;
+            error.Message.Should().NotContain("\u0008");
+            error.Message.Should().Be("Azure AI Translator returned an error: bad  input");
+        }
+
+        [TestMethod]
+        public async Task TranslateAsyncShouldNeverLogTheErrorResponseBody()
+        {
+            // A failed request can echo back review text, so the body must stay out of the logs
+            // at every level; the status, error code and request id are what gets logged.
+            var logger = new CapturingLogger();
+            EnqueueJson(HttpStatusCode.BadRequest, """{"error":{"code":400050,"message":"echo: private review text"}}""");
+
+            var act = async () => await CreateService(logger).TranslateAsync(["olá"], "en", TestContext.CancellationToken);
+
+            await act.Should().ThrowAsync<TranslationException>();
+            logger.Messages.Should().Contain(m => m.Contains("400050"));
+            logger.Messages.Should().NotContain(m => m.Contains("private review text"));
         }
 
         [TestMethod]
@@ -400,7 +442,7 @@ namespace MSStore.CLI.UnitTests
             });
         }
 
-        private AzureAITranslatorService CreateService()
+        private AzureAITranslatorService CreateService(ILogger<AzureAITranslatorService>? logger = null)
         {
             var handler = new StubHttpMessageHandler(_requests, _requestBodies, _responses);
 
@@ -417,7 +459,26 @@ namespace MSStore.CLI.UnitTests
                 _credentialManager.Object,
                 _configurationManager.Object,
                 _environmentInformationService.Object,
-                NullLogger<AzureAITranslatorService>.Instance);
+                logger ?? NullLogger<AzureAITranslatorService>.Instance);
+        }
+
+        /// <summary>
+        /// Records every message at every level, so nothing can slip past by being logged at a
+        /// level the CLI happens not to enable.
+        /// </summary>
+        private sealed class CapturingLogger : ILogger<AzureAITranslatorService>
+        {
+            public List<string> Messages { get; } = [];
+
+            public IDisposable? BeginScope<TState>(TState state)
+                where TState : notnull => null;
+
+            public bool IsEnabled(LogLevel logLevel) => true;
+
+            public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+            {
+                Messages.Add(formatter(state, exception));
+            }
         }
 
         private sealed class StubHttpMessageHandler(List<HttpRequestMessage> requests, List<string> requestBodies, Queue<HttpResponseMessage> responses) : HttpMessageHandler

@@ -196,7 +196,7 @@ namespace MSStore.CLI.Commands.Settings
                     {
                         // A new key may belong to a different resource, so keeping the earlier
                         // region is said out loud rather than done silently.
-                        _ansiConsole.MarkupLine($"Using the region '{config.TranslatorRegion.EscapeMarkup()}' stored earlier. Pass [bold]--region[/] to change it, or run [bold]--clear[/] first if the new key is for a global resource.");
+                        _ansiConsole.MarkupLine($"Using the region '{TerminalText.Sanitize(config.TranslatorRegion).EscapeMarkup()}' stored earlier. Pass [bold]--region[/] to change it, or run [bold]--clear[/] first if the new key is for a global resource.");
                     }
 
                     return await _telemetryClient.TrackCommandEventAsync<Handler>(0, ct);

@@ -348,6 +348,25 @@ namespace MSStore.CLI.UnitTests
             result.Error.Should().Contain("Using the region 'westus2' stored earlier.");
         }
 
+        [TestMethod]
+        public async Task SetTranslatorKeyShouldSanitizeTheEchoedRegion()
+        {
+            // The stored region can come from a hand-edited settings.json.
+            UseStoredRegion("west\u0007us2");
+            FakeConsole
+                .Setup(x => x.RequestStringAsync(It.IsAny<string>(), true, It.IsAny<CancellationToken>()))
+                .ReturnsAsync("new-key");
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "settings",
+                    "set-translator-key"
+                ]);
+
+            result.Error.Should().NotContain("\u0007");
+            result.Error.Should().Contain("Using the region 'west us2' stored earlier.");
+        }
+
         private void UseStoredRegion(string region)
         {
             FakeConfigurationManager

@@ -449,6 +449,7 @@ namespace MSStore.CLI.UnitTests
 
             result.Output.Should().Contain($"\"Id\": \"{reviewId}\"");
             result.Output.Should().Contain("\"ReviewTitle\": \"Great app\"");
+            result.Error.Should().Contain("Retrieved Review");
         }
 
         [TestMethod]
@@ -501,9 +502,60 @@ namespace MSStore.CLI.UnitTests
 
             result.Error.Should().Contain("Could not find review with ID");
 
+            // A review that was not found must not be announced as retrieved first.
+            result.Error.Should().NotContain("Retrieved Review");
+
             // No date option was passed, so no date parameters are sent and the service
             // searches every review. Suggesting --startDate here would misdirect the user.
             result.Error.Should().NotContain("--startDate");
+        }
+
+        [TestMethod]
+        public async Task ReviewsListCommandShouldSanitizeQuotedTextInTranslationErrors()
+        {
+            // Translation errors can quote the requested language or the service's own
+            // message, neither of which the CLI wrote.
+            FakeTranslationService
+                .Setup(x => x.ResolveLanguageAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new TranslationException("'x\u0007y' is not a language supported by Azure AI Translator."));
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA",
+                    "--translate",
+                    "x\u0007y"
+                ],
+                -1);
+
+            // The fake throws a raw message on purpose, standing in for any message that was not
+            // sanitized where it was built. The error line shown to the user must still be clean.
+            var errorLine = result.Error.Split('\n').Single(l => l.Contains('\ud83d') && l.Contains("not a language"));
+            errorLine.Should().NotContain("\u0007");
+            errorLine.Should().Contain("'x y' is not a language supported by Azure AI Translator.");
+        }
+
+        [TestMethod]
+        public async Task ReviewsGetCommandShouldSanitizeQuotedTextInTranslationErrors()
+        {
+            FakeTranslationService
+                .Setup(x => x.ResolveLanguageAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new TranslationException("Azure AI Translator returned an error: bad\u0008\u0008input"));
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "get",
+                    "9PN3ABCDEFGA",
+                    FakeReviews[0].Id!,
+                    "--translate"
+                ],
+                -1);
+
+            var errorLine = result.Error.Split('\n').Single(l => l.Contains('\ud83d') && l.Contains("returned an error"));
+            errorLine.Should().NotContain("\u0008");
+            errorLine.Should().Contain("Azure AI Translator returned an error: bad  input");
         }
 
         [TestMethod]

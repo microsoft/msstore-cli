@@ -83,14 +83,22 @@ namespace MSStore.CLI.Commands.Reviews
                             await ReviewTranslator.TranslateAsync(_translationService, [review], translateLanguage, ct);
                         }
 
-                        ctx.SuccessStatus(_ansiConsole, "[bold green]Retrieved Review[/]");
+                        // Only a review that was actually found counts as retrieved; otherwise the
+                        // not-found message below would follow a success line.
+                        if (review != null)
+                        {
+                            ctx.SuccessStatus(_ansiConsole, "[bold green]Retrieved Review[/]");
+                        }
 
                         return true;
                     }
                     catch (TranslationException err)
                     {
                         _logger.LogError(err, "Error while translating Review.");
-                        ctx.ErrorStatus(_ansiConsole, err.Message);
+
+                        // The message can quote text the CLI did not write, such as the requested
+                        // language or the service's own error message.
+                        ctx.ErrorStatus(_ansiConsole, TerminalText.Sanitize(err.Message));
                         return false;
                     }
                     catch (MSStoreHttpException err)

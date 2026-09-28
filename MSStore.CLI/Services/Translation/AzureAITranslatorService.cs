@@ -11,6 +11,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using MSStore.CLI.Helpers;
 using MSStore.CLI.Services.CredentialManager;
 using MSStore.CLI.Services.Translation.Models;
 
@@ -88,7 +89,9 @@ namespace MSStore.CLI.Services.Translation
                 return match;
             }
 
-            throw new TranslationException($"'{language}' is not a language supported by Azure AI Translator. See https://learn.microsoft.com/azure/ai-services/translator/language-support for the list of supported codes.");
+            // The language is quoted back, and it is text the user supplied rather than the CLI,
+            // so it is sanitized: the message is displayed and logged as-is.
+            throw new TranslationException($"'{TerminalText.Sanitize(language)}' is not a language supported by Azure AI Translator. See https://learn.microsoft.com/azure/ai-services/translator/language-support for the list of supported codes.");
         }
 
         public async Task<IReadOnlyList<TranslationResult?>> TranslateAsync(IReadOnlyList<string?> texts, string targetLanguage, CancellationToken ct = default)
@@ -373,16 +376,14 @@ namespace MSStore.CLI.Services.Translation
                 : "(none)";
 
             // The status, service error code and request id are enough to diagnose a failure
-            // and to raise a support case. The body is logged only at debug level because a
+            // and to raise a support case. The body is deliberately not logged at any level: a
             // failed request can echo back the submitted review text, which should not end up
-            // in CI logs collected at the default level.
+            // in collected logs.
             _logger.LogError(
                 "Translator request failed with {StatusCode}. Service error code: {ErrorCode}. X-RequestId: {RequestId}.",
                 (int)response.StatusCode,
                 error?.Code,
                 requestId);
-
-            _logger.LogDebug("Translator error response body: {Body}", content);
 
             var message = error?.Code switch
             {
@@ -401,10 +402,12 @@ namespace MSStore.CLI.Services.Translation
                 return new TranslationException(message);
             }
 
+            // The service's own message and reason phrase are quoted from the response, so they
+            // are sanitized before becoming part of a message that is displayed and logged.
             return new TranslationException(
                 error?.Message is { Length: > 0 } serviceMessage
-                    ? $"Azure AI Translator returned an error: {serviceMessage}"
-                    : $"Azure AI Translator returned {(int)response.StatusCode} {response.ReasonPhrase}.");
+                    ? $"Azure AI Translator returned an error: {TerminalText.Sanitize(serviceMessage)}"
+                    : $"Azure AI Translator returned {(int)response.StatusCode} {TerminalText.Sanitize(response.ReasonPhrase)}.");
         }
     }
 }

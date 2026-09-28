@@ -150,7 +150,10 @@ namespace MSStore.CLI.Commands.Reviews
                     catch (TranslationException err)
                     {
                         _logger.LogError(err, "Error while translating Reviews.");
-                        ctx.ErrorStatus(_ansiConsole, err.Message);
+
+                        // The message can quote text the CLI did not write, such as the requested
+                        // language or the service's own error message.
+                        ctx.ErrorStatus(_ansiConsole, TerminalText.Sanitize(err.Message));
                         return null;
                     }
                     catch (MSStoreHttpException err)
