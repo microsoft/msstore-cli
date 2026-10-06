@@ -12,7 +12,7 @@ The Microsoft Store Developer Command Line Interface is a cross-platform (Window
 
 By default the CLI splits its output as follows:
 
-* **stdout** carries the command's result — machine-readable payloads such as the JSON emitted by `submission get`, `apps get` and `submission rollout get`, the package path printed by `package`, and `--help` text. This keeps `msstore submission get ... | ConvertFrom-Json` and `$(msstore package ...)` reliable.
+* **stdout** carries the command's result — machine-readable payloads such as the JSON emitted by `submission get`, `apps get`, `reviews get` and `submission rollout get`, the package path printed by `package`, and `--help` text. This keeps `msstore submission get ... | ConvertFrom-Json` and `$(msstore package ...)` reliable.
 * **stderr** carries everything else meant for a human — progress, status, success messages, tables, prompts and verbose logging.
 
 `--output-stream stdout` deliberately breaks that separation: it moves the human-readable half onto stdout, where it is interleaved with any payload.
@@ -72,6 +72,51 @@ variables:
 ### GitHub Actions
 
 No change is needed. GitHub Actions fails a step based on its exit code alone and never turns stderr into an error annotation, so the default is already correct.
+
+## Reviews
+
+Read the Store reviews of a managed (MSIX) application:
+
+```
+msstore reviews list <productId>
+msstore reviews get <productId> <reviewId>
+```
+
+`list` renders a table and supports `--startDate`, `--endDate`, `--top`, `--skip`, `--rating` and `--market`. With no date options, reviews from every date are included; pass `--startDate`/`--endDate` to narrow the range. Results come back one page at a time, of up to 10,000 reviews or the `--top` value; when more remain, `list` prints the `--skip` value that shows the next page. The `Id` column is the value `reviews get` takes.
+
+> Responding to reviews is not supported. Microsoft documents its [Store reviews API](https://learn.microsoft.com/windows/uwp/monetize/submit-responses-to-app-reviews) as "currently not in a working state", and points to [Partner Center](https://learn.microsoft.com/windows/apps/publish/analyze-msi-exe/ratings-reviews-performance) instead.
+
+### Translating reviews
+
+The Microsoft Store returns no translated text and no language information for reviews, so `--translate` uses [Azure AI Translator](https://learn.microsoft.com/azure/ai-services/translator/) with a key you supply:
+
+```
+msstore reviews list <productId> --translate      # translates into English
+msstore reviews list <productId> --translate pt   # translates into Portuguese
+```
+
+Provide the key through environment variables:
+
+| Variable | Required | Description |
+| --- | --- | --- |
+| `MSSTORE_TRANSLATOR_KEY` | Yes | The Azure AI Translator resource key. |
+| `MSSTORE_TRANSLATOR_REGION` | Only for regional and multi-service resources | The resource region. Not needed for a global resource. |
+
+Or store them once, so they persist between runs:
+
+```
+# Prompts for the key without echoing it
+msstore settings set-translator-key --region <region>
+
+# Reads the key from standard input, for scripted setup
+az keyvault secret show --vault-name <vault> --name <secret> --query value -o tsv | msstore settings set-translator-key --key-stdin
+
+msstore settings set-translator-key --clear
+```
+
+The key is deliberately not accepted as a command-line argument, where it would be recorded in shell history and visible in process listings. It is held in the OS secure store; the region is not a secret and is saved in `settings.json`. In CI, use the environment variables instead of storing a key.
+
+Translation is billed per source character, per target language, against your own Azure subscription.
 
 ## Contributing
 
