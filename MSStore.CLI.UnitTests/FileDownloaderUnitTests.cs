@@ -49,6 +49,12 @@ namespace MSStore.CLI.UnitTests
         [DataRow("fe80::1", false)]
         [DataRow("fd00:ec2::254", false)]
         [DataRow("ff02::1", false)]
+        [DataRow("64:ff9b:1::a00:1", false)]
+        [DataRow("64:ff9b:1::a9fe:a9fe", false)]
+        [DataRow("64:ff9b:1::808:808", false)]
+        [DataRow("64:ff9b::a00:1", false)]
+        [DataRow("64:ff9b::a9fe:a9fe", false)]
+        [DataRow("64:ff9b::808:808", true)]
         [TestMethod]
         public void IsPublicAddress(string address, bool expected)
         {

@@ -97,11 +97,30 @@ namespace MSStore.CLI.Services.Http
                     b[0] >= 224);
             }
 
-            return address.AddressFamily == AddressFamily.InterNetworkV6 &&
-                !address.IsIPv6LinkLocal &&
-                !address.IsIPv6SiteLocal &&
-                !address.IsIPv6UniqueLocal &&
-                !address.IsIPv6Multicast;
+            if (address.AddressFamily != AddressFamily.InterNetworkV6 ||
+                address.IsIPv6LinkLocal ||
+                address.IsIPv6SiteLocal ||
+                address.IsIPv6UniqueLocal ||
+                address.IsIPv6Multicast)
+            {
+                return false;
+            }
+
+            var v6 = address.GetAddressBytes();
+
+            // 64:ff9b:1::/48 is the local-use NAT64 prefix (RFC 8215) and can translate to any IPv4 address.
+            if (v6[0] == 0x00 && v6[1] == 0x64 && v6[2] == 0xff && v6[3] == 0x9b && v6[4] == 0x00 && v6[5] == 0x01)
+            {
+                return false;
+            }
+
+            // 64:ff9b::/96 is the well-known NAT64 prefix (RFC 6052); judge it by the embedded IPv4 address.
+            if (v6[0] == 0x00 && v6[1] == 0x64 && v6[2] == 0xff && v6[3] == 0x9b && v6[4..12].All(b => b == 0))
+            {
+                return IsPublicAddress(new IPAddress(v6[12..16]));
+            }
+
+            return true;
         }
 
         private static async ValueTask<System.IO.Stream> ConnectToPublicAddressAsync(SocketsHttpConnectionContext context, CancellationToken ct)
