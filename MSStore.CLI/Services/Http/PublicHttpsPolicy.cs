@@ -19,6 +19,39 @@ namespace MSStore.CLI.Services.Http
     /// </summary>
     internal static class PublicHttpsPolicy
     {
+        // IANA IPv4 special-purpose registry entries that are not globally reachable, plus multicast and reserved.
+        private static readonly IPNetwork[] BlockedIPv4Networks =
+        [
+            IPNetwork.Parse("0.0.0.0/8"),
+            IPNetwork.Parse("10.0.0.0/8"),
+            IPNetwork.Parse("100.64.0.0/10"),
+            IPNetwork.Parse("127.0.0.0/8"),
+            IPNetwork.Parse("169.254.0.0/16"),
+            IPNetwork.Parse("172.16.0.0/12"),
+            IPNetwork.Parse("192.0.0.0/24"),
+            IPNetwork.Parse("192.0.2.0/24"),
+            IPNetwork.Parse("192.88.99.0/24"),
+            IPNetwork.Parse("192.168.0.0/16"),
+            IPNetwork.Parse("198.18.0.0/15"),
+            IPNetwork.Parse("198.51.100.0/24"),
+            IPNetwork.Parse("203.0.113.0/24"),
+            IPNetwork.Parse("224.0.0.0/3"),
+        ];
+
+        // Only global unicast IPv6 is allowed, minus the special-purpose ranges carved out of it
+        // (IETF protocol assignments incl. Teredo and benchmarking, documentation, 6to4).
+        private static readonly IPNetwork GlobalUnicastIPv6Network = IPNetwork.Parse("2000::/3");
+
+        private static readonly IPNetwork[] BlockedIPv6Networks =
+        [
+            IPNetwork.Parse("2001::/23"),
+            IPNetwork.Parse("2001:db8::/32"),
+            IPNetwork.Parse("2002::/16"),
+            IPNetwork.Parse("3fff::/20"),
+        ];
+
+        // Well-known NAT64 prefix (RFC 6052): judged by the embedded IPv4 address.
+        private static readonly IPNetwork Nat64IPv6Network = IPNetwork.Parse("64:ff9b::/96");
         public static bool TryCreateUri(string? url, [NotNullWhen(true)] out Uri? uri, [NotNullWhen(false)] out string? error)
         {
             uri = null;
@@ -73,54 +106,22 @@ namespace MSStore.CLI.Services.Http
                 address = address.MapToIPv4();
             }
 
-            if (IPAddress.IsLoopback(address) ||
-                address.Equals(IPAddress.Any) ||
-                address.Equals(IPAddress.IPv6Any))
-            {
-                return false;
-            }
-
             if (address.AddressFamily == AddressFamily.InterNetwork)
             {
-                var b = address.GetAddressBytes();
-
-                // Rejects 0/8, 10/8, 100.64/10 (CGNAT), 169.254/16 (link-local, cloud metadata),
-                // 172.16/12, 192.168/16, 198.18/15 (benchmarking) and 224/3 (multicast, reserved, broadcast).
-                return !(
-                    b[0] == 0 ||
-                    b[0] == 10 ||
-                    (b[0] == 100 && b[1] >= 64 && b[1] <= 127) ||
-                    (b[0] == 169 && b[1] == 254) ||
-                    (b[0] == 172 && b[1] >= 16 && b[1] <= 31) ||
-                    (b[0] == 192 && b[1] == 168) ||
-                    (b[0] == 198 && (b[1] == 18 || b[1] == 19)) ||
-                    b[0] >= 224);
+                return !BlockedIPv4Networks.Any(n => n.Contains(address));
             }
 
-            if (address.AddressFamily != AddressFamily.InterNetworkV6 ||
-                address.IsIPv6LinkLocal ||
-                address.IsIPv6SiteLocal ||
-                address.IsIPv6UniqueLocal ||
-                address.IsIPv6Multicast)
+            if (address.AddressFamily != AddressFamily.InterNetworkV6)
             {
                 return false;
             }
 
-            var v6 = address.GetAddressBytes();
-
-            // 64:ff9b:1::/48 is the local-use NAT64 prefix (RFC 8215) and can translate to any IPv4 address.
-            if (v6[0] == 0x00 && v6[1] == 0x64 && v6[2] == 0xff && v6[3] == 0x9b && v6[4] == 0x00 && v6[5] == 0x01)
+            if (Nat64IPv6Network.Contains(address))
             {
-                return false;
+                return IsPublicAddress(new IPAddress(address.GetAddressBytes()[12..16]));
             }
 
-            // 64:ff9b::/96 is the well-known NAT64 prefix (RFC 6052); judge it by the embedded IPv4 address.
-            if (v6[0] == 0x00 && v6[1] == 0x64 && v6[2] == 0xff && v6[3] == 0x9b && v6[4..12].All(b => b == 0))
-            {
-                return IsPublicAddress(new IPAddress(v6[12..16]));
-            }
-
-            return true;
+            return GlobalUnicastIPv6Network.Contains(address) && !BlockedIPv6Networks.Any(n => n.Contains(address));
         }
 
         private static async ValueTask<System.IO.Stream> ConnectToPublicAddressAsync(SocketsHttpConnectionContext context, CancellationToken ct)
