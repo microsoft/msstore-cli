@@ -52,6 +52,7 @@ namespace MSStore.CLI.Services.Http
 
         // Well-known NAT64 prefix (RFC 6052): judged by the embedded IPv4 address.
         private static readonly IPNetwork Nat64IPv6Network = IPNetwork.Parse("64:ff9b::/96");
+
         public static bool TryCreateUri(string? url, [NotNullWhen(true)] out Uri? uri, [NotNullWhen(false)] out string? error)
         {
             uri = null;
@@ -135,6 +136,7 @@ namespace MSStore.CLI.Services.Http
                 throw new HttpRequestException($"Connection to '{host}' was blocked because it resolves to a non-public IP address.");
             }
 
+            // This constructor creates a dual-mode IPv6 socket, so it can connect to both IPv4 and IPv6 addresses.
             var socket = new Socket(SocketType.Stream, ProtocolType.Tcp) { NoDelay = true };
             try
             {

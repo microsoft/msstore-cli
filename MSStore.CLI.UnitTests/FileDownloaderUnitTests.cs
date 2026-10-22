@@ -25,7 +25,14 @@ namespace MSStore.CLI.UnitTests
         [TestCleanup]
         public void Cleanup()
         {
-            Directory.Delete(_tempDir, true);
+            try
+            {
+                Directory.Delete(_tempDir, true);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Best-effort cleanup; don't mask the test result.
+            }
         }
 
         [DataRow("8.8.8.8", true)]
@@ -37,13 +44,13 @@ namespace MSStore.CLI.UnitTests
         [DataRow("127.0.0.1", false)]
         [DataRow("169.254.169.254", false)]
         [DataRow("172.16.0.1", false)]
+        [DataRow("192.0.0.1", false)]
+        [DataRow("192.0.2.1", false)]
         [DataRow("192.168.1.1", false)]
         [DataRow("198.17.255.255", true)]
         [DataRow("198.18.0.1", false)]
         [DataRow("198.19.255.254", false)]
         [DataRow("198.20.0.0", true)]
-        [DataRow("192.0.0.1", false)]
-        [DataRow("192.0.2.1", false)]
         [DataRow("198.51.100.1", false)]
         [DataRow("203.0.113.1", false)]
         [DataRow("224.0.0.1", false)]
