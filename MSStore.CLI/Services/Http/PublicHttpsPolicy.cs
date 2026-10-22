@@ -47,14 +47,17 @@ namespace MSStore.CLI.Services.Http
         }
 
         /// <summary>
-        /// Creates a handler that refuses direct connections to non-public addresses. The check runs at connect
+        /// Creates a handler that refuses connections to non-public addresses. The check runs at connect
         /// time on the address actually used, so it also covers redirects, IP literals and DNS rebinding.
+        /// Proxies are disabled: through a proxy the connection goes to the proxy, which would then reach the
+        /// destination without it ever being checked.
         /// </summary>
         /// <returns>The configured handler.</returns>
         public static SocketsHttpHandler CreateHandler()
         {
             var handler = new SocketsHttpHandler
             {
+                UseProxy = false,
                 ConnectCallback = ConnectToPublicAddressAsync,
             };
             handler.SslOptions.CertificateRevocationCheckMode = X509RevocationMode.Online;
@@ -82,7 +85,7 @@ namespace MSStore.CLI.Services.Http
                 var b = address.GetAddressBytes();
 
                 // Rejects 0/8, 10/8, 100.64/10 (CGNAT), 169.254/16 (link-local, cloud metadata),
-                // 172.16/12, 192.168/16 and 224/3 (multicast, reserved, broadcast).
+                // 172.16/12, 192.168/16, 198.18/15 (benchmarking) and 224/3 (multicast, reserved, broadcast).
                 return !(
                     b[0] == 0 ||
                     b[0] == 10 ||
@@ -90,6 +93,7 @@ namespace MSStore.CLI.Services.Http
                     (b[0] == 169 && b[1] == 254) ||
                     (b[0] == 172 && b[1] >= 16 && b[1] <= 31) ||
                     (b[0] == 192 && b[1] == 168) ||
+                    (b[0] == 198 && (b[1] == 18 || b[1] == 19)) ||
                     b[0] >= 224);
             }
 
@@ -106,9 +110,7 @@ namespace MSStore.CLI.Services.Http
             var host = endPoint.Host.TrimStart('[').TrimEnd(']');
             var addresses = await Dns.GetHostAddressesAsync(host, ct).ConfigureAwait(false);
 
-            // A configured proxy (usually on a private network) is allowed; every other connection must be public.
-            if (!IsProxyConnection(context.InitialRequestMessage.RequestUri, host, endPoint.Port) &&
-                (addresses.Length == 0 || addresses.Any(a => !IsPublicAddress(a))))
+            if (addresses.Length == 0 || addresses.Any(a => !IsPublicAddress(a)))
             {
                 throw new HttpRequestException($"Connection to '{host}' was blocked because it resolves to a non-public IP address.");
             }
@@ -124,20 +126,6 @@ namespace MSStore.CLI.Services.Http
                 socket.Dispose();
                 throw;
             }
-        }
-
-        private static bool IsProxyConnection(Uri? requestUri, string host, int port)
-        {
-            if (requestUri == null || HttpClient.DefaultProxy.IsBypassed(requestUri))
-            {
-                return false;
-            }
-
-            var proxyUri = HttpClient.DefaultProxy.GetProxy(requestUri);
-            return proxyUri != null &&
-                !string.Equals(proxyUri.IdnHost, requestUri.IdnHost, StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(proxyUri.IdnHost, host, StringComparison.OrdinalIgnoreCase) &&
-                proxyUri.Port == port;
         }
     }
 }

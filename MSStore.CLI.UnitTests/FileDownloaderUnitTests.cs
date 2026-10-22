@@ -38,6 +38,10 @@ namespace MSStore.CLI.UnitTests
         [DataRow("169.254.169.254", false)]
         [DataRow("172.16.0.1", false)]
         [DataRow("192.168.1.1", false)]
+        [DataRow("198.17.255.255", true)]
+        [DataRow("198.18.0.1", false)]
+        [DataRow("198.19.255.254", false)]
+        [DataRow("198.20.0.0", true)]
         [DataRow("224.0.0.1", false)]
         [DataRow("::", false)]
         [DataRow("::1", false)]
@@ -74,6 +78,30 @@ namespace MSStore.CLI.UnitTests
             var ex = await Assert.ThrowsAsync<HttpRequestException>(() => client.GetAsync(new Uri(url), TestContext.CancellationToken));
 
             Assert.Contains("non-public IP address", ex.Message);
+        }
+
+        [TestMethod]
+        public async Task HandlerIgnoresProxyAndChecksPrivateDestination()
+        {
+            var proxyListener = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0);
+            proxyListener.Start();
+            try
+            {
+                var proxyPort = ((IPEndPoint)proxyListener.LocalEndpoint).Port;
+                var handler = PublicHttpsPolicy.CreateHandler();
+                handler.Proxy = new WebProxy($"http://127.0.0.1:{proxyPort}");
+                using var client = new HttpClient(handler);
+
+                var ex = await Assert.ThrowsAsync<HttpRequestException>(() => client.GetAsync(new Uri("https://10.0.0.1/icon.png"), TestContext.CancellationToken));
+
+                Assert.IsFalse(handler.UseProxy);
+                Assert.Contains("non-public IP address", ex.Message);
+                Assert.IsFalse(proxyListener.Pending());
+            }
+            finally
+            {
+                proxyListener.Stop();
+            }
         }
 
         [TestMethod]
