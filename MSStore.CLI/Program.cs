@@ -128,6 +128,11 @@ namespace MSStore.CLI
                             };
                         });
 
+                    // Used for URLs taken from untrusted content (e.g. PWA manifests): only connects to public IP addresses.
+                    services
+                        .AddHttpClient(FileDownloader.HttpClientName)
+                        .ConfigurePrimaryHttpMessageHandler(PublicHttpsPolicy.CreateHandler);
+
                     services
                         .AddHttpClient("DefaultLargeUploader", client =>
                         {
