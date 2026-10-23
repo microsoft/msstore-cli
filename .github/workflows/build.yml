@@ -54,7 +54,7 @@ jobs:
       run: dotnet run --project MSStore.CLI.UnitTests -f net10.0-windows10.0.17763.0 --no-build -c Release --coverage --coverage-output-format cobertura --report-trx --results-directory ./TestResults
     - name: Publish test results
       if: ${{ !cancelled() }}
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: test-results-${{ matrix.os }}
         path: TestResults/*.trx
@@ -63,7 +63,7 @@ jobs:
     - name: Merge code coverage files
       run: reportgenerator "-reports:${{ github.workspace }}/**/*.cobertura.xml" "-targetdir:${{ github.workspace }}/report" "-reporttypes:Cobertura" "-filefilters:-*GenerationContext*.g.cs"
     - name: Publish code coverage results
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: Cobertura-${{ matrix.os }}
         path: ${{ github.workspace }}/report/Cobertura.xml
@@ -135,13 +135,13 @@ jobs:
       run: ."C:\Program Files (x86)\Windows Kits\10\App Certification Kit\SignTool.exe" sign /fd SHA256 /a /f .\MSStore.CLI.MSIX\MSStore.CLI.MSIX_TemporaryKey.pfx ${{ github.workspace }}/MSStore.CLI.MSIX/AppPackages/${{ matrix.dotnet-arch }}/MSStore.CLI.MSIX_${{ env.GitBuildVersionSimple }}.0_${{ matrix.dotnet-arch }}_Test.msix
     - name: Upload Artifact - CLI
       if: ${{ !env.ACT }}
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: CLI-${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }}
         path: ${{ github.workspace }}/MSStore.CLI/bin/Release/${{ matrix.dotnet-framework }}/${{ matrix.dotnet-os }}-${{ matrix.dotnet-arch }}/publish/**/*
     - name: Upload Artifact - MSIX
       if: ${{ matrix.os == 'windows-latest' && !env.ACT }}
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: CLI-MSIX-${{ matrix.dotnet-arch }}
         path: ${{ github.workspace }}/MSStore.CLI.MSIX/AppPackages/${{ matrix.dotnet-arch }}/MSStore.CLI.MSIX_${{ env.GitBuildVersionSimple }}.0_${{ matrix.dotnet-arch }}_Test.msix
