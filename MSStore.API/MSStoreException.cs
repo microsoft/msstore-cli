@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Net;
 
 namespace MSStore.API
 {
@@ -20,5 +21,12 @@ namespace MSStore.API
             : base(message, innerException)
         {
         }
+
+        /// <summary>
+        /// Gets the HTTP status of the failed response, when the error came from one that had a
+        /// body. Errors without a body are raised as <see cref="MSStoreHttpException"/>, which
+        /// carries the whole response instead.
+        /// </summary>
+        public HttpStatusCode? StatusCode { get; init; }
     }
 }

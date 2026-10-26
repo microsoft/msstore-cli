@@ -63,7 +63,7 @@ namespace MSStore.CLI
             ansiConsole.WriteLine();
         }
 
-        public MicrosoftStoreCLI(InfoCommand infoCommand, ReconfigureCommand reconfigureCommand, SettingsCommand settingsCommand, AppsCommand appsCommand, SubmissionCommand submissionCommand, FlightsCommand flightsCommand, InitCommand initCommand, PackageCommand packageCommand, PublishCommand publishCommand, Handler handler)
+        public MicrosoftStoreCLI(InfoCommand infoCommand, ReconfigureCommand reconfigureCommand, SettingsCommand settingsCommand, AppsCommand appsCommand, SubmissionCommand submissionCommand, FlightsCommand flightsCommand, ReviewsCommand reviewsCommand, InitCommand initCommand, PackageCommand packageCommand, PublishCommand publishCommand, Handler handler)
             : base(description: "CLI tool to automate Microsoft Store Developer tasks.")
         {
             Subcommands.Add(infoCommand);
@@ -72,6 +72,7 @@ namespace MSStore.CLI
             Subcommands.Add(appsCommand);
             Subcommands.Add(submissionCommand);
             Subcommands.Add(flightsCommand);
+            Subcommands.Add(reviewsCommand);
             Subcommands.Add(initCommand);
             Subcommands.Add(packageCommand);
             Subcommands.Add(publishCommand);

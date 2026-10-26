@@ -29,6 +29,14 @@ namespace MSStore.CLI.Services
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? PublisherDisplayName { get; set; }
 
+        /// <summary>
+        /// Gets or sets the region of the Azure AI Translator resource. Required for regional
+        /// and multi-service resources, and unnecessary for a global one. This is not a
+        /// secret; the key itself lives in the OS secure store.
+        /// </summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? TranslatorRegion { get; set; }
+
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
         public bool ClientAssertion { get; set; }
 
