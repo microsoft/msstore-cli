@@ -41,7 +41,7 @@ steps:
 - script: dotnet publish MSStore.CLI --self-contained -r ${{ parameters.dotnet_runtime }}-${{ parameters.dotnet_arch }} -f ${{ parameters.dotnet_framework }} /p:Configuration=${{ parameters.dotnet_configuration }} /p:PublishProfile=${{ parameters.dotnet_runtime }}-${{ parameters.dotnet_arch }}
   displayName: Publish CLI
 - ${{ if eq(parameters['DoEsrp'], 'true') }}:
-  - task: EsrpCodeSigning@5
+  - task: EsrpCodeSigning@6
     displayName: Code Sign ESRP - CLI - 3rd Party Dependencies
     condition: startsWith(variables.AgentOS, 'Windows_NT')
     inputs:
@@ -80,7 +80,7 @@ steps:
                 "ToolVersion": "1.0"
             }
         ]
-  - task: EsrpCodeSigning@5
+  - task: EsrpCodeSigning@6
     displayName: Code Sign ESRP - CLI Windows + Existing DLLs & Authenticode
     condition: startsWith(variables.AgentOS, 'Windows_NT')
     inputs:
