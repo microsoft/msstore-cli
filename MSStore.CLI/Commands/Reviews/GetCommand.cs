@@ -1,0 +1,142 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
+
+using System;
+using System.CommandLine;
+using System.CommandLine.Invocation;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.ApplicationInsights;
+using Microsoft.Extensions.Logging;
+using MSStore.API;
+using MSStore.API.Models;
+using MSStore.API.Packaged.Models;
+using MSStore.CLI.Helpers;
+using MSStore.CLI.Services;
+using MSStore.CLI.Services.Translation;
+using Spectre.Console;
+
+namespace MSStore.CLI.Commands.Reviews
+{
+    internal class GetCommand : Command
+    {
+        public GetCommand()
+            : base("get", "Retrieves the details of a single review.")
+        {
+            Arguments.Add(ReviewsCommand.ProductIdArgument);
+            Arguments.Add(ReviewsCommand.ReviewIdArgument);
+            Options.Add(ReviewsCommand.StartDateOption);
+            Options.Add(ReviewsCommand.EndDateOption);
+            Options.Add(ReviewsCommand.TranslateOption);
+        }
+
+        public class Handler(
+            ILogger<GetCommand.Handler> logger,
+            IStoreAPIFactory storeAPIFactory,
+            ITranslationService translationService,
+            IAnsiConsole ansiConsole,
+            TelemetryClient telemetryClient) : AsynchronousCommandLineAction
+        {
+            private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            private readonly IStoreAPIFactory _storeAPIFactory = storeAPIFactory ?? throw new ArgumentNullException(nameof(storeAPIFactory));
+            private readonly ITranslationService _translationService = translationService ?? throw new ArgumentNullException(nameof(translationService));
+            private readonly IAnsiConsole _ansiConsole = ansiConsole ?? throw new ArgumentNullException(nameof(ansiConsole));
+            private readonly TelemetryClient _telemetryClient = telemetryClient ?? throw new ArgumentNullException(nameof(telemetryClient));
+
+            public override async Task<int> InvokeAsync(ParseResult parseResult, CancellationToken ct = default)
+            {
+                string productId = parseResult.GetRequiredValue(ReviewsCommand.ProductIdArgument);
+                string reviewId = parseResult.GetRequiredValue(ReviewsCommand.ReviewIdArgument);
+
+                if (ProductTypeHelper.Solve(productId) == ProductType.Unpackaged)
+                {
+                    _ansiConsole.WriteLine("This command is not supported for unpackaged applications.");
+                    return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, -1, ct);
+                }
+
+                var translateLanguage = parseResult.GetTranslateLanguage();
+
+                AppReview? review = null;
+
+                // A failed call and a review that genuinely is not in the result set both
+                // leave 'review' null, so the outcome is tracked separately to avoid telling
+                // the user the review does not exist when the call never succeeded.
+                var success = await _ansiConsole.Status().StartAsync("Retrieving Review", async ctx =>
+                {
+                    try
+                    {
+                        var storePackagedAPI = await _storeAPIFactory.CreatePackagedAsync(ct: ct);
+
+                        var response = await storePackagedAPI.GetAppReviewsAsync(
+                            productId,
+                            parseResult.GetValue(ReviewsCommand.StartDateOption),
+                            parseResult.GetValue(ReviewsCommand.EndDateOption),
+                            filter: $"id eq '{reviewId.Replace("'", "''", StringComparison.Ordinal)}'",
+                            ct: ct);
+
+                        review = response.Value?.Find(r => string.Equals(r.Id, reviewId, StringComparison.OrdinalIgnoreCase));
+
+                        if (review != null && translateLanguage != null)
+                        {
+                            ctx.Status("Translating Review");
+                            await ReviewTranslator.TranslateAsync(_translationService, [review], translateLanguage, ct);
+                        }
+
+                        // Only a review that was actually found counts as retrieved; otherwise the
+                        // not-found message below would follow a success line.
+                        if (review != null)
+                        {
+                            ctx.SuccessStatus(_ansiConsole, "[bold green]Retrieved Review[/]");
+                        }
+
+                        return true;
+                    }
+                    catch (TranslationException err)
+                    {
+                        _logger.LogError(err, "Error while translating Review.");
+
+                        // The message can quote text the CLI did not write, such as the requested
+                        // language or the service's own error message.
+                        ctx.ErrorStatus(_ansiConsole, TerminalText.Sanitize(err.Message));
+                        return false;
+                    }
+                    catch (MSStoreException err) when (ReviewsFailure.GetStatusCode(err) is not null)
+                    {
+                        _logger.LogError(err, "Error while retrieving Review. HTTP status: {StatusCode}.", ReviewsFailure.GetStatusCode(err));
+                        ctx.ErrorStatus(_ansiConsole, ReviewsFailure.Describe(err));
+                        return false;
+                    }
+                    catch (Exception err)
+                    {
+                        _logger.LogError(err, "Error while retrieving Review.");
+                        ctx.ErrorStatus(_ansiConsole, err);
+                        return false;
+                    }
+                });
+
+                if (!success)
+                {
+                    return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, -1, ct);
+                }
+
+                if (review == null)
+                {
+                    // The ID is echoed back, so it is sanitized like any other text the CLI did not
+                    // produce: a script may well pass along an ID it took from elsewhere.
+                    var displayedId = TerminalText.Sanitize(reviewId).EscapeMarkup();
+
+                    _ansiConsole.MarkupLine(parseResult.NarrowedReviewsByDate()
+                        ? $"Could not find review with ID '{displayedId}' within the requested date range. Try widening it with [bold]--startDate[/] and [bold]--endDate[/]."
+                        : $"Could not find review with ID '{displayedId}'.");
+
+                    return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, -1, ct);
+                }
+
+                StandardOutput.WriteLine(JsonSerializer.Serialize(review, SourceGenerationContext.GetCustom(true).AppReview));
+
+                return await _telemetryClient.TrackCommandEventAsync<Handler>(productId, 0, ct);
+            }
+        }
+    }
+}

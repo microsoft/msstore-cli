@@ -309,7 +309,10 @@ namespace MSStore.API
 
                 if (response.Content.Headers.ContentLength != 0)
                 {
-                    throw new MSStoreException(await response.Content.ReadAsStringAsync(ct));
+                    throw new MSStoreException(await response.Content.ReadAsStringAsync(ct))
+                    {
+                        StatusCode = response.StatusCode
+                    };
                 }
                 else
                 {
