@@ -8,6 +8,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Extensibility;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -288,6 +289,9 @@ namespace MSStore.CLI.UnitTests
 
             _hostBuilder = Host.CreateDefaultBuilder(null)
                 .UseEnvironment("CLI")
+
+                // Config reload uses a FileSystemWatcher per host, which exhausts the Linux inotify instance limit across the suite.
+                .ConfigureHostConfiguration(config => config.AddInMemoryCollection([new("hostBuilder:reloadConfigOnChange", "false")]))
                 .ConfigureServices((hostContext, services) =>
                 {
                     services
@@ -840,7 +844,7 @@ namespace MSStore.CLI.UnitTests
             AnsiConsole.Profile.Capabilities.Ansi = true;
             AnsiConsole.Profile.Capabilities.Unicode = true;
 
-            IHost host = _hostBuilder.Start();
+            using IHost host = _hostBuilder.Start();
 
             var storeCLI = host.Services.GetRequiredService<MicrosoftStoreCLI>();
             storeCLI.Subcommands.Add(new TestCommand(this, host));
