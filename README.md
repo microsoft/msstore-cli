@@ -4,7 +4,7 @@
 
 > [!NOTE]
 > This is the **Microsoft Store Developer CLI** (`msstore`), for publishing and managing apps in Partner Center.
-> If you want to search for, install or update apps from the Microsoft Store, use the **Microsoft Store CLI** (`store`) that ships with Windows 11 instead. Run `store help` for usage.
+> If you want to search for, install or update apps from the Microsoft Store, use the **Microsoft Store CLI** (`store`), available on Windows 11, instead. Run `store --help` for usage.
 
 ## About
 The Microsoft Store Developer Command Line Interface is a cross-platform (Windows, MacOS, Linux) CLI that helps developers access the Microsoft Store APIs, for both managed (MSIX), as well as unmanaged (MSI/EXE) applications. It helps developers by creating required online resources (credentials), as well as later setting up their application projects (UWPs, Win32s, Flutter, PWAs, Electron, React-Native, as well as many other types of Windows applications) to be ready to ship to the Microsoft Store, going from the initial steps of configuring the application's manifest, as well as the actual publishing of an MSIX or MSI/EXE.
