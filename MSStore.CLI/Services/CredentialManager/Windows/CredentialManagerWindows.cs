@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Linq;
 using Meziantou.Framework.Win32;
 
 namespace MSStore.CLI.Services.CredentialManager.Windows
@@ -34,7 +33,7 @@ namespace MSStore.CLI.Services.CredentialManager.Windows
             try
             {
                 var credentialName = GetCredentialName(userName);
-                if (Meziantou.Framework.Win32.CredentialManager.EnumerateCredentials(credentialName).Any())
+                if (Meziantou.Framework.Win32.CredentialManager.EnumerateCredentials(credentialName).Count > 0)
                 {
                     Meziantou.Framework.Win32.CredentialManager.DeleteCredential(credentialName);
                 }
