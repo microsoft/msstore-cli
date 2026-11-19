@@ -1,0 +1,680 @@
+﻿// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
+
+using MSStore.API.Packaged.Models;
+using MSStore.CLI.Services.Translation;
+
+namespace MSStore.CLI.UnitTests
+{
+    [TestClass]
+    public class ReviewsCommandUnitTests : BaseCommandLineTest
+    {
+        [TestInitialize]
+        public void Init()
+        {
+            FakeLogin();
+            AddDefaultFakeAccount();
+            AddFakeApps();
+            AddFakeReviews();
+        }
+
+        [TestMethod]
+        public async Task ReviewsListCommandShouldReturnZero()
+        {
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA"
+                ]);
+
+            // The table is human-facing output, so it goes to the injected console (stderr).
+            result.Error.Should().Contain("FakeReviewer1");
+            result.Error.Should().Contain("Great app");
+        }
+
+        [TestMethod]
+        public async Task ReviewsListCommandShouldRenderReviewsMissingOptionalFields()
+        {
+            // The analytics API omits fields entirely rather than returning them as null,
+            // so a sparse review must not break rendering.
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA"
+                ]);
+
+            result.Error.Should().Contain("Um jogo fantástico");
+            result.Error.Should().Contain("*---- (1)");
+        }
+
+        [TestMethod]
+        public async Task ReviewsListCommandShouldFilterByMarket()
+        {
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA",
+                    "--market",
+                    "BR"
+                ]);
+
+            result.Error.Should().Contain("Um jogo fantástico");
+            result.Error.Should().NotContain("Great app");
+        }
+
+        [TestMethod]
+        public async Task ReviewsListCommandShouldFilterByRating()
+        {
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA",
+                    "--rating",
+                    "5"
+                ]);
+
+            result.Error.Should().Contain("Great app");
+            result.Error.Should().NotContain("Um jogo fantástico");
+        }
+
+        [TestMethod]
+        public async Task ReviewsListCommandShouldRejectInvalidRating()
+        {
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA",
+                    "--rating",
+                    "9"
+                ],
+                -1);
+
+            result.Error.Should().Contain("--rating must be between 1 and 5.");
+        }
+
+        [TestMethod]
+        public async Task ReviewsListCommandShouldRejectTooLargeTop()
+        {
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA",
+                    "--top",
+                    "10001"
+                ],
+                -1);
+
+            result.Error.Should().Contain("--top cannot be greater than 10000.");
+        }
+
+        [TestMethod]
+        [DataRow("0")]
+        [DataRow("-5")]
+        public async Task ReviewsListCommandShouldRejectNonPositiveTop(string top)
+        {
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA",
+                    "--top",
+                    top
+                ],
+                -1);
+
+            result.Error.Should().Contain("--top must be at least 1.");
+        }
+
+        [TestMethod]
+        public async Task ReviewsListCommandShouldRejectNegativeSkip()
+        {
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA",
+                    "--skip",
+                    "-3"
+                ],
+                -1);
+
+            result.Error.Should().Contain("--skip cannot be negative.");
+        }
+
+        [TestMethod]
+        public async Task ReviewsListCommandShouldSayWhenMoreReviewsExist()
+        {
+            // Without this, a page cut short by --top is indistinguishable from the full set.
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA",
+                    "--top",
+                    "1"
+                ]);
+
+            result.Error.Should().Contain("Showing reviews 1-1 of 3. Re-run with --skip 1 to see the next page.");
+        }
+
+        [TestMethod]
+        public async Task ReviewsListCommandShouldPointToTheFollowingPage()
+        {
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA",
+                    "--top",
+                    "1",
+                    "--skip",
+                    "1"
+                ]);
+
+            result.Error.Should().Contain("Showing reviews 2-2 of 3. Re-run with --skip 2 to see the next page.");
+        }
+
+        [TestMethod]
+        public async Task ReviewsListCommandShouldNotSayMoreExistOnTheLastPage()
+        {
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA",
+                    "--top",
+                    "1",
+                    "--skip",
+                    "2"
+                ]);
+
+            result.Error.Should().NotContain("Showing reviews");
+        }
+
+        [TestMethod]
+        public async Task ReviewsListCommandShouldNotSayMoreExistWhenEverythingIsShown()
+        {
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA"
+                ]);
+
+            result.Error.Should().NotContain("Showing reviews");
+        }
+
+        [TestMethod]
+        public async Task ReviewsListCommandShouldCountOnlyReviewsMatchingTheFilters()
+        {
+            // One fixture review is from BR, so a one-review page is already the whole result.
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA",
+                    "--market",
+                    "BR",
+                    "--top",
+                    "1"
+                ]);
+
+            result.Error.Should().NotContain("Showing reviews");
+        }
+
+        [TestMethod]
+        public async Task ReviewsListCommandShouldNeutralizeControlCharactersInReviews()
+        {
+            // Reviews are written by customers, and Spectre escapes only its own markup, so
+            // control characters would otherwise reach the terminal: an OSC sequence retitles
+            // the window, backspaces overprint earlier output, and U+009B is a one-byte CSI.
+            FakeReviews.Clear();
+            FakeReviews.Add(new AppReview
+            {
+                Id = "9EB876CC-4F8F-4867-DFB0-D2BE7AEC3649",
+                Date = "3/8/2021 10:00:00 AM",
+                Rating = 1,
+                ReviewerName = "Evil\u001b]0;pwned\u0007Reviewer",
+                ReviewTitle = "Title\u0008\u0008\u0008Fake",
+                ReviewText = "Text\u009b2JMore"
+            });
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA"
+                ]);
+
+            result.Error.Should().NotContain("\u0007");
+            result.Error.Should().NotContain("\u0008");
+            result.Error.Should().NotContain("\u009b");
+
+            // The escape was replaced rather than interpreted, so the rest of the sequence is
+            // shown as inert text. Had the sequence reached the output intact, the harness would
+            // have stripped all of it and this text would be missing.
+            result.Error.Should().Contain("Evil ]0;pwned Reviewer");
+        }
+
+        [TestMethod]
+        public async Task ReviewsGetCommandShouldSanitizeTheEchoedReviewId()
+        {
+            // The ID is echoed back in the not-found message, so control characters in it must
+            // not reach the terminal either.
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "get",
+                    "9PN3ABCDEFGA",
+                    "bad\u0007id\u0008x"
+                ],
+                -1);
+
+            result.Error.Should().NotContain("\u0007");
+            result.Error.Should().NotContain("\u0008");
+            result.Error.Should().Contain("Could not find review with ID 'bad id x'.");
+        }
+
+        [TestMethod]
+        [DataRow(System.Net.HttpStatusCode.Unauthorized)]
+        [DataRow(System.Net.HttpStatusCode.Forbidden)]
+        public async Task ReviewsListCommandShouldExplainAProductItCannotRead(System.Net.HttpStatusCode status)
+        {
+            // The live analytics API answers an unknown product ID, and one owned by another
+            // account, with a 401 and this body. The body means it is not an MSStoreHttpException.
+            FakeStorePackagedAPI
+                .Setup(x => x.GetAppReviewsAsync(It.IsAny<string>(), It.IsAny<DateOnly?>(), It.IsAny<DateOnly?>(), It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new MSStore.API.MSStoreException("""{"error":"User Unauthorized due to AMS call failure."}""") { StatusCode = status });
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA"
+                ],
+                -1);
+
+            result.Error.Should().Contain("Could not read the reviews for this product. Check that the product ID is correct and that it belongs to this account.");
+            result.Error.Should().NotContain("Error!");
+        }
+
+        [TestMethod]
+        public async Task ReviewsGetCommandShouldExplainAProductItCannotRead()
+        {
+            // A bodiless failure arrives as MSStoreHttpException instead, and must read the same.
+            FakeStorePackagedAPI
+                .Setup(x => x.GetAppReviewsAsync(It.IsAny<string>(), It.IsAny<DateOnly?>(), It.IsAny<DateOnly?>(), It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new MSStore.API.MSStoreHttpException(new HttpResponseMessage(System.Net.HttpStatusCode.Forbidden)));
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "get",
+                    "9PN3ABCDEFGA",
+                    FakeReviews[0].Id!
+                ],
+                -1);
+
+            result.Error.Should().Contain("Could not read the reviews for this product.");
+            result.Error.Should().NotContain("Could not find review with ID");
+        }
+
+        [TestMethod]
+        public async Task ReviewsListCommandShouldReportOtherServiceFailuresGenerically()
+        {
+            FakeStorePackagedAPI
+                .Setup(x => x.GetAppReviewsAsync(It.IsAny<string>(), It.IsAny<DateOnly?>(), It.IsAny<DateOnly?>(), It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new MSStore.API.MSStoreException("""{"error":"Internal failure"}""") { StatusCode = System.Net.HttpStatusCode.InternalServerError });
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA"
+                ],
+                -1);
+
+            result.Error.Should().Contain("Error while retrieving Reviews.");
+            result.Error.Should().NotContain("Check that the product ID");
+        }
+
+        [TestMethod]
+        public async Task ReviewsListCommandShouldNotClaimNoReviewsWhenSkipIsPastTheEnd()
+        {
+            // The service reports a total of 0 once --skip is past the end, so this empty page
+            // must not be presented as the application having no reviews.
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA",
+                    "--skip",
+                    "5"
+                ]);
+
+            result.Error.Should().Contain("No reviews on this page. --skip 5 may be past the end of the results.");
+            result.Error.Should().NotContain("This application has no reviews");
+        }
+
+        [TestMethod]
+        public async Task ReviewsListCommandIsNotSupportedForUnpackagedApps()
+        {
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    Guid.Empty.ToString()
+                ],
+                -1);
+
+            result.Error.Should().Contain("This command is not supported for unpackaged applications.");
+        }
+
+        [TestMethod]
+        public async Task ReviewsListCommandShouldReportWhenThereAreNoReviews()
+        {
+            FakeReviews.Clear();
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA"
+                ]);
+
+            result.Error.Should().Contain("This application has no reviews.");
+
+            // No date or filter option was passed, so the service returns reviews from every
+            // date. Referring to a period or filters here would misdirect the user.
+            result.Error.Should().NotContain("period");
+            result.Error.Should().NotContain("filters");
+        }
+
+        [TestMethod]
+        public async Task ReviewsListCommandShouldMentionThePeriodWhenNarrowedByDate()
+        {
+            FakeReviews.Clear();
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA",
+                    "--startDate",
+                    "2024-01-01"
+                ]);
+
+            result.Error.Should().Contain("for the requested period.");
+        }
+
+        [TestMethod]
+        public async Task ReviewsListCommandShouldMentionFiltersWhenNarrowedByFilter()
+        {
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA",
+                    "--market",
+                    "ZZ"
+                ]);
+
+            result.Error.Should().Contain("matching the requested filters.");
+        }
+
+        [TestMethod]
+        public async Task ReviewsListCommandShouldMentionBothWhenNarrowedByDateAndFilter()
+        {
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA",
+                    "--startDate",
+                    "2024-01-01",
+                    "--rating",
+                    "2"
+                ]);
+
+            result.Error.Should().Contain("matching the requested period and filters.");
+        }
+
+        [TestMethod]
+        public async Task ReviewsListCommandShouldTranslateWhenRequested()
+        {
+            AddFakeTranslations();
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA",
+                    "--translate"
+                ]);
+
+            result.Error.Should().Contain("[en] Great app");
+        }
+
+        [TestMethod]
+        public async Task ReviewsListCommandShouldTranslateIntoTheRequestedLanguage()
+        {
+            AddFakeTranslations();
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA",
+                    "--translate",
+                    "pt"
+                ]);
+
+            result.Error.Should().Contain("[pt] Great app");
+        }
+
+        [TestMethod]
+        public async Task ReviewsListCommandShouldReportMissingTranslatorKey()
+        {
+            FakeTranslationService
+                .Setup(x => x.TranslateAsync(It.IsAny<IReadOnlyList<string?>>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new TranslationException("No Azure AI Translator key is configured."));
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA",
+                    "--translate"
+                ],
+                -1);
+
+            result.Error.Should().Contain("No Azure AI Translator key is configured.");
+        }
+
+        [TestMethod]
+        public async Task ReviewsGetCommandShouldReturnJsonForKnownReview()
+        {
+            var reviewId = FakeReviews[0].Id!;
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "get",
+                    "9PN3ABCDEFGA",
+                    reviewId
+                ]);
+
+            result.Output.Should().Contain($"\"Id\": \"{reviewId}\"");
+            result.Output.Should().Contain("\"ReviewTitle\": \"Great app\"");
+            result.Error.Should().Contain("Retrieved Review");
+        }
+
+        [TestMethod]
+        public async Task ReviewsGetCommandShouldNotEmitTranslatedFieldsWhenNotTranslating()
+        {
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "get",
+                    "9PN3ABCDEFGA",
+                    FakeReviews[0].Id!
+                ]);
+
+            result.Output.Should().NotContain("TranslatedReviewTitle");
+            result.Output.Should().NotContain("DetectedLanguage");
+        }
+
+        [TestMethod]
+        public async Task ReviewsGetCommandShouldEmitTranslatedFieldsWhenTranslating()
+        {
+            AddFakeTranslations();
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "get",
+                    "9PN3ABCDEFGA",
+                    FakeReviews[1].Id!,
+                    "--translate"
+                ]);
+
+            // System.Text.Json escapes non-ASCII by default, so the accented characters are
+            // \u-escaped in the payload. That is valid JSON and decodes back correctly; the
+            // same encoder is used by every other command that emits JSON.
+            result.Output.Should().Contain("\"TranslatedReviewTitle\": \"[en] Um jogo fant\\u00E1stico\"");
+            result.Output.Should().Contain("\"DetectedLanguage\": \"pt\"");
+        }
+
+        [TestMethod]
+        public async Task ReviewsGetCommandShouldReturnErrorIfNonExistingReview()
+        {
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "get",
+                    "9PN3ABCDEFGA",
+                    "00000000-0000-0000-0000-000000000000"
+                ],
+                -1);
+
+            result.Error.Should().Contain("Could not find review with ID");
+
+            // A review that was not found must not be announced as retrieved first.
+            result.Error.Should().NotContain("Retrieved Review");
+
+            // No date option was passed, so no date parameters are sent and the service
+            // searches every review. Suggesting --startDate here would misdirect the user.
+            result.Error.Should().NotContain("--startDate");
+        }
+
+        [TestMethod]
+        public async Task ReviewsListCommandShouldSanitizeQuotedTextInTranslationErrors()
+        {
+            // Translation errors can quote the requested language or the service's own
+            // message, neither of which the CLI wrote.
+            FakeTranslationService
+                .Setup(x => x.ResolveLanguageAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new TranslationException("'x\u0007y' is not a language supported by Azure AI Translator."));
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "list",
+                    "9PN3ABCDEFGA",
+                    "--translate",
+                    "x\u0007y"
+                ],
+                -1);
+
+            // The fake throws a raw message on purpose, standing in for any message that was not
+            // sanitized where it was built. The error line shown to the user must still be clean.
+            var errorLine = result.Error.Split('\n').Single(l => l.Contains('\ud83d') && l.Contains("not a language"));
+            errorLine.Should().NotContain("\u0007");
+            errorLine.Should().Contain("'x y' is not a language supported by Azure AI Translator.");
+        }
+
+        [TestMethod]
+        public async Task ReviewsGetCommandShouldSanitizeQuotedTextInTranslationErrors()
+        {
+            FakeTranslationService
+                .Setup(x => x.ResolveLanguageAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new TranslationException("Translation failed: bad\u0008\u0008input"));
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "get",
+                    "9PN3ABCDEFGA",
+                    FakeReviews[0].Id!,
+                    "--translate"
+                ],
+                -1);
+
+            var errorLine = result.Error.Split('\n').Single(l => l.Contains('\ud83d') && l.Contains("Translation failed"));
+            errorLine.Should().NotContain("\u0008");
+            errorLine.Should().Contain("Translation failed: bad  input");
+        }
+
+        [TestMethod]
+        public async Task ReviewsGetCommandShouldSuggestWideningAnExplicitDateRange()
+        {
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "get",
+                    "9PN3ABCDEFGA",
+                    "00000000-0000-0000-0000-000000000000",
+                    "--startDate",
+                    "2024-01-01"
+                ],
+                -1);
+
+            result.Error.Should().Contain("within the requested date range");
+        }
+
+        [TestMethod]
+        public async Task ReviewsGetCommandShouldNotClaimTheReviewIsMissingWhenTranslationFails()
+        {
+            FakeTranslationService
+                .Setup(x => x.TranslateAsync(It.IsAny<IReadOnlyList<string?>>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new TranslationException("No Azure AI Translator key is configured."));
+
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "get",
+                    "9PN3ABCDEFGA",
+                    FakeReviews[0].Id!,
+                    "--translate"
+                ],
+                -1);
+
+            result.Error.Should().Contain("No Azure AI Translator key is configured.");
+
+            // The review was found; only the translation failed, so pointing the user at
+            // --startDate would misdirect them.
+            result.Error.Should().NotContain("Could not find review with ID");
+        }
+
+        [TestMethod]
+        public async Task ReviewsGetCommandIsNotSupportedForUnpackagedApps()
+        {
+            var result = await ParseAndInvokeAsync(
+                [
+                    "reviews",
+                    "get",
+                    Guid.Empty.ToString(),
+                    FakeReviews[0].Id!
+                ],
+                -1);
+
+            result.Error.Should().Contain("This command is not supported for unpackaged applications.");
+        }
+    }
+}

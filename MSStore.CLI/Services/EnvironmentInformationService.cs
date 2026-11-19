@@ -39,5 +39,7 @@ namespace MSStore.CLI.Services
         }
 
         public bool IsRunningOnCI => _runningOnCI;
+
+        public string? GetEnvironmentVariable(string name) => Environment.GetEnvironmentVariable(name);
     }
 }
