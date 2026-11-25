@@ -205,6 +205,22 @@ namespace MSStore.CLI.UnitTests
             old.FileStatus.Should().Be(FileStatus.PendingDelete);
         }
 
+        [TestMethod]
+        public void LowerVersionTargetForAnotherFamilyDoesNotBlockReplacement()
+        {
+            var old = StorePackage("old.msix", "x64", "Windows.Desktop min version 10.0.17763.0", "2.0.0.0");
+            var packages = new List<ApplicationPackage> { old };
+
+            var upload = CreateZip(
+                "app.msixupload",
+                CreateMsix("desktop.msix", "x64", "3.0.0.0", ("Windows.Desktop", "10.0.17763.0")),
+                CreateMsix("xbox.msix", "x64", "1.0.0.0", ("Windows.Xbox", "10.0.17763.0")));
+
+            Mark(packages, upload);
+
+            old.FileStatus.Should().Be(FileStatus.PendingDelete);
+        }
+
         private static int Mark(List<ApplicationPackage> packages, FileInfo file)
             => IStorePackagedAPIExtensions.MarkReplacedPackages(packages, [file], NullLogger.Instance);
 

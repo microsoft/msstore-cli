@@ -62,9 +62,9 @@ namespace MSStore.CLI.Helpers
         {
             foreach (var existing in existingTargets)
             {
-                var newForArchitecture = newTargets.Where(t => Matches(t.Architecture, existing.Architecture)).ToList();
+                var newForArchitecture = newTargets.Where(t => Matches(t.Architecture, existing.Architecture) && t.Version >= existing.Version).ToList();
                 var existingForArchitecture = existingTargets.Where(t => Matches(t.Architecture, existing.Architecture)).ToList();
-                if (newForArchitecture.Count == 0 || newForArchitecture.Any(t => t.Version < existing.Version))
+                if (newForArchitecture.Count == 0)
                 {
                     return false;
                 }
