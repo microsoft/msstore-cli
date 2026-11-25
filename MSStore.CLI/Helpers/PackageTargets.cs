@@ -18,11 +18,14 @@ namespace MSStore.CLI.Helpers
     internal static class PackageTargets
     {
         private const string MinVersionSeparator = " min version ";
+        private const string UniversalDeviceFamily = "Windows.Universal";
         private static readonly string[] PackageExtensions = [".msix", ".appx", ".msixbundle", ".appxbundle"];
 
         public static List<Target>? FromStorePackage(ApplicationPackage package)
         {
-            if (string.IsNullOrWhiteSpace(package.Architecture) || package.TargetDeviceFamilies is not { Count: > 0 })
+            if (string.IsNullOrWhiteSpace(package.Architecture)
+                || package.TargetDeviceFamilies is not { Count: > 0 }
+                || !Version.TryParse(package.Version, out var version))
             {
                 return null;
             }
@@ -36,7 +39,7 @@ namespace MSStore.CLI.Helpers
                     return null;
                 }
 
-                targets.Add(new Target(package.Architecture.Trim(), parts[0], minVersion));
+                targets.Add(new Target(package.Architecture.Trim(), parts[0], minVersion, version));
             }
 
             return targets;
@@ -56,11 +59,22 @@ namespace MSStore.CLI.Helpers
         }
 
         public static bool Supersedes(List<Target> newTargets, List<Target> existingTargets)
-            => existingTargets.All(existing => newTargets.Any(target =>
-                string.Equals(target.Architecture, existing.Architecture, StringComparison.OrdinalIgnoreCase)
-                && (string.Equals(target.DeviceFamily, existing.DeviceFamily, StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(target.DeviceFamily, "Windows.Universal", StringComparison.OrdinalIgnoreCase))
-                && target.MinVersion <= existing.MinVersion));
+        {
+            return existingTargets.All(existing => newTargets.Any(target =>
+                Matches(target.Architecture, existing.Architecture)
+                && AppliesTo(target, existing.DeviceFamily)
+                && target.MinVersion <= existing.MinVersion
+                && target.Version >= existing.Version));
+
+            // An explicit device family overrides Windows.Universal for that family.
+            bool AppliesTo(Target target, string deviceFamily)
+                => Matches(target.DeviceFamily, deviceFamily)
+                || (Matches(target.DeviceFamily, UniversalDeviceFamily)
+                    && !newTargets.Any(t => Matches(t.Architecture, target.Architecture) && Matches(t.DeviceFamily, deviceFamily)));
+        }
+
+        private static bool Matches(string first, string second)
+            => string.Equals(first, second, StringComparison.OrdinalIgnoreCase);
 
         private static List<Target>? ReadArchive(ZipArchive archive)
         {
@@ -70,15 +84,38 @@ namespace MSStore.CLI.Helpers
                 return ReadAppxManifest(appxManifest);
             }
 
-            // Bundles list their packages in a manifest; .msixupload/.appxupload files hold them at the root.
             var bundleManifest = archive.GetEntry("AppxMetadata/AppxBundleManifest.xml");
-            var innerPackages = bundleManifest != null
-                ? GetBundlePackages(archive, bundleManifest)
-                : archive.Entries.Where(e => !e.FullName.Contains('/', StringComparison.Ordinal)
-                    && PackageExtensions.Contains(Path.GetExtension(e.FullName), StringComparer.OrdinalIgnoreCase));
+            if (bundleManifest != null)
+            {
+                return ReadBundle(archive, bundleManifest);
+            }
 
+            // .msixupload/.appxupload files hold their packages and bundles at the root.
+            return ReadPackages(archive.Entries.Where(e => !e.FullName.Contains('/', StringComparison.Ordinal)
+                && PackageExtensions.Contains(Path.GetExtension(e.FullName), StringComparer.OrdinalIgnoreCase)));
+        }
+
+        private static List<Target>? ReadBundle(ZipArchive archive, ZipArchiveEntry bundleManifest)
+        {
+            var root = LoadXml(bundleManifest).DocumentElement;
+            var identity = root?.SelectSingleNode("*[local-name()='Identity']") as XmlElement;
+            if (!Version.TryParse(identity?.GetAttribute("Version"), out var bundleVersion))
+            {
+                return null;
+            }
+
+            var entries = (root?.SelectNodes("*[local-name()='Packages']/*[local-name()='Package'][@Type='application']")?.OfType<XmlElement>() ?? [])
+                .Select(package => package.GetAttribute("FileName"))
+                .Select(fileName => archive.GetEntry(fileName) ?? archive.GetEntry(Uri.EscapeDataString(fileName)));
+
+            // The Store reports the bundle's own version, which can differ from its inner packages.
+            return ReadPackages(entries)?.Select(t => t with { Version = bundleVersion }).ToList();
+        }
+
+        private static List<Target>? ReadPackages(IEnumerable<ZipArchiveEntry?> entries)
+        {
             var targets = new List<Target>();
-            foreach (var entry in innerPackages)
+            foreach (var entry in entries)
             {
                 var innerTargets = entry != null ? ReadNestedArchive(entry) : null;
                 if (innerTargets == null)
@@ -90,16 +127,6 @@ namespace MSStore.CLI.Helpers
             }
 
             return targets.Count > 0 ? targets : null;
-        }
-
-        private static IEnumerable<ZipArchiveEntry?> GetBundlePackages(ZipArchive archive, ZipArchiveEntry bundleManifest)
-        {
-            var packages = LoadXml(bundleManifest).SelectNodes("/*[local-name()='Bundle']/*[local-name()='Packages']/*[local-name()='Package'][@Type='application']");
-            foreach (var package in packages?.OfType<XmlElement>() ?? [])
-            {
-                var fileName = package.GetAttribute("FileName");
-                yield return archive.GetEntry(fileName) ?? archive.GetEntry(Uri.EscapeDataString(fileName));
-            }
         }
 
         private static List<Target>? ReadNestedArchive(ZipArchiveEntry entry)
@@ -127,6 +154,11 @@ namespace MSStore.CLI.Helpers
                 architecture = "neutral";
             }
 
+            if (!Version.TryParse(identity?.GetAttribute("Version"), out var version))
+            {
+                return null;
+            }
+
             var targets = new List<Target>();
             var deviceFamilies = root?.SelectNodes("*[local-name()='Dependencies']/*[local-name()='TargetDeviceFamily']");
             foreach (var deviceFamily in deviceFamilies?.OfType<XmlElement>() ?? [])
@@ -136,7 +168,7 @@ namespace MSStore.CLI.Helpers
                     return null;
                 }
 
-                targets.Add(new Target(architecture, deviceFamily.GetAttribute("Name"), minVersion));
+                targets.Add(new Target(architecture, deviceFamily.GetAttribute("Name"), minVersion, version));
             }
 
             return targets.Count > 0 ? targets : null;
@@ -151,6 +183,6 @@ namespace MSStore.CLI.Helpers
             return xmlDoc;
         }
 
-        internal sealed record Target(string Architecture, string DeviceFamily, Version MinVersion);
+        internal sealed record Target(string Architecture, string DeviceFamily, Version MinVersion, Version Version);
     }
 }

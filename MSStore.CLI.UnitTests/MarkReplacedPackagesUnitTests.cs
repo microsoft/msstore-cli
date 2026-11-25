@@ -152,24 +152,52 @@ namespace MSStore.CLI.UnitTests
             packages.Should().BeEmpty();
         }
 
+        [TestMethod]
+        public void KeepsPackagesWithAHigherVersion()
+        {
+            var windows10 = StorePackage("v1.msix", "x64", "Windows.Desktop min version 10.0.17763.0", "1.0.0.0");
+            var windows11 = StorePackage("v2.msix", "x64", "Windows.Desktop min version 10.0.22000.0", "2.0.0.0");
+            var packages = new List<ApplicationPackage> { windows10, windows11 };
+
+            Mark(packages, CreateMsix("new.msix", "x64", "1.1.0.0", ("Windows.Desktop", "10.0.17763.0")));
+
+            windows10.FileStatus.Should().Be(FileStatus.PendingDelete);
+            windows11.FileStatus.Should().Be(FileStatus.Uploaded);
+        }
+
+        [TestMethod]
+        public void ExplicitDeviceFamilyOverridesUniversal()
+        {
+            var old = StorePackage("old.msix", "x64", "Windows.Desktop min version 10.0.17763.0");
+            var packages = new List<ApplicationPackage> { old };
+
+            Mark(packages, CreateMsix("new.msix", "x64", ("Windows.Universal", "10.0.17763.0"), ("Windows.Desktop", "10.0.22000.0")));
+
+            old.FileStatus.Should().Be(FileStatus.Uploaded);
+        }
+
         private static int Mark(List<ApplicationPackage> packages, FileInfo file)
             => IStorePackagedAPIExtensions.MarkReplacedPackages(packages, [file], NullLogger.Instance);
 
-        private static ApplicationPackage StorePackage(string fileName, string architecture, string deviceFamily)
+        private static ApplicationPackage StorePackage(string fileName, string architecture, string deviceFamily, string version = "1.0.0.0")
             => new()
             {
                 FileName = fileName,
                 FileStatus = FileStatus.Uploaded,
                 Architecture = architecture,
                 TargetDeviceFamilies = [deviceFamily],
+                Version = version,
             };
 
         private FileInfo CreateMsix(string fileName, string architecture, params (string Name, string MinVersion)[] deviceFamilies)
+            => CreateMsix(fileName, architecture, "1.0.0.0", deviceFamilies);
+
+        private FileInfo CreateMsix(string fileName, string architecture, string version, params (string Name, string MinVersion)[] deviceFamilies)
         {
             var families = string.Concat(deviceFamilies.Select(f => $@"<TargetDeviceFamily Name=""{f.Name}"" MinVersion=""{f.MinVersion}"" MaxVersionTested=""10.0.22621.0"" />"));
             var manifest = $@"<?xml version=""1.0"" encoding=""utf-8""?>
 <Package xmlns=""http://schemas.microsoft.com/appx/manifest/foundation/windows10"">
-  <Identity Name=""App"" Publisher=""CN=Test"" Version=""1.0.0.0"" ProcessorArchitecture=""{architecture}"" />
+  <Identity Name=""App"" Publisher=""CN=Test"" Version=""{version}"" ProcessorArchitecture=""{architecture}"" />
   <Dependencies>{families}</Dependencies>
 </Package>";
             return CreateZip(fileName, ("AppxManifest.xml", manifest));
@@ -180,6 +208,7 @@ namespace MSStore.CLI.UnitTests
             var packageElements = string.Concat(innerPackages.Select(p => $@"<Package Type=""application"" FileName=""{p.Name}"" />"));
             var manifest = $@"<?xml version=""1.0"" encoding=""utf-8""?>
 <Bundle xmlns=""http://schemas.microsoft.com/appx/2013/bundle"">
+  <Identity Name=""App"" Publisher=""CN=Test"" Version=""1.0.0.0"" />
   <Packages>{packageElements}</Packages>
 </Bundle>";
 

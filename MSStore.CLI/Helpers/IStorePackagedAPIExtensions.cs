@@ -737,7 +737,7 @@ namespace MSStore.CLI.Helpers
         /// <summary>
         /// Marks the existing packages that the new files replace and returns how many were removed.
         /// An existing package is replaced when a new file covers all its architectures and device families
-        /// with the same or a lower minimum OS version. If the targets of either side are unknown,
+        /// with the same or a lower minimum OS version and the same or a higher package version. If the targets of either side are unknown,
         /// a single existing package with the same extension is replaced instead.
         /// </summary>
         /// <returns>The number of existing packages removed or marked for deletion.</returns>
