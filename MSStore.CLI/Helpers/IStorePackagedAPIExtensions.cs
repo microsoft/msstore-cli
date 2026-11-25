@@ -649,59 +649,28 @@ namespace MSStore.CLI.Helpers
                     DirectoryInfo? uploadDir = null;
                     try
                     {
-                        List<ApplicationPackage>? packages;
-                        if (devCenterSubmission != null)
-                        {
-                            packages = devCenterSubmission.ApplicationPackages;
-                        }
-                        else if (devCenterFlightSubmission != null)
-                        {
-                            packages = devCenterFlightSubmission.FlightPackages;
-                        }
-                        else
+                        var packages = devCenterSubmission?.ApplicationPackages ?? devCenterFlightSubmission?.FlightPackages;
+                        if (packages == null)
                         {
                             return null;
                         }
 
                         uploadDir = Directory.CreateDirectory(Path.Combine(output.FullName, $"Upload_{Path.GetFileNameWithoutExtension(Path.GetRandomFileName())}"));
 
-                        foreach (var file in packageFiles)
+                        var files = packageFiles.ToList();
+                        var replacedCount = MarkReplacedPackages(packages, files, logger);
+                        if (replacedCount > 0)
                         {
-                            var applicationPackage = packages?.FirstOrDefault(p => Path.GetExtension(p.FileName) == file.Extension);
-                            if (applicationPackage != null)
-                            {
-                                if (applicationPackage.FileStatus == FileStatus.PendingUpload)
-                                {
-                                    if (devCenterSubmission != null)
-                                    {
-                                        devCenterSubmission.ApplicationPackages?.Remove(applicationPackage);
-                                    }
-                                    else if (devCenterFlightSubmission != null)
-                                    {
-                                        devCenterFlightSubmission.FlightPackages?.Remove(applicationPackage);
-                                    }
-                                }
-                                else
-                                {
-                                    // Mark as Deleted
-                                    applicationPackage.FileStatus = FileStatus.PendingDelete;
-                                }
-                            }
+                            ansiConsole.MarkupLine($"Removing [green]{replacedCount}[/] existing package(s) replaced by the new upload.");
+                        }
 
-                            var newApplicationPackage = new ApplicationPackage
+                        foreach (var file in files)
+                        {
+                            packages.Add(new ApplicationPackage
                             {
                                 FileStatus = FileStatus.PendingUpload,
                                 FileName = file.Name
-                            };
-
-                            if (devCenterSubmission != null)
-                            {
-                                devCenterSubmission.ApplicationPackages?.Add(newApplicationPackage);
-                            }
-                            else if (devCenterFlightSubmission != null)
-                            {
-                                devCenterFlightSubmission.FlightPackages?.Add(newApplicationPackage);
-                            }
+                            });
 
                             logger.LogInformation("Copying '{FileFullName}' to zip bundle folder.", file.FullName);
                             File.Copy(file.FullName, Path.Combine(uploadDir.FullName, file.Name));
@@ -763,6 +732,63 @@ namespace MSStore.CLI.Helpers
                         uploadDir?.Delete(true);
                     }
                 });
+        }
+
+        /// <summary>
+        /// Marks the existing packages that the new files replace and returns how many were removed.
+        /// An existing package is replaced when a new file covers all its architectures and device families
+        /// with the same or a lower minimum OS version. If the targets of either side are unknown,
+        /// a single existing package with the same extension is replaced instead.
+        /// </summary>
+        /// <returns>The number of existing packages removed or marked for deletion.</returns>
+        internal static int MarkReplacedPackages(List<ApplicationPackage> packages, IReadOnlyList<FileInfo> packageFiles, ILogger logger)
+        {
+            var replaced = new List<ApplicationPackage>();
+
+            foreach (var file in packageFiles)
+            {
+                var newTargets = PackageTargets.FromFile(file);
+                var candidates = packages.Where(p => p.FileStatus != FileStatus.PendingDelete && !replaced.Contains(p)).ToList();
+
+                // Left over from a previous attempt at this submission, never processed by the Store.
+                replaced.AddRange(candidates.Where(p => p.FileStatus == FileStatus.PendingUpload && HasExtension(p, file)));
+
+                var uploaded = candidates.Where(p => p.FileStatus != FileStatus.PendingUpload).ToList();
+                var superseded = uploaded.Where(p =>
+                    newTargets != null
+                    && PackageTargets.FromStorePackage(p) is { } existingTargets
+                    && PackageTargets.Supersedes(newTargets, existingTargets)).ToList();
+
+                if (superseded.Count == 0)
+                {
+                    var fallback = uploaded.FirstOrDefault(p => HasExtension(p, file) && (newTargets == null || PackageTargets.FromStorePackage(p) == null));
+                    if (fallback != null)
+                    {
+                        superseded.Add(fallback);
+                    }
+                }
+
+                replaced.AddRange(superseded);
+            }
+
+            foreach (var package in replaced)
+            {
+                if (package.FileStatus == FileStatus.PendingUpload)
+                {
+                    packages.Remove(package);
+                }
+                else
+                {
+                    package.FileStatus = FileStatus.PendingDelete;
+                }
+
+                logger.LogInformation("Removing existing package '{FileName}' (version {Version}, architecture {Architecture}).", package.FileName, package.Version, package.Architecture);
+            }
+
+            return replaced.Count;
+
+            static bool HasExtension(ApplicationPackage package, FileInfo file)
+                => string.Equals(Path.GetExtension(package.FileName), file.Extension, StringComparison.OrdinalIgnoreCase);
         }
 
         private static async Task<bool> CreateImageAsync(string listingKey, Image image, string uploadDir, IProgress<double> progress, IFileDownloader fileDownloader, ILogger logger, CancellationToken ct)
