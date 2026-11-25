@@ -187,6 +187,24 @@ namespace MSStore.CLI.UnitTests
             old.FileStatus.Should().Be(FileStatus.Uploaded);
         }
 
+        [TestMethod]
+        public void ReplacesPackageWithTheSameUniversalAndExplicitFamilies()
+        {
+            var old = new ApplicationPackage
+            {
+                FileName = "old.msix",
+                FileStatus = FileStatus.Uploaded,
+                Architecture = "x64",
+                Version = "1.0.0.0",
+                TargetDeviceFamilies = ["Windows.Universal min version 10.0.17763.0", "Windows.Desktop min version 10.0.22000.0"],
+            };
+            var packages = new List<ApplicationPackage> { old };
+
+            Mark(packages, CreateMsix("new.msix", "x64", "1.1.0.0", ("Windows.Universal", "10.0.17763.0"), ("Windows.Desktop", "10.0.22000.0")));
+
+            old.FileStatus.Should().Be(FileStatus.PendingDelete);
+        }
+
         private static int Mark(List<ApplicationPackage> packages, FileInfo file)
             => IStorePackagedAPIExtensions.MarkReplacedPackages(packages, [file], NullLogger.Instance);
 

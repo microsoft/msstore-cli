@@ -60,23 +60,35 @@ namespace MSStore.CLI.Helpers
 
         public static bool Supersedes(List<Target> newTargets, List<Target> existingTargets)
         {
-            return existingTargets.All(existing => newTargets.Any(target =>
-                Matches(target.Architecture, existing.Architecture)
-                && AppliesTo(target, existing.DeviceFamily)
-                && target.MinVersion <= existing.MinVersion
-                && target.Version >= existing.Version
-                && (!Matches(existing.DeviceFamily, UniversalDeviceFamily) || CoversAllFamilies(existing))));
+            foreach (var existing in existingTargets)
+            {
+                var newForArchitecture = newTargets.Where(t => Matches(t.Architecture, existing.Architecture)).ToList();
+                var existingForArchitecture = existingTargets.Where(t => Matches(t.Architecture, existing.Architecture)).ToList();
+                if (newForArchitecture.Count == 0 || newForArchitecture.Any(t => t.Version < existing.Version))
+                {
+                    return false;
+                }
 
-            // An existing Universal package serves every family, so no family the new package declares may need a newer OS.
-            bool CoversAllFamilies(Target existing)
-                => newTargets.Where(t => Matches(t.Architecture, existing.Architecture)).All(t => t.MinVersion <= existing.MinVersion);
+                // Every device family the existing package reaches must be reached by the new one on the same or an older OS.
+                var families = existingForArchitecture.Concat(newForArchitecture).Select(t => t.DeviceFamily).Distinct(StringComparer.OrdinalIgnoreCase);
+                foreach (var family in families)
+                {
+                    var existingMin = EffectiveMinVersion(existingForArchitecture, family);
+                    var newMin = EffectiveMinVersion(newForArchitecture, family);
+                    if (existingMin != null && (newMin == null || newMin > existingMin))
+                    {
+                        return false;
+                    }
+                }
+            }
 
-            // An explicit device family overrides Windows.Universal for that family.
-            bool AppliesTo(Target target, string deviceFamily)
-                => Matches(target.DeviceFamily, deviceFamily)
-                || (Matches(target.DeviceFamily, UniversalDeviceFamily)
-                    && !newTargets.Any(t => Matches(t.Architecture, target.Architecture) && Matches(t.DeviceFamily, deviceFamily)));
+            return true;
         }
+
+        // An explicit device family overrides Windows.Universal for that family.
+        private static Version? EffectiveMinVersion(List<Target> targets, string deviceFamily)
+            => (targets.FirstOrDefault(t => Matches(t.DeviceFamily, deviceFamily))
+                ?? targets.FirstOrDefault(t => Matches(t.DeviceFamily, UniversalDeviceFamily)))?.MinVersion;
 
         private static bool Matches(string first, string second)
             => string.Equals(first, second, StringComparison.OrdinalIgnoreCase);
