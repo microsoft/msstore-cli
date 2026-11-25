@@ -176,6 +176,17 @@ namespace MSStore.CLI.UnitTests
             old.FileStatus.Should().Be(FileStatus.Uploaded);
         }
 
+        [TestMethod]
+        public void KeepsUniversalPackageWhenNewPackageRaisesAFamilyMinimum()
+        {
+            var old = StorePackage("old.msix", "x64", "Windows.Universal min version 10.0.17763.0");
+            var packages = new List<ApplicationPackage> { old };
+
+            Mark(packages, CreateMsix("new.msix", "x64", ("Windows.Universal", "10.0.17763.0"), ("Windows.Desktop", "10.0.22000.0")));
+
+            old.FileStatus.Should().Be(FileStatus.Uploaded);
+        }
+
         private static int Mark(List<ApplicationPackage> packages, FileInfo file)
             => IStorePackagedAPIExtensions.MarkReplacedPackages(packages, [file], NullLogger.Instance);
 

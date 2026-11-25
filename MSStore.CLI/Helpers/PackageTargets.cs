@@ -64,7 +64,12 @@ namespace MSStore.CLI.Helpers
                 Matches(target.Architecture, existing.Architecture)
                 && AppliesTo(target, existing.DeviceFamily)
                 && target.MinVersion <= existing.MinVersion
-                && target.Version >= existing.Version));
+                && target.Version >= existing.Version
+                && (!Matches(existing.DeviceFamily, UniversalDeviceFamily) || CoversAllFamilies(existing))));
+
+            // An existing Universal package serves every family, so no family the new package declares may need a newer OS.
+            bool CoversAllFamilies(Target existing)
+                => newTargets.Where(t => Matches(t.Architecture, existing.Architecture)).All(t => t.MinVersion <= existing.MinVersion);
 
             // An explicit device family overrides Windows.Universal for that family.
             bool AppliesTo(Target target, string deviceFamily)
