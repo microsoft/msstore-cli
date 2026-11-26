@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace MSStore.API.Packaged.Models
 {
@@ -16,5 +17,8 @@ namespace MSStore.API.Packaged.Models
         public List<string>? Capabilities { get; set; }
         public string? MinimumDirectXVersion { get; set; }
         public string? MinimumSystemRam { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public List<string>? TargetDeviceFamilies { get; set; }
     }
 }

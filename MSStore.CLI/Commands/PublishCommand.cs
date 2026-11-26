@@ -31,6 +31,7 @@ namespace MSStore.CLI.Commands
         internal static readonly Option<float?> PackageRolloutPercentageOption;
         internal static readonly Option<string?> PriceIdOption;
         internal static readonly Option<long> UploadTimeoutOption;
+        internal static readonly Option<bool> ReplacePackagesOption;
         private static readonly Option<DirectoryInfo?> InputDirectoryOption;
         private static readonly Option<string> AppIdOption;
         private static readonly Option<bool> NoCommitOption;
@@ -123,6 +124,12 @@ namespace MSStore.CLI.Commands
                 DefaultValueFactory = _ => false
             };
 
+            ReplacePackagesOption = new Option<bool>("--replacePackages", "-rp")
+            {
+                Description = "Removes an existing package with the same file extension when the CLI cannot tell which architectures, device families or versions the existing or new package targets. Without this option, such packages are kept.",
+                DefaultValueFactory = _ => false
+            };
+
             UploadTimeoutOption = new Option<long>("--uploadTimeout", "-ut")
             {
                 Description = "Specifies timeout in seconds for package upload to blob storage. Valid only for MSIX and PWA packages.",
@@ -167,6 +174,7 @@ namespace MSStore.CLI.Commands
             Options.Add(PackageRolloutPercentageOption);
             Options.Add(PriceIdOption);
             Options.Add(UploadTimeoutOption);
+            Options.Add(ReplacePackagesOption);
         }
 
         public class Handler(
@@ -192,6 +200,7 @@ namespace MSStore.CLI.Commands
                 var inputDirectory = parseResult.GetValue(InputDirectoryOption);
                 var noCommit = parseResult.GetRequiredValue(NoCommitOption);
                 var uploadTimeout = parseResult.GetValue(UploadTimeoutOption);
+                var replacePackages = parseResult.GetValue(ReplacePackagesOption);
 
                 var projectPublisher = await _projectConfiguratorFactory.FindProjectPublisherAsync(pathOrUrl, ct);
 
@@ -238,7 +247,7 @@ namespace MSStore.CLI.Commands
                 }
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(
-                    await projectPublisher.PublishAsync(pathOrUrl, app, flightId, inputDirectory, noCommit, packageRolloutPercentage, priceId, uploadTimeout, storePackagedAPI, ct), props, ct);
+                    await projectPublisher.PublishAsync(pathOrUrl, app, flightId, inputDirectory, noCommit, packageRolloutPercentage, priceId, uploadTimeout, replacePackages, storePackagedAPI, ct), props, ct);
             }
         }
     }
