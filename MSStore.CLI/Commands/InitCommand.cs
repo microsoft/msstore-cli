@@ -137,6 +137,7 @@ namespace MSStore.CLI.Commands
             Options.Add(PublishCommand.PackageRolloutPercentageOption);
             Options.Add(PublishCommand.PriceIdOption);
             Options.Add(PublishCommand.UploadTimeoutOption);
+            Options.Add(PublishCommand.ReplacePackagesOption);
         }
 
         public class Handler(
@@ -178,6 +179,7 @@ namespace MSStore.CLI.Commands
                 var packageRolloutPercentage = parseResult.GetValue(PublishCommand.PackageRolloutPercentageOption);
                 var priceId = parseResult.GetValue(PublishCommand.PriceIdOption);
                 var uploadTimeout = parseResult.GetValue(PublishCommand.UploadTimeoutOption);
+                var replacePackages = parseResult.GetValue(PublishCommand.ReplacePackagesOption);
                 var output = parseResult.GetValue(OutputOption);
                 var arch = parseResult.GetValue(ArchOption);
 
@@ -365,7 +367,7 @@ namespace MSStore.CLI.Commands
                         return await _telemetryClient.TrackCommandEventAsync<Handler>(-5, props, ct);
                     }
 
-                    result = await projectPublisher.PublishAsync(pathOrUrl, app, flightId, outputDirectory, false, packageRolloutPercentage, priceId, uploadTimeout, storePackagedAPI, ct);
+                    result = await projectPublisher.PublishAsync(pathOrUrl, app, flightId, outputDirectory, false, packageRolloutPercentage, priceId, uploadTimeout, replacePackages, storePackagedAPI, ct);
                 }
 
                 return await _telemetryClient.TrackCommandEventAsync<Handler>(result, props, ct);

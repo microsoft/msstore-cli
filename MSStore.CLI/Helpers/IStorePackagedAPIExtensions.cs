@@ -354,6 +354,7 @@ namespace MSStore.CLI.Helpers
             float? packageRolloutPercentage,
             string? priceId,
             long uploadTimeout,
+            bool replacePackages,
             IBrowserLauncher browserLauncher,
             IConsoleReader consoleReader,
             IZipFileManager zipFileManager,
@@ -521,7 +522,7 @@ namespace MSStore.CLI.Helpers
             ansiConsole.MarkupLine("New Submission [green]properly configured[/].");
             logger.LogInformation("New Submission properly configured. FileUploadUrl: {FileUploadUrl}", submission.FileUploadUrl);
 
-            var uploadZipFilePath = await PrepareBundleAsync(ansiConsole, submission, output, input, zipFileManager, fileDownloader, logger, ct);
+            var uploadZipFilePath = await PrepareBundleAsync(ansiConsole, submission, output, input, replacePackages, zipFileManager, fileDownloader, logger, ct);
 
             if (uploadZipFilePath == null)
             {
@@ -628,7 +629,7 @@ namespace MSStore.CLI.Helpers
             return await storePackagedAPI.HandleLastSubmissionStatusAsync(ansiConsole, lastSubmissionStatus, app.Id, flightId, submission.Id, browserLauncher, logger, ct);
         }
 
-        private static async Task<string?> PrepareBundleAsync(IAnsiConsole ansiConsole, IDevCenterSubmission submission, DirectoryInfo output, IEnumerable<FileInfo> packageFiles, IZipFileManager zipFileManager, IFileDownloader fileDownloader, ILogger logger, CancellationToken ct)
+        private static async Task<string?> PrepareBundleAsync(IAnsiConsole ansiConsole, IDevCenterSubmission submission, DirectoryInfo output, IEnumerable<FileInfo> packageFiles, bool replacePackages, IZipFileManager zipFileManager, IFileDownloader fileDownloader, ILogger logger, CancellationToken ct)
         {
             DevCenterSubmission? devCenterSubmission = submission as DevCenterSubmission;
             DevCenterFlightSubmission? devCenterFlightSubmission = submission as DevCenterFlightSubmission;
@@ -658,7 +659,7 @@ namespace MSStore.CLI.Helpers
                         uploadDir = Directory.CreateDirectory(Path.Combine(output.FullName, $"Upload_{Path.GetFileNameWithoutExtension(Path.GetRandomFileName())}"));
 
                         var files = packageFiles.ToList();
-                        var replacedCount = MarkReplacedPackages(packages, files, logger);
+                        var replacedCount = MarkReplacedPackages(packages, files, replacePackages, logger);
                         if (replacedCount > 0)
                         {
                             ansiConsole.MarkupLine($"Removing [green]{replacedCount}[/] existing package(s) replaced by the new upload.");
@@ -741,7 +742,7 @@ namespace MSStore.CLI.Helpers
         /// a single existing package with the same extension is replaced instead.
         /// </summary>
         /// <returns>The number of existing packages removed or marked for deletion.</returns>
-        internal static int MarkReplacedPackages(List<ApplicationPackage> packages, IReadOnlyList<FileInfo> packageFiles, ILogger logger)
+        internal static int MarkReplacedPackages(List<ApplicationPackage> packages, IReadOnlyList<FileInfo> packageFiles, bool replaceUnknownPackages, ILogger logger)
         {
             var replaced = new List<ApplicationPackage>();
 
@@ -759,7 +760,7 @@ namespace MSStore.CLI.Helpers
                     && PackageTargets.FromStorePackage(p) is { } existingTargets
                     && PackageTargets.Supersedes(newTargets, existingTargets)).ToList();
 
-                if (superseded.Count == 0)
+                if (superseded.Count == 0 && replaceUnknownPackages)
                 {
                     var fallback = uploaded.FirstOrDefault(p => HasExtension(p, file) && (newTargets == null || PackageTargets.FromStorePackage(p) == null));
                     if (fallback != null)

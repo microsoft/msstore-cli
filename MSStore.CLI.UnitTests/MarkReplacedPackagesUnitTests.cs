@@ -104,7 +104,7 @@ namespace MSStore.CLI.UnitTests
         }
 
         [TestMethod]
-        public void FallsBackToReplacingOnePackageWhenStoreMinimumVersionIsMissing()
+        public void KeepsPackagesWhenStoreMinimumVersionIsMissing()
         {
             var packages = new List<ApplicationPackage>
             {
@@ -114,13 +114,28 @@ namespace MSStore.CLI.UnitTests
 
             var count = Mark(packages, CreateMsix("new.msix", "x64", ("Windows.Desktop", "10.0.17763.0")));
 
+            count.Should().Be(0);
+            packages.Should().OnlyContain(p => p.FileStatus == FileStatus.Uploaded);
+        }
+
+        [TestMethod]
+        public void ReplacePackagesReplacesOnePackageWhenStoreMinimumVersionIsMissing()
+        {
+            var packages = new List<ApplicationPackage>
+            {
+                StorePackage("a.msix", "x64", "Windows.Desktop"),
+                StorePackage("b.msix", "x64", "Windows.Desktop"),
+            };
+
+            var count = Mark(packages, CreateMsix("new.msix", "x64", ("Windows.Desktop", "10.0.17763.0")), replacePackages: true);
+
             count.Should().Be(1);
             packages[0].FileStatus.Should().Be(FileStatus.PendingDelete);
             packages[1].FileStatus.Should().Be(FileStatus.Uploaded);
         }
 
         [TestMethod]
-        public void FallsBackToReplacingOnePackageWithTheSameExtensionWhenTargetsAreUnknown()
+        public void ReplacePackagesReplacesOnePackageWithTheSameExtensionWhenTargetsAreUnknown()
         {
             var packages = new List<ApplicationPackage>
             {
@@ -130,7 +145,8 @@ namespace MSStore.CLI.UnitTests
             var notAPackage = new FileInfo(Path.Combine(_tempDir.FullName, "new.msix"));
             File.WriteAllText(notAPackage.FullName, "not a zip");
 
-            var count = Mark(packages, notAPackage);
+            Mark(packages, notAPackage).Should().Be(0);
+            var count = Mark(packages, notAPackage, replacePackages: true);
 
             count.Should().Be(1);
             packages[0].FileStatus.Should().Be(FileStatus.PendingDelete);
@@ -221,8 +237,8 @@ namespace MSStore.CLI.UnitTests
             old.FileStatus.Should().Be(FileStatus.PendingDelete);
         }
 
-        private static int Mark(List<ApplicationPackage> packages, FileInfo file)
-            => IStorePackagedAPIExtensions.MarkReplacedPackages(packages, [file], NullLogger.Instance);
+        private static int Mark(List<ApplicationPackage> packages, FileInfo file, bool replacePackages = false)
+            => IStorePackagedAPIExtensions.MarkReplacedPackages(packages, [file], replacePackages, NullLogger.Instance);
 
         private static ApplicationPackage StorePackage(string fileName, string architecture, string deviceFamily, string version = "1.0.0.0")
             => new()
